@@ -10,9 +10,10 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { CheckCircle2, AlertTriangle, XCircle, MinusCircle, Loader2, ExternalLink, Send, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 import { collectiveInvoiceTotals } from "@/lib/collectiveInvoiceTotals";
+import { supplierTypeForPartner, type CollectiveSupplierType } from "@/lib/collectiveInvoiceSupplier";
 
 type MatchStatus = "matched" | "ambiguous" | "unmatched" | "manual" | "internal";
 
@@ -44,7 +45,7 @@ interface Booking {
 }
 
 interface ParseResponse {
-  supplier_type?: "doeksen" | "isla";
+  supplier_type?: CollectiveSupplierType;
   invoice: {
     invoice_number: string;
     invoice_date: string;
@@ -63,14 +64,32 @@ interface Props {
   open: boolean;
   onClose: () => void;
   inboxItem: PurchaseInvoiceInboxItem | null;
-  partnerId: string; // e.g. "rederij" of "bagagevervoer-vlieland"
+  /** De partner zoals de inbox hem uit de factuur afleidde; null als dat niet lukte. Hier nog te wijzigen. */
+  partnerId: string | null;
 }
 
 const EUR = (n: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n || 0);
 
-export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: Props) {
+export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId: guessedPartnerId }: Props) {
   const qc = useQueryClient();
+  // De gok van de inbox is een beginwaarde. Een factuur van Jan van Vlieland
+  // werd eerder stilzwijgend als Doeksen verwerkt; nu kies je hier de partner
+  // en bepaalt die hoe de factuur wordt gelezen en gematcht.
+  const [partnerId, setPartnerId] = useState<string | null>(guessedPartnerId);
+  const { data: partners } = useQuery({
+    queryKey: ["partners-active-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name, iban")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open,
+  });
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ParseResponse | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -78,21 +97,26 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const [forwardToSnelstart, setForwardToSnelstart] = useState(true);
 
   useEffect(() => {
+    if (open) setPartnerId(guessedPartnerId);
+  }, [open, guessedPartnerId]);
+
+  // Opnieuw lezen zodra de partner wisselt tussen Doeksen en de rest: dat is
+  // een andere prompt én een andere manier van matchen.
+  const supplierType = supplierTypeForPartner(partnerId);
+  useEffect(() => {
     if (open && inboxItem) {
-      void parse();
+      void parse(supplierType);
     } else {
       setData(null);
       setBookings([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, inboxItem?.id]);
+  }, [open, inboxItem?.id, supplierType]);
 
-  async function parse() {
+  async function parse(supplier_type: CollectiveSupplierType) {
     if (!inboxItem) return;
     setLoading(true);
     try {
-      const supplier_type: "doeksen" | "isla" =
-        partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen";
       const { data: resp, error } = await supabase.functions.invoke<ParseResponse>(
         "parse-collective-invoice",
         { body: { inbox_id: inboxItem.id, supplier_type } },
@@ -109,9 +133,8 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     }
   }
 
-  const supplierType: "doeksen" | "isla" =
-    data?.supplier_type ?? (partnerId === "bagagevervoer-vlieland" ? "isla" : "doeksen");
-  const supplierLabel = supplierType === "isla" ? "Isla Vlieland B.V." : "Rederij Doeksen";
+  const selectedPartner = partners?.find((p) => p.id === partnerId) ?? null;
+  const supplierLabel = selectedPartner?.name ?? (supplierType === "doeksen" ? "Rederij Doeksen" : "leverancier");
 
   const sumIncl = useMemo(
     () => bookings.reduce((s, b) => s + (b.amount_incl_vat || 0), 0),
@@ -120,7 +143,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
   const totalsMatch = data
     ? Math.abs(sumIncl - data.invoice.total_incl_vat) < 0.05
     : false;
-  const allResolved = bookings.every(
+  const allResolved = !!partnerId && bookings.every(
     (b) => b.match_status !== "unmatched" && b.match_status !== "ambiguous",
   );
   // Doeksen incasseert tickets plus toeristenbelasting minus ingehouden
@@ -150,7 +173,7 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
     const b = bookings[idx];
     const cand = b.candidates.find((c) => c.item_id === candidateItemId);
     if (!cand) return;
-    // For Isla rows candidate.item_id is "project:<uuid>" — these candidates do not
+    // Bij matchen op klantnaam is candidate.item_id "project:<uuid>" — these candidates do not
     // map to an existing program_request_item, so route via "book as extra cost".
     if (candidateItemId.startsWith("project:")) {
       bookAsExtraOnProject(idx, {
@@ -200,6 +223,10 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
 
   async function finalize() {
     if (!data || !inboxItem) return;
+    if (!partnerId) {
+      toast.error("Kies eerst de leverancier (partner)");
+      return;
+    }
     setForwarding(true);
     try {
       const { data: resp, error } = await supabase.functions.invoke(
@@ -258,6 +285,25 @@ export function CollectiveInvoiceSheet({ open, onClose, inboxItem, partnerId }: 
             Eén factuur, meerdere klantboekingen. Controleer de matches en stuur in één keer door.
           </SheetDescription>
         </SheetHeader>
+
+        <div className="mt-4 grid grid-cols-[auto_1fr] items-center gap-3 text-sm">
+          <span className="text-muted-foreground">Leverancier (partner)</span>
+          <Select value={partnerId ?? ""} onValueChange={(v) => setPartnerId(v || null)} disabled={forwarding}>
+            <SelectTrigger className={partnerId ? "" : "border-destructive"}>
+              <SelectValue placeholder="Kies de partner die deze factuur stuurde…" />
+            </SelectTrigger>
+            <SelectContent>
+              {(partners ?? []).map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!partnerId && (
+            <p className="col-span-2 text-xs text-destructive">
+              De leverancier is niet uit de factuur af te leiden. Kies hem hier; Doeksen wordt op reservatienummer gematcht, elke andere partner op klantnaam.
+            </p>
+          )}
+        </div>
 
         {loading && (
           <div className="space-y-3 mt-6">
@@ -395,7 +441,7 @@ function BookingRow({
   onBookOnProject,
 }: {
   booking: Booking;
-  supplierType: "doeksen" | "isla";
+  supplierType: CollectiveSupplierType;
   usedItemIds: string[];
   partnerId: string;
   onChooseCandidate: (itemId: string) => void;
@@ -403,7 +449,7 @@ function BookingRow({
   onLinkManual: (cand: Candidate) => void;
   onBookOnProject: (project: { request_id: string; reference_number: string | null; customer_label: string }) => void | Promise<void>;
 }) {
-  const isIsla = supplierType === "isla";
+  const byCustomerName = supplierType !== "doeksen";
 
   const icon = {
     matched: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
@@ -428,13 +474,13 @@ function BookingRow({
           {icon}
           <div className="min-w-0">
             <div className="font-medium truncate">
-              {!isIsla && (
+              {!byCustomerName && (
                 <span className="font-mono text-xs text-muted-foreground mr-2">{booking.resnr}</span>
               )}
               {booking.customer_name || <span className="italic text-muted-foreground">— (geen klantnaam)</span>}
             </div>
             <div className="text-xs text-muted-foreground">
-              {isIsla
+              {byCustomerName
                 ? [booking.description, booking.departure_dates?.join(" → ")].filter(Boolean).join(" · ")
                 : (
                   <>
@@ -447,7 +493,7 @@ function BookingRow({
         </div>
         <div className="text-right shrink-0">
           <div className="font-mono font-semibold">{EUR(booking.amount_incl_vat)}</div>
-          {!isIsla && booking.supplier_commission > 0 && (
+          {!byCustomerName && booking.supplier_commission > 0 && (
             <div className="text-xs text-emerald-700">−{EUR(booking.supplier_commission)} comm.</div>
           )}
         </div>
@@ -467,7 +513,7 @@ function BookingRow({
               {booking.project.reference_number || booking.project.customer_label}
               <ExternalLink className="h-3 w-3" />
             </a>
-            {booking.match_status === "manual" && !isIsla && (
+            {booking.match_status === "manual" && !byCustomerName && (
               <ManualLinkPopover
                 defaultQuery={booking.customer_name}
                 usedItemIds={usedItemIds}
@@ -482,9 +528,9 @@ function BookingRow({
         {booking.match_status === "ambiguous" && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted-foreground">
-              {isIsla ? "Suggesties op klantnaam:" : "Meerdere kandidaten:"}
+              {byCustomerName ? "Suggesties op klantnaam:" : "Meerdere kandidaten:"}
             </span>
-            {isIsla ? (
+            {byCustomerName ? (
               <>
                 {(booking.suggested_projects || []).map((sp) => (
                   <Button
@@ -542,11 +588,11 @@ function BookingRow({
         {booking.match_status === "unmatched" && (
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline" className="text-red-700 border-red-300">
-              {isIsla
+              {byCustomerName
                 ? `Geen project gevonden voor "${booking.customer_name || "—"}"`
                 : `Geen ticket gevonden voor Resnr ${booking.resnr}`}
             </Badge>
-            {!isIsla && (
+            {!byCustomerName && (
               <ManualLinkPopover
                 defaultQuery={booking.customer_name}
                 usedItemIds={usedItemIds}

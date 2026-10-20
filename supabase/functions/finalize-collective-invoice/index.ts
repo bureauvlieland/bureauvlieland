@@ -129,7 +129,9 @@ Deno.serve(async (req) => {
     // tickets + toeristenbelasting − commissie. De factuur die we opslaan moet
     // dat volledige bedrag dragen, anders herkent de bankmatching de incasso
     // niet en ontbreekt de toeristenbelasting als inkoop.
-    const isDoeksen = body.partner_id !== "bagagevervoer-vlieland";
+    // Alleen Doeksen heeft reservatienummers, toeristenbelasting en ingehouden
+    // commissie; elke andere partner (Isla, Jan van Vlieland, …) niet.
+    const isDoeksen = body.partner_id === "rederij";
     const bookingTouristTax = body.bookings.reduce((s, b) => s + (Number(b.tourist_tax) || 0), 0);
     const totals = collectiveInvoiceTotals({
       total_incl_vat: body.invoice.total_incl_vat,

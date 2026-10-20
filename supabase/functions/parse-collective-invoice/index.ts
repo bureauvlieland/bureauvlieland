@@ -36,12 +36,12 @@ EXTRACTIE FACTUURKOP:
 - total_tourist_tax, total_supplier_commission (sommen onderaan)
 - net_to_pay (kolom "Netto bedrag" totaal — wat wij daadwerkelijk overmaken)`;
 
-const SYSTEM_PROMPT_ISLA = `Je bent een specialist in het uitlezen van Nederlandse verzamelfacturen van Isla Vlieland B.V. (bagagevervoer).
+const SYSTEM_PROMPT_GENERIC = `Je bent een specialist in het uitlezen van Nederlandse verzamelfacturen van lokale leveranciers op Vlieland (bagagevervoer, fietsverhuur, catering): één factuur met regels voor meerdere klanten of groepen.
 
 Lees ALLE pagina's en extracteer per factuurregel:
 - customer_name (de klant / het bedrijf / de groep waarvoor de dienst is geleverd — bv "Stedelijk Gymnasium Haarlem", "Familie Jansen", etc.)
 - delivery_date (datum van levering / dienst, YYYY-MM-DD; gebruik de regelspecifieke datum)
-- description (korte beschrijving van wat er geleverd is, bv "Bagagevervoer retour 30 personen")
+- description (korte beschrijving van wat er geleverd is, bv "Bagagevervoer retour 30 personen" of "12 fietsen 3 dagen")
 - amount_excl_vat, vat_amount, amount_incl_vat (NUMMERS, geen €, punt als decimaal)
 - reference (optionele referentie/ordernummer als die op de regel staat)
 
@@ -109,11 +109,11 @@ const DOEKSEN_TOOL = {
   },
 };
 
-const ISLA_TOOL = {
+const GENERIC_TOOL = {
   type: "function",
   function: {
-    name: "extract_isla_invoice",
-    description: "Extracteer Isla Vlieland verzamelfactuur met alle factuurregels",
+    name: "extract_collective_lines_invoice",
+    description: "Extracteer een verzamelfactuur op klantnaam met alle factuurregels",
     parameters: {
       type: "object",
       properties: {
@@ -155,10 +155,17 @@ const ISLA_TOOL = {
   },
 };
 
-function detectSupplierType(hint: string | null | undefined, scanSupplier: string | null | undefined): "doeksen" | "isla" {
-  const text = `${hint || ""} ${scanSupplier || ""}`.toLowerCase();
-  if (/isla|bagage/.test(text)) return "isla";
-  return "doeksen";
+/**
+ * Doeksen heeft reservatienummers en ingehouden commissie en wordt daarop
+ * gematcht; elke andere leverancier (Isla, Jan van Vlieland, …) op klantnaam.
+ * De sheet geeft het type door op grond van de gekozen partner; zonder hint
+ * kijken we naar de leveranciersnaam. "isla" is de oude naam van "generic".
+ */
+function detectSupplierType(hint: string | null | undefined, scanSupplier: string | null | undefined): "doeksen" | "generic" {
+  const h = (hint || "").toLowerCase();
+  if (h === "doeksen") return "doeksen";
+  if (h === "generic" || h === "isla") return "generic";
+  return /doeksen|rederij/.test((scanSupplier || "").toLowerCase()) ? "doeksen" : "generic";
 }
 
 // Lightweight name normalisation + token-overlap similarity for fuzzy matching
@@ -250,10 +257,10 @@ Deno.serve(async (req) => {
 
     if (!aiConfigured()) return jsonResp({ error: AI_NOT_CONFIGURED_MESSAGE }, 500);
 
-    const systemPrompt = supplierType === "isla" ? SYSTEM_PROMPT_ISLA : SYSTEM_PROMPT_DOEKSEN;
-    const tool = supplierType === "isla" ? ISLA_TOOL : DOEKSEN_TOOL;
-    const userText = supplierType === "isla"
-      ? "Extracteer de Isla Vlieland verzamelfactuur volledig via extract_isla_invoice."
+    const systemPrompt = supplierType === "generic" ? SYSTEM_PROMPT_GENERIC : SYSTEM_PROMPT_DOEKSEN;
+    const tool = supplierType === "generic" ? GENERIC_TOOL : DOEKSEN_TOOL;
+    const userText = supplierType === "generic"
+      ? "Extracteer de verzamelfactuur volledig via extract_collective_lines_invoice: één regel per klant of groep."
       : "Extracteer de verzamelfactuur volledig via extract_collective_invoice.";
 
     const aiResp = await aiChatCompletions({
@@ -305,9 +312,9 @@ Deno.serve(async (req) => {
         bookings: proposal,
       });
     } else {
-      const proposal = await matchIsla(adminClient, extracted);
+      const proposal = await matchByCustomerName(adminClient, extracted);
       return jsonResp({
-        supplier_type: "isla",
+        supplier_type: "generic",
         invoice: {
           invoice_number: extracted.invoice_number,
           invoice_date: extracted.invoice_date,
@@ -387,7 +394,7 @@ async function matchDoeksen(adminClient: any, extracted: any) {
   });
 }
 
-async function matchIsla(adminClient: any, extracted: any) {
+async function matchByCustomerName(adminClient: any, extracted: any) {
   // Fetch projects in a generous window around the invoice date.
   const invDate = extracted.invoice_date ? new Date(extracted.invoice_date) : new Date();
   const from = new Date(invDate); from.setDate(from.getDate() - 120);

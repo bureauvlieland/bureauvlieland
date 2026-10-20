@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePurchaseInvoiceInbox } from "@/hooks/usePurchaseInvoiceInbox";
 import { AddPurchaseInvoiceDialog } from "@/components/admin/AddPurchaseInvoiceDialog";
 import { CollectiveInvoiceSheet } from "@/components/admin/purchase-invoices/CollectiveInvoiceSheet";
+import { DOEKSEN_PARTNER_ID } from "@/lib/collectiveInvoiceSupplier";
+import { suggestPartner, type SuggestablePartner } from "@/lib/purchaseInvoicePartnerSuggestion";
 import { MatchedRegistrationBanner } from "@/components/admin/purchase-invoices/MatchedRegistrationBanner";
 import type { InboxStatus, PurchaseInvoiceInboxItem } from "@/types/purchaseInvoiceInbox";
 
@@ -44,7 +47,19 @@ export default function AdminPurchaseInvoiceInbox() {
   const [tab, setTab] = useState<InboxStatus | "all">("new");
   const { items, isLoading, discard, rescan, markProcessed, reprocess } = usePurchaseInvoiceInbox(tab);
   const [processingItem, setProcessingItem] = useState<PurchaseInvoiceInboxItem | null>(null);
-  const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string } | null>(null);
+  const [collectiveItem, setCollectiveItem] = useState<{ item: PurchaseInvoiceInboxItem; partnerId: string | null } | null>(null);
+  const { data: partners } = useQuery({
+    queryKey: ["partners-active-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name, iban")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data || []) as SuggestablePartner[];
+    },
+  });
   const [reprocessItem, setReprocessItem] = useState<PurchaseInvoiceInboxItem | null>(null);
 
   const handleDownload = async (path: string) => {
@@ -237,7 +252,7 @@ export default function AdminPurchaseInvoiceInbox() {
                                 onClick={() =>
                                   setCollectiveItem({
                                     item,
-                                    partnerId: guessPartnerId(item) || "rederij",
+                                    partnerId: guessPartnerId(item, partners ?? []),
                                   })
                                 }
                                 disabled={item.scan_status === "scanning" || item.scan_status === "pending"}
@@ -301,7 +316,7 @@ export default function AdminPurchaseInvoiceInbox() {
         open={!!collectiveItem}
         onClose={() => setCollectiveItem(null)}
         inboxItem={collectiveItem?.item || null}
-        partnerId={collectiveItem?.partnerId || "rederij"}
+        partnerId={collectiveItem?.partnerId ?? null}
       />
 
       <AlertDialog open={!!reprocessItem} onOpenChange={(open) => !open && setReprocessItem(null)}>
@@ -347,8 +362,21 @@ function isLikelyCollective(item: PurchaseInvoiceInboxItem): boolean {
   return /doeksen|rederij/.test(text);
 }
 
-function guessPartnerId(item: PurchaseInvoiceInboxItem): string | null {
-  const text = `${item.scan_result?.supplier_name || ""} ${item.from_email || ""} ${item.from_name || ""} ${item.subject || ""}`.toLowerCase();
-  if (/doeksen|rederij/.test(text)) return "rederij";
+/**
+ * Welke partner stuurde deze verzamelfactuur? Eerst op wat de scanner las (IBAN,
+ * naam, of dezelfde woorden in een andere volgorde), dan op de afzender van de
+ * mail. Vroeger kende dit alleen Doeksen en viel al het andere daar ook op terug,
+ * waardoor een factuur van Jan van Vlieland als Doeksen werd verwerkt.
+ */
+function guessPartnerId(item: PurchaseInvoiceInboxItem, partners: SuggestablePartner[]): string | null {
+  const scanned = suggestPartner(
+    { supplier_name: item.scan_result?.supplier_name, supplier_iban: item.scan_result?.supplier_iban },
+    partners,
+  );
+  if (scanned) return scanned.partnerId;
+  const fromName = suggestPartner({ supplier_name: item.from_name }, partners);
+  if (fromName) return fromName.partnerId;
+  const text = `${item.from_email || ""} ${item.from_name || ""} ${item.subject || ""}`.toLowerCase();
+  if (/doeksen|rederij/.test(text)) return DOEKSEN_PARTNER_ID;
   return null;
 }
