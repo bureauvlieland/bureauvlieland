@@ -443,7 +443,7 @@ function BookingRow({
   booking: Booking;
   supplierType: CollectiveSupplierType;
   usedItemIds: string[];
-  partnerId: string;
+  partnerId: string | null;
   onChooseCandidate: (itemId: string) => void;
   onMarkInternal: () => void;
   onLinkManual: (cand: Candidate) => void;
@@ -629,7 +629,7 @@ function ManualLinkPopover({
   defaultQuery: string;
   usedItemIds: string[];
   triggerLabel: string;
-  providerId?: string;
+  providerId?: string | null;
   onPick: (cand: Candidate) => void;
 }) {
   const [open, setOpen] = useState(false);
