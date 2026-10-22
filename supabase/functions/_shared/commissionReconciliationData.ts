@@ -11,6 +11,7 @@
  */
 
 import { getCommissionRate } from "./commissionRates.ts";
+import { expectsPartnerInvoice } from "./itemHandling.ts";
 import {
   amountExclVat,
   calculateLodgingCommission,
@@ -47,7 +48,7 @@ const ITEM_COLUMNS =
   "id, request_id, provider_id, block_id, block_name, quoted_price, vat_rate, commission_percentage, " +
   "commission_status, commission_basis, commission_invoice_id, invoiced_number, invoiced_amount, " +
   "status, block_type, proposed_date, commission_exempt, commission_exempt_reason, " +
-  "commission_exempt_at, partner_dismissed_at";
+  "commission_exempt_at, partner_dismissed_at, partner_handling, billing_route";
 
 export interface LoadReconciliationOptions {
   /** Beperk tot één partner (null/undefined = alle partners). */
@@ -368,6 +369,11 @@ export async function loadReconciliationInputs(
   );
   const items: ReconItemInput[] = rawItems
     .filter((i) => !skipRequestIds.has(i.request_id))
+    // Onderdelen zonder partnerfactuur aan Bureau Vlieland (mededelingen, en
+    // alles op de verblijfsnota of rechtstreeks bij de klant; zie itemHandling)
+    // horen niet in de commissiewerklijst. Loopt er commissie over zo'n post,
+    // dan zit die in de logiesofferte/inkoopfactuur van de accommodatie.
+    .filter((i) => expectsPartnerInvoice(i))
     // Een inkoopfactuur maakt een onderdeel verkocht, maar niet in een geannuleerd project.
     .filter((i) => !(SOLD_ITEM_STATUSES.includes(i.status ?? "") ? false : cancelledRequestIds.has(i.request_id)))
     .map((i) => ({

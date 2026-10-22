@@ -45,10 +45,12 @@ Deno.test({ name: "400 bij onbekende status-waarde", sanitizeOps: false, sanitiz
 // confirmed — prijs-validatie
 // ============================================================
 
-Deno.test({ name: "confirmed zonder prijs → 400", sanitizeOps: false, sanitizeResources: false }, async () => {
+Deno.test({ name: "confirmed zonder prijs valideert door tot token-check (prijsplicht hangt af van de afhandeling van het item)", sanitizeOps: false, sanitizeResources: false }, async () => {
+  // Een bevestiging-onderdeel (partner_handling 'confirm', zie _shared/itemHandling)
+  // mag zonder prijs bevestigd worden; dat weten we pas na het laden van het item.
   const res = await post({ status: "confirmed" });
-  assertEquals(res.status, 400);
-  assertEquals((await res.json()).error, "Quoted price is required when confirming");
+  assertEquals(res.status, 403);
+  assertEquals((await res.json()).error, "Invalid partner token");
 });
 
 Deno.test({ name: "confirmed met prijs 0 → 400 (0 is geen geldige offerte)", sanitizeOps: false, sanitizeResources: false }, async () => {

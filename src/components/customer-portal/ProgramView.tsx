@@ -192,7 +192,7 @@ const byTime = (a: ProgramRequestItem, b: ProgramRequestItem) => {
 };
 
 const WAITING_STATUSES: ItemDisplayStatus[] = ["wacht_op_partner", "klant_akkoord_wacht_partner", "tegenvoorstel_klant"];
-const DONE_STATUSES: ItemDisplayStatus[] = ["geaccepteerd", "klant_akkoord_bureau", "uitgevoerd", "self_arranged", "afgesloten_automatisch"];
+const DONE_STATUSES: ItemDisplayStatus[] = ["geaccepteerd", "klant_akkoord_bureau", "uitgevoerd", "self_arranged", "afgesloten_automatisch", "bevestiging_gevraagd", "bevestigd", "ter_kennisgeving"];
 
 /** De dagkop staat na een klik 144px (scroll-mt-36) onder de bovenrand; daaronder telt een dag als "in beeld". */
 const SCROLL_LINE = 150;

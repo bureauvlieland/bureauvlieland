@@ -27,6 +27,7 @@
  */
 
 import { getDisplayLineTotal, getNumberOfDays, isPerDayItem, isPerPersonItem, getEffectivePeople } from "@/lib/portalPricing";
+import { billingRouteOf } from "@/lib/itemHandling";
 import { computeProjectFees, type FeeBreakdown } from "@/lib/feeEngine";
 import { isFeeExcluded, type ExcludableFeeKey } from "@/lib/excludedFees";
 import { resolveItemVatRate } from "@/lib/itemVatRate";
@@ -67,6 +68,8 @@ export interface SpecItemInput {
   override_children?: number | null;
   child_unit_price?: number | null;
   vat_rate?: number | null;
+  /** bureau | partner_stay_invoice | customer_direct, zie lib/itemHandling */
+  billing_route?: string | null;
   booking_reference?: string | null;
 }
 
@@ -212,6 +215,8 @@ export interface ProjectInvoiceSpec {
   unpricedItems: SpecItemInput[];
   /** Zelf geregelde onderdelen: niet op de factuur. */
   selfArrangedItems: SpecItemInput[];
+  /** Onderdelen buiten de bureaufactuur (verblijfsnota partner of klant rechtstreeks, zie lib/itemHandling). */
+  offInvoiceItems: SpecItemInput[];
   numberOfPeople: number;
   numberOfDays: number;
   isBureauCentral: boolean;
@@ -267,12 +272,19 @@ export function buildProjectInvoiceSpec(input: BuildSpecInput): ProjectInvoiceSp
   const lines: SpecLine[] = [];
   const unpricedItems: SpecItemInput[] = [];
   const selfArrangedItems: SpecItemInput[] = [];
+  const offInvoiceItems: SpecItemInput[] = [];
 
   // ── Onderdelen (programma en overige kosten) ────────────────────────────
   const activeItems = items.filter((it) => it.status !== "cancelled");
   for (const item of activeItems) {
     if (item.block_type === "self_arranged") {
       selfArrangedItems.push(item);
+      continue;
+    }
+    // Verblijfsnota partner of klant rechtstreeks: niet op onze factuur en
+    // ook geen "prijs volgt nog"-melding.
+    if (billingRouteOf(item) !== "bureau") {
+      offInvoiceItems.push(item);
       continue;
     }
     const kind: SpecLineKind = item.day_index === -1 ? "extra_cost" : "program";
@@ -626,6 +638,7 @@ export function buildProjectInvoiceSpec(input: BuildSpecInput): ProjectInvoiceSp
     feeBreakdown,
     unpricedItems,
     selfArrangedItems,
+    offInvoiceItems,
     numberOfPeople: people,
     numberOfDays: days,
     isBureauCentral,

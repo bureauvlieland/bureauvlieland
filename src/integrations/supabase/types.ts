@@ -3349,6 +3349,7 @@ export type Database = {
           admin_status_override_reason: string | null
           auto_closed_reason: string | null
           awaiting_customer_for_partner_send: boolean
+          billing_route: string
           block_category: string
           block_id: string | null
           block_name: string
@@ -3406,6 +3407,7 @@ export type Database = {
           parent_item_id: string | null
           partner_dismissed_at: string | null
           partner_dismissed_reason: string | null
+          partner_handling: string
           partner_instructions: string | null
           partner_price_change_acknowledged_at: string | null
           partner_purchase_price: number | null
@@ -3468,6 +3470,7 @@ export type Database = {
           admin_status_override_reason?: string | null
           auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
+          billing_route?: string
           block_category: string
           block_id?: string | null
           block_name: string
@@ -3525,6 +3528,7 @@ export type Database = {
           parent_item_id?: string | null
           partner_dismissed_at?: string | null
           partner_dismissed_reason?: string | null
+          partner_handling?: string
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null
@@ -3587,6 +3591,7 @@ export type Database = {
           admin_status_override_reason?: string | null
           auto_closed_reason?: string | null
           awaiting_customer_for_partner_send?: boolean
+          billing_route?: string
           block_category?: string
           block_id?: string | null
           block_name?: string
@@ -3644,6 +3649,7 @@ export type Database = {
           parent_item_id?: string | null
           partner_dismissed_at?: string | null
           partner_dismissed_reason?: string | null
+          partner_handling?: string
           partner_instructions?: string | null
           partner_price_change_acknowledged_at?: string | null
           partner_purchase_price?: number | null

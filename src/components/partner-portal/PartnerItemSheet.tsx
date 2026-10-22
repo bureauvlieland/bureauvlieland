@@ -26,6 +26,7 @@ import {
 import { hasOpenAdminPriceChange as detectOpenAdminPriceChange, getNumberOfDays, isPerPersonItem, isPerDayItem, getPriceBreakdownLabel } from "@/lib/portalPricing";
 import { itemDisplayStatusConfig, deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
+import { isConfirmOnlyItem, isInformationalItem, partnerBillingNote, requiresPartnerQuote } from "@/lib/itemHandling";
 import { formatEuro } from "@/lib/formatEuro";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
 
@@ -154,8 +155,16 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
   const canInvoice = canPartnerInvoiceItem(item, request);
   const awaitingTerms = isAwaitingInvoicingRelease(item, request);
   const isCustomQuote = !!item.is_custom_quote;
-  const canRespond = !isCustomQuote && (item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed");
-  const canMarkExecuted = (item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number;
+  // Geen offertetraject (lib/itemHandling): bevestigen is één klik zonder
+  // prijs, een mededeling vraagt niets. Het reactieformulier is voor offertes.
+  const informational = isInformationalItem(item);
+  const confirmOnly = isConfirmOnlyItem(item);
+  const needsQuote = requiresPartnerQuote(item);
+  const billingNote = partnerBillingNote(item);
+  const isOpenForResponse = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
+  const canConfirmOnly = confirmOnly && isOpenForResponse;
+  const canRespond = needsQuote && !isCustomQuote && isOpenForResponse;
+  const canMarkExecuted = needsQuote && (item.status === "accepted" || (item.status === "confirmed" && hasCustomerAccepted)) && !item.invoiced_number;
 
   const hasOpenAdminPriceChange = !!item.quoted_price && detectOpenAdminPriceChange(item as never, effectivePeopleForItem, numberOfDaysForItem);
   const canAcknowledgePriceChange = hasOpenAdminPriceChange && !item.invoiced_number && item.status !== "cancelled" && item.status !== "executed";
@@ -255,7 +264,9 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
           : `${request.number_of_people}`,
       icon: Users,
     },
-    ...(item.quoted_price && item.status !== "alternative"
+    ...(!needsQuote
+      ? []
+      : item.quoted_price && item.status !== "alternative"
       ? [
           {
             label: "Uw prijs",
@@ -300,7 +311,19 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
               <p>{request.cancellation_reason ? `Reden: ${request.cancellation_reason}` : "Het programma is geannuleerd door de klant."}</p>
             </Notice>
           )}
-          {isBureauCentral && <BureauCentralBadge variant="full" />}
+          {isBureauCentral && needsQuote && <BureauCentralBadge variant="full" />}
+          {(informational || confirmOnly) && (
+            <Notice tone={canConfirmOnly ? "warning" : "info"} title={informational ? "Ter kennisgeving" : canConfirmOnly ? "Bevestiging gevraagd" : "Bevestigd"}>
+              <p>
+                {informational
+                  ? "Bureau Vlieland geeft dit onderdeel aan u door. U hoeft niets te doen."
+                  : canConfirmOnly
+                    ? "Bureau Vlieland heeft dit bij u doorgegeven. Bevestig dat het geregeld is; een prijs of offerte is niet nodig."
+                    : "U heeft bevestigd dat dit geregeld is."}
+              </p>
+              {billingNote && <p>{billingNote}</p>}
+            </Notice>
+          )}
           {item.status === "counter_proposed" && (
             <Notice
               tone="warning"
@@ -486,7 +509,7 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
             })()}
 
           {/* Maatwerk: de offerte zelf opstellen */}
-          {isCustomQuote && (item.status === "pending" || item.status === "alternative") && (
+          {isCustomQuote && needsQuote && (item.status === "pending" || item.status === "alternative") && (
             <section className="space-y-2">
               <h3 className="text-sm font-medium">Maatwerkofferte opstellen</h3>
               <PartnerCustomQuoteEditor
@@ -631,6 +654,12 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
             </Button>
           ) : (
             <>
+              {canConfirmOnly && (
+                <Button onClick={async () => { setIsSubmitting(true); const ok = await onStatusUpdate("confirmed"); setIsSubmitting(false); if (ok) onClose(); }} disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle className="mr-2 h-4 w-4" aria-hidden="true" />}
+                  Bevestigen
+                </Button>
+              )}
               {canMarkExecuted && (
                 <Button variant={canInvoice ? "outline" : "default"} onClick={handleMarkExecuted} disabled={isSubmitting || hasOpenAdminPriceChange} title={hasOpenAdminPriceChange ? "Reageer eerst op de nieuwe prijs van Bureau Vlieland." : undefined}>
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Play className="mr-2 h-4 w-4" aria-hidden="true" />}

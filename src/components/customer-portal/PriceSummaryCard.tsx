@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { billingRouteOf } from "@/lib/itemHandling";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Euro, Clock, FileText, AlertCircle, BedDouble } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,12 @@ export const PriceSummaryCard = ({
 
     const lineByItem = new Map(spec.lines.filter((l) => l.itemId).map((l) => [l.itemId!, l]));
     const relevantItems = items.filter(
-      (item) => item.block_type !== "self_arranged" && item.status !== "cancelled"
+      (item) => item.block_type !== "self_arranged" && item.status !== "cancelled" && billingRouteOf(item) === "bureau"
+    );
+    // Op de verblijfsnota van de accommodatie of rechtstreeks bij de aanbieder:
+    // wel in het programma, niet op deze factuur (lib/itemHandling).
+    const offInvoiceItems = items.filter(
+      (item) => item.block_type !== "self_arranged" && item.status !== "cancelled" && billingRouteOf(item) !== "bureau"
     );
     const selfArrangedItems = items.filter(
       (item) => item.block_type === "self_arranged" && item.status !== "cancelled"
@@ -186,6 +192,7 @@ export const PriceSummaryCard = ({
     return {
       orderLines,
       selfArrangedItems,
+      offInvoiceItems,
       pendingCount: spec.unpricedItems.length,
       hasPreliminaryItems: orderLines.some((l) => l.isPreliminary),
       coordinationFee: spec.totals.coordinationFee,
@@ -459,6 +466,21 @@ export const PriceSummaryCard = ({
                 <span className="text-sm">Programmawijzigingen</span>
                 <span className="text-sm whitespace-nowrap">€{formatPrice(summary.revisionFees)}</span>
               </div>
+            </div>
+          )}
+
+          {/* Buiten deze factuur: verblijfsnota of rechtstreeks bij de aanbieder */}
+          {summary.offInvoiceItems.length > 0 && (
+            <div className="py-2.5">
+              <p className="font-medium text-muted-foreground uppercase text-eyebrow mb-1">Niet op deze factuur</p>
+              {summary.offInvoiceItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between py-0.5">
+                  <span className="text-sm text-muted-foreground">{item.block_name}</span>
+                  <span className="text-xs text-muted-foreground italic">
+                    {billingRouteOf(item) === "partner_stay_invoice" ? "op de nota van de accommodatie" : "rechtstreeks bij de aanbieder"}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
 

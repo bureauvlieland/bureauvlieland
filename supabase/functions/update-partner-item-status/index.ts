@@ -1,5 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isConfirmOnlyItem, isInformationalItem, requiresPartnerQuote } from "../_shared/itemHandling.ts";
 import { 
   getRenderedTemplate, 
   sanitizeHtml, 
@@ -244,7 +245,10 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (status === "confirmed" && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
+    // Een meegegeven prijs moet positief zijn. Óf er een prijs vereist is,
+    // hangt af van de afhandeling van het onderdeel (zie verderop, na het
+    // laden van het item).
+    if (status === "confirmed" && quotedPrice !== undefined && quotedPrice !== null && quotedPrice <= 0) {
       return new Response(
         JSON.stringify({ error: "Quoted price is required when confirming" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -292,6 +296,30 @@ export const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Afhandeling (zie _shared/itemHandling): alleen een offerte-onderdeel
+    // vraagt een prijs bij bevestigen. Een bevestiging-onderdeel is één klik,
+    // een mededeling kent helemaal geen partnerreactie.
+    const needsQuote = requiresPartnerQuote(item);
+    const confirmOnly = isConfirmOnlyItem(item);
+    if (isInformationalItem(item)) {
+      return new Response(
+        JSON.stringify({ error: "Dit onderdeel is ter kennisgeving; er wordt geen reactie verwacht." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (confirmOnly && status !== "confirmed" && status !== "unavailable") {
+      return new Response(
+        JSON.stringify({ error: "Dit onderdeel vraagt alleen een bevestiging." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (status === "confirmed" && needsQuote && (quotedPrice === undefined || quotedPrice === null || quotedPrice <= 0)) {
+      return new Response(
+        JSON.stringify({ error: "Quoted price is required when confirming" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const oldStatus = item.status;
 
     const isPriceAck = status === "acknowledge_price_change";
@@ -307,7 +335,7 @@ export const handler = async (req: Request): Promise<Response> => {
       updated_at: new Date().toISOString(),
     };
 
-    if (status === "confirmed" && quotedPrice !== undefined) {
+    if (status === "confirmed" && needsQuote && quotedPrice !== undefined) {
       updateData.quoted_price = quotedPrice;
       updateData.quoted_at = new Date().toISOString();
       updateData.quoted_notes = quotedNotes || null;
@@ -412,6 +440,8 @@ export const handler = async (req: Request): Promise<Response> => {
 
     // Resolve any pending partner_reminder todos for this item
     if (status === "confirmed" || status === "unavailable" || status === "alternative") {
+      // (voor een bevestiging-onderdeel is er niets te beoordelen: alleen de
+      // herinnering sluiten, geen beoordelingstaak voor het bureau)
       await supabase
         .from("admin_todos")
         .update({
@@ -436,7 +466,7 @@ export const handler = async (req: Request): Promise<Response> => {
         .neq("status", "done")
         .maybeSingle();
 
-      if (!existingStatusTodo) {
+      if (!existingStatusTodo && !(confirmOnly && status === "confirmed")) {
         await supabase.from("admin_todos").insert({
           title: `Partner ${partner.name} reageert op "${item.block_name}" — ${statusLabel}`,
           description: `Partner ${partner.name} heeft "${item.block_name}" ${statusLabel} voor ${programRequest.customer_name}.${quotedPrice ? ` Prijs: €${quotedPrice.toFixed(2)}` : ''}${statusNote ? ` Opmerking: ${statusNote}` : ''}`,
@@ -694,7 +724,10 @@ export const handler = async (req: Request): Promise<Response> => {
 
 
     const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
-    if (validEmailStatuses.includes(status)) {
+    // Een bevestiging zonder offerte vraagt geen akkoord van de klant; die
+    // krijgt er dus ook geen statusmail over. "Niet beschikbaar" wel.
+    const skipCustomerEmail = confirmOnly && status === "confirmed";
+    if (validEmailStatuses.includes(status) && !skipCustomerEmail) {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       

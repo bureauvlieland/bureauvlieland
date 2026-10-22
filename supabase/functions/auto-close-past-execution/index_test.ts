@@ -235,3 +235,36 @@ Deno.test("runAutoClose normaliseert projecten die al klaar voor facturatie zijn
   assertEquals(readyItem.status, "confirmed");
   assertEquals(readyItem.auto_closed_reason, "auto_past_execution");
 });
+
+Deno.test("runAutoClose zet onderdelen zonder offertetraject op uitgevoerd, niet op afgesloten", async () => {
+  const store = seed();
+  store.program_request_items.push(
+    // Bevestiging-onderdeel dat de partner bevestigd heeft → uitgevoerd, geen historie
+    { id: "item-confirm-ok", request_id: "past-1", status: "confirmed", partner_handling: "confirm", block_name: "Diner Bravoure", auto_closed_reason: null },
+    // Bevestiging-onderdeel dat nooit bevestigd is → toch uitgevoerd, met stille historie
+    { id: "item-confirm-open", request_id: "past-1", status: "pending", partner_handling: "confirm", block_name: "Lunch op het terras", auto_closed_reason: null },
+    // Mededeling → uitgevoerd
+    { id: "item-inform", request_id: "past-1", status: "confirmed", partner_handling: "inform", block_name: "Groep arriveert 15:00", auto_closed_reason: null },
+    // Toekomstig confirm-onderdeel blijft staan
+    { id: "item-confirm-future", request_id: "future-1", status: "pending", partner_handling: "confirm", block_name: "Diner", auto_closed_reason: null },
+  );
+  const client = buildClient(store);
+  const res = await runAutoClose(client, { now: NOW });
+
+  assertEquals(res.items_executed_no_quote, 3);
+  // De offerte-telling blijft zoals in de basistest: confirm/inform tellen daar niet mee
+  assertEquals(res.items_confirmed, 2);
+  assertEquals(res.items_marked_handled, 1);
+
+  const byId = (id: string) => store.program_request_items.find((i) => i.id === id)!;
+  for (const id of ["item-confirm-ok", "item-confirm-open", "item-inform"]) {
+    assertEquals(byId(id).status, "executed", `${id} op uitgevoerd`);
+    assertEquals(byId(id).auto_closed_reason, null, `${id} niet als 'afgesloten (automatisch)' gemarkeerd`);
+    assertEquals(typeof byId(id).executed_at, "string");
+  }
+  assertEquals(byId("item-confirm-future").status, "pending");
+
+  const history = (store.program_request_history ?? []).filter((h) => h.item_id === "item-confirm-open");
+  assertEquals(history.length, 1, "alleen het niet-bevestigde onderdeel krijgt een historieregel");
+  assertEquals((store.program_request_history ?? []).some((h) => h.item_id === "item-confirm-ok"), false);
+});

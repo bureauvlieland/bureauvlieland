@@ -6,6 +6,11 @@
 // Wat er gebeurt per project (past_execution én niet cancelled, niet fully_invoiced):
 //  1. program_request_items met status 'pending', 'alternative' of 'counter_proposed'
 //     → status='confirmed', auto_closed_reason='auto_past_execution'
+//  1b. onderdelen zonder offertetraject (partner_handling 'confirm'/'inform',
+//     zie _shared/itemHandling) → status='executed'. Daar valt niets te
+//     beoordelen of te factureren; een niet-bevestigd confirm-onderdeel krijgt
+//     een stille notitie in de projecthistorie, de partner wordt niet meer
+//     lastiggevallen.
 //  2. accommodation_quotes met status 'pending'/'submitted' voor deze aanvraag
 //     → status='expired', auto_closed_reason='auto_past_execution'
 //  3. admin_todos met auto_type in de whitelist (pre-executie) → status='done',
@@ -46,6 +51,8 @@ export interface AutoCloseResult {
   projects_past_execution: number;
   items_confirmed: number;
   items_marked_handled: number;
+  /** confirm/inform-onderdelen die op uitgevoerd zijn gezet */
+  items_executed_no_quote: number;
   quotes_expired: number;
   todos_closed: number;
   projects_marked_ready_for_invoice: number;
@@ -90,6 +97,7 @@ export async function runAutoClose(
     projects_past_execution: 0,
     items_confirmed: 0,
     items_marked_handled: 0,
+    items_executed_no_quote: 0,
     quotes_expired: 0,
     todos_closed: 0,
     projects_marked_ready_for_invoice: 0,
@@ -124,14 +132,73 @@ export async function runAutoClose(
 
   const ids = pastProjects.map((p) => p.id);
 
+  // 1b. onderdelen zonder offertetraject → executed
+  {
+    const { data: noQuoteItems, error } = await supabase
+      .from("program_request_items")
+      .select("id, request_id, status, block_name, partner_handling")
+      .in("request_id", ids)
+      .in("partner_handling", ["confirm", "inform"])
+      .in("status", ["pending", "alternative", "counter_proposed", "confirmed", "accepted"]);
+    if (error) result.errors.push({ project_id: "*", error: `load no-quote items: ${error.message}` });
+    else if (noQuoteItems && noQuoteItems.length) {
+      const rows = noQuoteItems as Array<{ id: string; request_id: string; status: string; block_name: string; partner_handling: string }>;
+      result.items_executed_no_quote = rows.length;
+      if (!dryRun) {
+        const unconfirmed = rows.filter((r) => r.partner_handling === "confirm" && r.status !== "confirmed" && r.status !== "accepted");
+        const confirmedOrInform = rows.filter((r) => !unconfirmed.some((u) => u.id === r.id));
+        if (confirmedOrInform.length > 0) {
+          const { error: uErr } = await supabase
+            .from("program_request_items")
+            .update({
+              status: "executed",
+              executed_at: now.toISOString(),
+              status_updated_at: now.toISOString(),
+              status_updated_by: "auto_close_past_execution",
+              status_note: "Automatisch op uitgevoerd gezet na afloop; geen offerte of partnerfactuur van toepassing.",
+            })
+            .in("id", confirmedOrInform.map((r) => r.id));
+          if (uErr) result.errors.push({ project_id: "*", error: `execute no-quote items: ${uErr.message}` });
+        }
+        if (unconfirmed.length > 0) {
+          const { error: uErr } = await supabase
+            .from("program_request_items")
+            .update({
+              status: "executed",
+              executed_at: now.toISOString(),
+              status_updated_at: now.toISOString(),
+              status_updated_by: "auto_close_past_execution",
+              status_note: "Niet bevestigd door de partner; automatisch op uitgevoerd gezet na afloop.",
+            })
+            .in("id", unconfirmed.map((r) => r.id));
+          if (uErr) result.errors.push({ project_id: "*", error: `execute unconfirmed no-quote items: ${uErr.message}` });
+          else {
+            const { error: hErr } = await supabase.from("program_request_history").insert(
+              unconfirmed.map((r) => ({
+                request_id: r.request_id,
+                item_id: r.id,
+                action: `Onderdeel "${r.block_name}" is niet bevestigd door de partner en na afloop automatisch op uitgevoerd gezet`,
+                actor: "system",
+                actor_name: "auto-close-past-execution",
+                new_value: { status: "executed", partner_handling: "confirm", confirmed_by_partner: false },
+              })),
+            );
+            if (hErr) result.errors.push({ project_id: "*", error: `history no-quote: ${hErr.message}` });
+          }
+        }
+      }
+    }
+  }
+
   // 1. items → confirmed
   {
     const { data: items, error } = await supabase
       .from("program_request_items")
-      .select("id, request_id, status, provider_id, block_type, block_category, quoted_at, partner_price_change_acknowledged_at")
+      .select("id, request_id, status, provider_id, block_type, block_category, quoted_at, partner_price_change_acknowledged_at, partner_handling")
       .in("request_id", ids)
       .in("status", ["pending", "alternative", "counter_proposed"])
-      .is("auto_closed_reason", null);
+      .is("auto_closed_reason", null)
+      .or("partner_handling.is.null,partner_handling.eq.quote");
     if (error) result.errors.push({ project_id: "*", error: `load items: ${error.message}` });
     else if (items && items.length && !dryRun) {
       for (const item of items as Array<{ status: string }>) {

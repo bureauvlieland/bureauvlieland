@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Sparkles } from "lucide-react";
+import { ItemHandlingFields } from "./ItemHandlingFields";
+import type { BillingRoute, PartnerHandling } from "@/lib/itemHandling";
 
 interface Props {
   isOpen: boolean;
@@ -29,7 +31,10 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
   const [partnerId, setPartnerId] = useState<string>("");
   const [dayIndex, setDayIndex] = useState<string>("0");
   const [preferredTime, setPreferredTime] = useState<string>("");
+  const [handling, setHandling] = useState<PartnerHandling>("quote");
+  const [billingRoute, setBillingRoute] = useState<BillingRoute>("bureau");
   const [submitting, setSubmitting] = useState(false);
+  const needsQuote = handling === "quote";
 
   useEffect(() => {
     if (!isOpen) return;
@@ -49,11 +54,13 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
     setPartnerId("");
     setDayIndex("0");
     setPreferredTime("");
+    setHandling("quote");
+    setBillingRoute("bureau");
   };
 
   const handleCreate = async () => {
     if (!title.trim()) return toast.error("Titel is verplicht");
-    if (!briefing.trim()) return toast.error("Briefing voor de partner is verplicht");
+    if (needsQuote && !briefing.trim()) return toast.error("Briefing voor de partner is verplicht");
     if (!partnerId) return toast.error("Kies een partner");
 
     const partner = partners.find((p) => p.id === partnerId);
@@ -71,14 +78,18 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
         provider_name: partner.name,
         day_index: Number(dayIndex),
         preferred_time: preferredTime || null,
-        status: "pending",
+        // Een mededeling wacht op niemand: direct 'confirmed', zodat hij nergens
+        // als openstaande partneractie telt (zie lib/itemHandling).
+        status: handling === "inform" ? "confirmed" : "pending",
         price_type: "total",
         is_custom_quote: true,
-        custom_briefing: briefing.trim(),
+        custom_briefing: briefing.trim() || null,
+        partner_handling: handling,
+        billing_route: billingRoute,
         pending_added: true,
       } as any);
       if (error) throw error;
-      toast.success("Maatwerk-item aangemaakt", {
+      toast.success(handling === "quote" ? "Maatwerk-item aangemaakt" : handling === "confirm" ? "Bevestiging-onderdeel aangemaakt" : "Mededeling aangemaakt", {
         description: "Publiceer & notificeer de partner via de projectacties.",
       });
       reset();
@@ -101,8 +112,8 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
             Maatwerk-item toevoegen
           </SheetTitle>
           <SheetDescription>
-            Voor onderdelen die geen bestaande bouwsteen hebben. De partner ontvangt de briefing
-            en dient een gespecificeerde offerte in.
+            Voor onderdelen die geen bestaande bouwsteen hebben. Kies of de partner een offerte
+            indient, alleen bevestigt, of het alleen te horen krijgt.
           </SheetDescription>
         </SheetHeader>
 
@@ -153,17 +164,39 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
             </Select>
           </div>
 
+          <ItemHandlingFields
+            idPrefix="cm"
+            handling={handling}
+            billingRoute={billingRoute}
+            onHandlingChange={(v) => {
+              setHandling(v);
+              // Een offerte landt op de bureaufactuur; voor bevestiging en
+              // mededeling is de verblijfsnota van de partner de gangbare route.
+              if (v === "quote") setBillingRoute("bureau");
+              else if (billingRoute === "bureau") setBillingRoute("partner_stay_invoice");
+            }}
+            onBillingRouteChange={setBillingRoute}
+          />
+
           <div className="space-y-2">
-            <Label htmlFor="cm-brief">Briefing voor partner</Label>
+            <Label htmlFor="cm-brief">{needsQuote ? "Briefing voor partner" : "Toelichting voor partner (optioneel)"}</Label>
             <Textarea
               id="cm-brief"
-              rows={8}
+              rows={needsQuote ? 8 : 4}
               value={briefing}
               onChange={(e) => setBriefing(e.target.value)}
-              placeholder="Beschrijf zo concreet mogelijk wat je nodig hebt (aantallen, tijd, locatie, wensen)."
+              placeholder={
+                needsQuote
+                  ? "Beschrijf zo concreet mogelijk wat je nodig hebt (aantallen, tijd, locatie, wensen)."
+                  : "Bv. Tafel voor 7 om 19:00, gereserveerd op naam Swagerman. Rekening op de verblijfsnota."
+              }
             />
             <p className="text-xs text-muted-foreground">
-              De partner voegt daarna zelf offerteregels toe (omschrijving, aantal, prijs incl. BTW, BTW-tarief).
+              {needsQuote
+                ? "De partner voegt daarna zelf offerteregels toe (omschrijving, aantal, prijs incl. BTW, BTW-tarief)."
+                : handling === "confirm"
+                  ? "De partner ziet dit bij het onderdeel en bevestigt met één klik. Geen prijs, geen offerte."
+                  : "De partner ziet dit bij het onderdeel. Er wordt geen reactie verwacht."}
             </p>
           </div>
 
@@ -171,7 +204,7 @@ export function AdminAddCustomItemSheet({ isOpen, onClose, requestId, selectedDa
             <Button variant="outline" onClick={onClose} disabled={submitting}>Annuleren</Button>
             <Button onClick={handleCreate} disabled={submitting}>
               {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Maatwerk-item aanmaken
+              {needsQuote ? "Maatwerk-item aanmaken" : handling === "confirm" ? "Bevestiging-onderdeel aanmaken" : "Mededeling aanmaken"}
             </Button>
           </div>
         </div>

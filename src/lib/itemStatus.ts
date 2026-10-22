@@ -11,6 +11,7 @@
 import type { ProgramRequestItem } from "@/types/programRequest";
 import { hasOpenAdminPriceChange, priceChangeRequiresReapproval } from "@/lib/portalPricing";
 import { isBureauItem } from "@/lib/bureauItem";
+import { partnerHandlingOf } from "@/lib/itemHandling";
 
 
 export type ItemDisplayStatus =
@@ -25,7 +26,10 @@ export type ItemDisplayStatus =
   | "geannuleerd"
   | "niet_beschikbaar"
   | "self_arranged"
-  | "afgesloten_automatisch";
+  | "afgesloten_automatisch"
+  | "bevestiging_gevraagd"
+  | "bevestigd"
+  | "ter_kennisgeving";
 
 /**
  * Toon van een status voor de klant (woordenlijst klant, plan klantportaal):
@@ -70,7 +74,8 @@ export interface ItemDisplayStatusInfo {
     | "CheckCircle2"
     | "Ban"
     | "XCircle"
-    | "ExternalLink";
+    | "ExternalLink"
+    | "Info";
 }
 
 export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatusInfo> = {
@@ -229,6 +234,50 @@ export const itemDisplayStatusConfig: Record<ItemDisplayStatus, ItemDisplayStatu
     bgColor: "bg-amber-100 dark:bg-amber-950/50",
     icon: "ExternalLink",
   },
+  // Onderdelen zonder offertetraject (lib/itemHandling): de partner bevestigt
+  // alleen, of krijgt het alleen te horen. Geen prijs, geen klant-akkoord.
+  bevestiging_gevraagd: {
+    adminLabel: "Wacht op bevestiging aanbieder",
+    customerLabel: "Geregeld",
+    partnerLabel: "Bevestiging gevraagd",
+    adminTooltip: "Doorgegeven aan de aanbieder; die hoeft alleen te bevestigen dat het geregeld is. Geen offerte.",
+    customerTooltip: "Bureau Vlieland heeft dit voor u geregeld.",
+    partnerTooltip: "Bureau Vlieland heeft dit onderdeel bij u doorgegeven. Bevestig dat het geregeld is; een prijs of offerte is niet nodig.",
+    actor: "partner",
+    customerTone: "success",
+    partnerTone: "warning",
+    color: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-950/50",
+    icon: "Clock",
+  },
+  bevestigd: {
+    adminLabel: "Bevestigd door aanbieder",
+    customerLabel: "Geregeld",
+    partnerLabel: "Bevestigd",
+    adminTooltip: "De aanbieder heeft bevestigd dat dit geregeld is. Geen offerte of beoordeling nodig.",
+    customerTooltip: "Bureau Vlieland heeft dit voor u geregeld en de aanbieder heeft het bevestigd.",
+    partnerTooltip: "U heeft bevestigd dat dit geregeld is. Er is verder niets nodig.",
+    actor: "geen",
+    customerTone: "success",
+    partnerTone: "success",
+    color: "text-green-700 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-950/50",
+    icon: "CheckCircle",
+  },
+  ter_kennisgeving: {
+    adminLabel: "Ter kennisgeving",
+    customerLabel: "Geregeld",
+    partnerLabel: "Ter kennisgeving",
+    adminTooltip: "Mededeling aan de aanbieder. Er wordt geen reactie of offerte verwacht.",
+    customerTooltip: "Bureau Vlieland heeft dit voor u geregeld.",
+    partnerTooltip: "Dit onderdeel is ter informatie. U hoeft niets te doen.",
+    actor: "geen",
+    customerTone: "success",
+    partnerTone: "neutral",
+    color: "text-slate-600 dark:text-slate-400",
+    bgColor: "bg-slate-100 dark:bg-slate-900/50",
+    icon: "Info",
+  },
   afgesloten_automatisch: {
     adminLabel: "Afgesloten (automatisch)",
     customerLabel: "Afgesloten",
@@ -307,6 +356,19 @@ export function deriveItemDisplayStatus(
   if (item.status === "cancelled") return "geannuleerd";
   if (item.status === "executed" || item.status === "invoiced") return "uitgevoerd";
   if (item.status === "unavailable") return "niet_beschikbaar";
+
+  // Geen offertetraject: bevestiging of mededeling. Hier bestaat geen
+  // klant-akkoord, prijswijziging of automatische afsluiting; na de datum
+  // zet auto-close ze op "executed" en komen ze hierboven al uit op uitgevoerd.
+  const handling = partnerHandlingOf(item as unknown as { partner_handling?: string | null });
+  if (handling === "inform") return ctx.isPostExecution ? "uitgevoerd" : "ter_kennisgeving";
+  if (handling === "confirm") {
+    if (ctx.isPostExecution) return "uitgevoerd";
+    return item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed"
+      ? "bevestiging_gevraagd"
+      : "bevestigd";
+  }
+
   if ((item as any).auto_closed_reason === "auto_past_execution") return "afgesloten_automatisch";
   // Klant heeft een andere tijd/datum voorgesteld: de aanbieder is aan zet,
   // ongeacht een eerder gegeven klant-akkoord.
