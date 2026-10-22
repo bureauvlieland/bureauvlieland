@@ -1,4 +1,5 @@
 import { deriveItemDisplayStatusLoose, type CustomerStatusTone, type ItemDisplayStatus } from "./itemStatus";
+import { expectsPartnerInvoice } from "./itemHandling";
 import { partnerQuoteStatus } from "./accommodationQuoteStatus";
 
 /**
@@ -43,6 +44,7 @@ export const PARTNER_TURN_STATUSES: ReadonlySet<ItemDisplayStatus> = new Set([
   "tegenvoorstel_klant",
   "klant_akkoord_wacht_partner",
   "geaccepteerd",
+  "bevestiging_gevraagd",
 ]);
 /** Statussen waarbij de klant of het bureau aan zet is. */
 export const OTHER_TURN_STATUSES: ReadonlySet<ItemDisplayStatus> = new Set(["wacht_op_klant", "prijs_gewijzigd", "klant_akkoord_bureau"]);
@@ -52,6 +54,8 @@ export interface PartnerProjectItemInput {
   invoiced_number?: string | null;
   partner_dismissed_at?: string | null;
   is_concept?: boolean;
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 export interface PartnerProjectRequestInput {
@@ -84,7 +88,9 @@ export function derivePartnerProjectStatus(items: PartnerProjectItemInput[], req
 
   const executed = live.filter((d) => d.status === "uitgevoerd");
   if (executed.length === live.length) {
-    const open = executed.filter((d) => !d.item.invoiced_number && !d.item.partner_dismissed_at);
+    // Onderdelen op de verblijfsnota of rechtstreeks bij de klant (lib/itemHandling)
+    // verwachten geen partnerfactuur en houden het project niet op "te factureren".
+    const open = executed.filter((d) => !d.item.invoiced_number && !d.item.partner_dismissed_at && expectsPartnerInvoice(d.item));
     if (open.length > 0) return partnerProjectStatusInfo("te_factureren");
     return partnerProjectStatusInfo(executed.some((d) => d.item.invoiced_number) ? "gefactureerd" : "afgesloten");
   }

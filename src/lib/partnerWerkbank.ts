@@ -2,6 +2,7 @@ import type { PartnerDashboardData } from "@/types/partner";
 import { hasOpenAdminPriceChange, getNumberOfDays } from "@/lib/portalPricing";
 import { canPartnerDismissInvoiceItem } from "@/lib/partnerInvoiceDismiss";
 import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
+import { isConfirmOnlyItem, isInformationalItem } from "@/lib/itemHandling";
 import { formatDurationWindow, getEffectiveTime } from "@/lib/timeUtils";
 
 /**
@@ -60,6 +61,15 @@ export function buildWerkbankRows(data: PartnerDashboardData): WerkbankRow[] {
           ? `De klant wil liever ${wanted}: ga akkoord of stel een andere tijd voor.`
           : "De klant stelt een andere tijd voor: reageer.",
       });
+      return;
+    }
+    // Mededelingen vragen niets; een bevestiging is één klik zonder offerte
+    // (lib/itemHandling). Daarna is er voor beide geen factuurstap.
+    if (isInformationalItem(i)) return;
+    if (isConfirmOnlyItem(i)) {
+      if (i.status === "pending" || i.status === "alternative") {
+        rows.push({ ...base, bucket: "review", hint: "Bevestig dat dit geregeld is (geen offerte nodig)." });
+      }
       return;
     }
     if (i.status === "pending") {

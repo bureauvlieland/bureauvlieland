@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BILLING_ROUTE_LABELS, billingRouteOf } from "@/lib/itemHandling";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -208,6 +209,16 @@ export const FinancialOverviewCard = ({
                     requestId={requestId}
                   />
                 </div>
+              </div>
+            ))}
+
+            {spec.offInvoiceItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between text-sm gap-2 text-muted-foreground">
+                <div className="flex items-center gap-2 min-w-0">
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[180px]">{item.block_name}</span>
+                </div>
+                <span className="whitespace-nowrap text-xs italic">{BILLING_ROUTE_LABELS[billingRouteOf(item)].admin}</span>
               </div>
             ))}
 

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { ArrowLeftRight, ChevronDown, ChevronUp, Clock, FileText, Loader2, MapPin, Play, Users } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, ChevronUp, Clock, FileText, Loader2, MapPin, Play, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice, Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
 import type { PartnerItem } from "@/types/partner";
 import { itemDisplayStatusConfig, deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
+import { isConfirmOnlyItem, isInformationalItem, partnerBillingNote } from "@/lib/itemHandling";
 import { getDisplayLineTotal, getNumberOfDays, hasOpenAdminPriceChange, isPerDayItem, isPerPersonItem } from "@/lib/portalPricing";
 import { formatDurationWindow, formatTimeHHmm } from "@/lib/timeUtils";
 import { formatEuro } from "@/lib/formatEuro";
@@ -48,7 +49,14 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdat
 
   const hasCustomerAccepted = !!item.customer_accepted_at || !!item.customer_approved_at;
   const effectiveStatus = item.status === "confirmed" && hasCustomerAccepted ? "accepted" : item.status;
-  const canRespond = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
+  // Geen offertetraject (lib/itemHandling): een mededeling vraagt niets, een
+  // bevestiging alleen één klik zonder prijs. De reactiesheet is voor offertes.
+  const informational = isInformationalItem(item);
+  const confirmOnly = isConfirmOnlyItem(item);
+  const billingNote = partnerBillingNote(item);
+  const isOpenForResponse = item.status === "pending" || item.status === "alternative" || item.status === "counter_proposed";
+  const canConfirmOnly = confirmOnly && isOpenForResponse;
+  const canRespond = !informational && !confirmOnly && isOpenForResponse;
   const canInvoice = canPartnerInvoiceItem(item, request);
   const awaitingTerms = isAwaitingInvoicingRelease(item, request);
   const canMarkExecuted = effectiveStatus === "accepted" && !!item.quoted_price;
@@ -135,7 +143,7 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdat
               <span>{item.location_address}</span>
             </p>
           )}
-          {lineTotal != null && (
+          {lineTotal != null && !informational && !confirmOnly && (
             <p className="mt-1.5 text-sm">
               <span className="font-semibold">{formatEuro(lineTotal)}</span>
               <span className="ml-1 text-xs text-muted-foreground">totaal{item.quoted_price == null ? " · verwacht" : ""}</span>
@@ -181,7 +189,14 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdat
           {awaitingTerms && (
             <p className="mt-2 text-xs text-muted-foreground">Factureren kan zodra de klant de voorwaarden heeft getekend of Bureau Vlieland het project heeft vrijgegeven.</p>
           )}
-          {item.auto_closed_reason === "auto_past_execution" && (
+          {(informational || confirmOnly) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {informational ? "Ter kennisgeving, u hoeft niets te doen." : canConfirmOnly ? "Bevestig dat dit geregeld is; een prijs of offerte is niet nodig." : null}
+              {billingNote && (informational || canConfirmOnly) ? " " : null}
+              {billingNote}
+            </p>
+          )}
+          {!informational && !confirmOnly && item.auto_closed_reason === "auto_past_execution" && (
             <p className="mt-2 text-xs text-muted-foreground">
               De datum is verstreken zonder afronding. Controleer of dit onderdeel nog gefactureerd moet worden, of neem contact op met Bureau Vlieland als de status niet klopt.
             </p>
@@ -192,6 +207,12 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdat
             {canRespond && (
               <Button size="sm" onClick={onOpen}>
                 {item.status === "alternative" ? "Voorstel aanpassen" : "Reageren"}
+              </Button>
+            )}
+            {canConfirmOnly && (
+              <Button size="sm" disabled={busy} onClick={() => void run(() => onStatusUpdate("confirmed"))}>
+                {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+                Bevestigen
               </Button>
             )}
             {!canRespond && canInvoice && (

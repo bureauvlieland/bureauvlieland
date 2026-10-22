@@ -38,6 +38,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { LocationPicker } from "@/components/admin/LocationPicker";
 import { resolveAutoTodo } from "@/lib/autoTodoCreator";
+import { ItemHandlingFields } from "@/components/admin/ItemHandlingFields";
+import { billingRouteOf, partnerHandlingOf, type BillingRoute, type PartnerHandling } from "@/lib/itemHandling";
 import { getPriceTypeSuffix } from "@/lib/portalPricing";
 import { useAutoSaveField } from "@/hooks/useAutoSaveField";
 import { FieldSaveIndicator } from "@/components/admin/FieldSaveIndicator";
@@ -80,6 +82,8 @@ interface ProgramRequestItem {
   pending_marked_for_removal?: boolean | null;
   is_custom_quote?: boolean | null;
   custom_briefing?: string | null;
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 interface AdminEditActivitySheetProps {
@@ -124,6 +128,11 @@ export const AdminEditActivitySheet = ({
     item?.pending_partner_instructions ?? item?.partner_instructions ?? ""
   );
   const [customBriefing, setCustomBriefing] = useState(item?.custom_briefing ?? "");
+  // Afhandeling en facturatieroute (lib/itemHandling) worden direct opgeslagen:
+  // ze veranderen wat de partner mag doen, niet wat de klant ziet.
+  const [handling, setHandling] = useState<PartnerHandling>(partnerHandlingOf(item));
+  const [billingRoute, setBillingRoute] = useState<BillingRoute>(billingRouteOf(item));
+  const [handlingSaving, setHandlingSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [locationLat, setLocationLat] = useState<number | null>(item?.location_lat ?? null);
@@ -208,6 +217,36 @@ export const AdminEditActivitySheet = ({
     (s) => s.status === "saving" || s.isDirty,
   );
 
+  const saveHandling = async (next: { handling?: PartnerHandling; billingRoute?: BillingRoute }) => {
+    if (!item) return;
+    const nextHandling = next.handling ?? handling;
+    const nextBilling = next.billingRoute ?? billingRoute;
+    setHandling(nextHandling);
+    setBillingRoute(nextBilling);
+    setHandlingSaving(true);
+    try {
+      const patch: Record<string, unknown> = {
+        partner_handling: nextHandling,
+        billing_route: nextBilling,
+        updated_at: new Date().toISOString(),
+      };
+      // Een mededeling wacht op niemand; een onderdeel dat terug naar offerte
+      // of bevestiging gaat, moet de partner wél weer kunnen beantwoorden.
+      if (nextHandling === "inform" && item.status === "pending") patch.status = "confirmed";
+      if (nextHandling !== "inform" && partnerHandlingOf(item) === "inform" && item.status === "confirmed") patch.status = "pending";
+      const { error } = await supabase.from("program_request_items").update(patch as never).eq("id", item.id);
+      if (error) throw error;
+      onSuccess();
+    } catch (e: unknown) {
+      console.error(e);
+      toast.error("Kon afhandeling niet opslaan", { description: e instanceof Error ? e.message : undefined });
+      setHandling(partnerHandlingOf(item));
+      setBillingRoute(billingRouteOf(item));
+    } finally {
+      setHandlingSaving(false);
+    }
+  };
+
   // Fetch partners for executor dropdown
   useEffect(() => {
     const fetchPartners = async () => {
@@ -239,6 +278,8 @@ export const AdminEditActivitySheet = ({
       setLocationLng(item.location_lng ?? null);
       setLocationAddress(item.location_address || "");
       setCustomBriefing(item.custom_briefing ?? "");
+      setHandling(partnerHandlingOf(item));
+      setBillingRoute(billingRouteOf(item));
     }
   }, [item]);
 
@@ -578,6 +619,21 @@ export const AdminEditActivitySheet = ({
               <p className="text-xs text-amber-800/80">
                 De partner ziet deze briefing in zijn offerte-editor. Fallback voor de klant als er nog geen "Beschrijving voor klant" is ingevuld.
               </p>
+            </div>
+          )}
+
+          {/* Afhandeling en facturatie (alleen voor partneronderdelen) */}
+          {item && item.provider_id !== "bureau" && item.provider_id !== "bureau-vlieland" && (
+            <div className="space-y-2 rounded-md border p-3">
+              <ItemHandlingFields
+                idPrefix="edit"
+                handling={handling}
+                billingRoute={billingRoute}
+                disabled={handlingSaving}
+                onHandlingChange={(v) => void saveHandling({ handling: v })}
+                onBillingRouteChange={(v) => void saveHandling({ billingRoute: v })}
+              />
+              <p className="text-xs text-muted-foreground">Wordt direct opgeslagen.</p>
             </div>
           )}
 

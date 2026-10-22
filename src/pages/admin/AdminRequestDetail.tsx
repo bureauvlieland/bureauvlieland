@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { BILLING_ROUTE_LABELS, PARTNER_HANDLING_LABELS, billingRouteOf, partnerHandlingOf } from "@/lib/itemHandling";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
@@ -327,6 +328,8 @@ interface ProgramRequestItem {
   custom_briefing?: string | null;
   partner_dismissed_at?: string | null;
   partner_dismissed_reason?: string | null;
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 
@@ -2371,6 +2374,22 @@ const AdminRequestDetail = () => {
                                           {item.is_custom_quote && (
                                             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
                                               Maatwerk
+                                            </span>
+                                          )}
+                                          {partnerHandlingOf(item) !== "quote" && (
+                                            <span
+                                              className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-200"
+                                              title={PARTNER_HANDLING_LABELS[partnerHandlingOf(item)].help}
+                                            >
+                                              {PARTNER_HANDLING_LABELS[partnerHandlingOf(item)].admin}
+                                            </span>
+                                          )}
+                                          {billingRouteOf(item) !== "bureau" && (
+                                            <span
+                                              className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200"
+                                              title={BILLING_ROUTE_LABELS[billingRouteOf(item)].help}
+                                            >
+                                              {BILLING_ROUTE_LABELS[billingRouteOf(item)].admin}
                                             </span>
                                           )}
                                         </div>

@@ -368,6 +368,10 @@ export interface ProgramRequestItem {
   admin_price_notes: string | null;
   partner_instructions?: string | null;
   skip_partner_notification: boolean;
+  /** Wat de partner moet doen: quote (offerte), confirm (alleen bevestigen), inform (ter kennisgeving). Zie lib/itemHandling. */
+  partner_handling?: string | null;
+  /** Waar de kosten landen: bureau, partner_stay_invoice, customer_direct. Zie lib/itemHandling. */
+  billing_route?: string | null;
   // Price type snapshot from building block
   price_type: string | null;
   // External URL for self-arranged items

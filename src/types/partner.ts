@@ -96,6 +96,10 @@ export interface PartnerItem {
   custom_briefing?: string | null;
   partner_dismissed_at?: string | null;
   partner_dismissed_reason?: string | null;
+  /** quote | confirm | inform, zie lib/itemHandling */
+  partner_handling?: string | null;
+  /** bureau | partner_stay_invoice | customer_direct, zie lib/itemHandling */
+  billing_route?: string | null;
   program_requests: {
     id: string;
     customer_name: string;

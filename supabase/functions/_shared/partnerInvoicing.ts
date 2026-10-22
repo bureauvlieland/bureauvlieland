@@ -14,6 +14,8 @@
 // factureerbaar, ook zonder los klantakkoord op het onderdeel: de uitvoering
 // is dan geweest of het bureau heeft bewust vrijgegeven.
 
+import { expectsPartnerInvoice } from "./itemHandling.ts";
+
 export const INVOICING_RELEASED_COMPLETION_STATUSES = [
   "ready_for_invoice",
   "partially_invoiced",
@@ -30,6 +32,9 @@ export interface InvoicingItemLike {
   invoiced_number?: string | null;
   customer_accepted_at?: string | null;
   customer_approved_at?: string | null;
+  /** Zie itemHandling: inform-onderdelen en onderdelen buiten de bureauroute kennen geen partnerfactuur. */
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 /** Heeft het bureau het project vrijgegeven voor facturatie? */
@@ -64,6 +69,7 @@ export function canPartnerInvoiceItem(
   item: InvoicingItemLike,
   req: InvoicingRequestLike | null | undefined,
 ): boolean {
+  if (!expectsPartnerInvoice(item)) return false;
   return !item.invoiced_number && hasInvoiceableStatus(item, req) && isPartnerInvoicingReleased(req);
 }
 
@@ -72,5 +78,6 @@ export function isAwaitingInvoicingRelease(
   item: InvoicingItemLike,
   req: InvoicingRequestLike | null | undefined,
 ): boolean {
+  if (!expectsPartnerInvoice(item)) return false;
   return !item.invoiced_number && hasInvoiceableStatus(item, req) && !isPartnerInvoicingReleased(req);
 }

@@ -11,6 +11,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { expectsPartnerInvoice, partnerBillingNote, partnerHandlingOf } from "../_shared/itemHandling.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -36,6 +37,9 @@ interface ProgramItem {
   skip_partner_notification: boolean;
   customer_approved_at: string | null;
   status: string;
+  /** zie _shared/itemHandling */
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 interface PartnerGroup {
@@ -76,12 +80,27 @@ function generatePartnerNotificationEmail(
 
   const itemsHtml = group.items
     .map((item) => {
+      // Afhandeling zonder offerte (zie _shared/itemHandling): zeg het erbij,
+      // zodat de partner niet op zoek gaat naar een prijsveld.
+      const handling = partnerHandlingOf(item);
+      const handlingLine = handling === "confirm"
+        ? `<div style="color:#555;font-size:13px;">Alleen even bevestigen dat dit geregeld is; een prijs of offerte is niet nodig.</div>`
+        : handling === "inform"
+          ? `<div style="color:#555;font-size:13px;">Ter kennisgeving, je hoeft hier niets mee te doen.</div>`
+          : "";
+      const billing = partnerBillingNote(item);
+      const billingLine = billing ? `<div style="color:#555;font-size:13px;">${sanitizeHtml(billing)}</div>` : "";
       return `<li style="margin-bottom: 12px;">
         <strong>${sanitizeHtml(item.block_name)}</strong>
         ${renderEffectiveTimeLine(item, "Tijd")}
+        ${handlingLine}${billingLine}
       </li>`;
     })
     .join("");
+  // Staat geen enkel onderdeel op de bureaufactuur, dan klopt de standaard
+  // facturatie-alinea niet en laten we hem weg.
+  const anyBureauInvoice = group.items.some((item) => expectsPartnerInvoice(item));
+  const allInform = group.items.every((item) => partnerHandlingOf(item) === "inform");
 
   const customerLabel = sanitizeHtml(program.customer_company || program.customer_name || "");
   const headline = isReminder
@@ -91,7 +110,7 @@ function generatePartnerNotificationEmail(
     ? `<p>Hoi ${sanitizeHtml(group.partnerName)},</p>
        <p>Een vriendelijke <strong>herinnering</strong>: onderstaande aanvraag staat nog open in je partnerportaal en wacht op een reactie.</p>`
     : `<p>Hoi ${sanitizeHtml(group.partnerName)},</p>
-       <p>Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben onderstaande onderdelen definitief in het programma opgenomen en willen je vragen ze te bevestigen via het partnerportaal.</p>`;
+       <p>Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben onderstaande onderdelen definitief in het programma opgenomen${allInform ? " en geven ze hierbij ter kennisgeving aan je door." : " en willen je vragen ze te bevestigen via het partnerportaal."}</p>`;
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -114,12 +133,14 @@ function generatePartnerNotificationEmail(
       </div>
       <div style="text-align:center; margin: 24px 0;">
         <a href="${portalUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600;">
-          Bevestig in partnerportaal →
+          ${allInform ? "Bekijk in partnerportaal →" : "Bevestig in partnerportaal →"}
         </a>
       </div>
-      <p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
+      ${anyBureauInvoice ? `<p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
         <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a> (of upload in het partnerportaal). Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
-      </p>
+      </p>` : `<p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
+        Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
+      </p>`}
       <p style="margin-top: 24px; color:#666; font-size:13px;">
         Met vriendelijke groet,<br><strong>Bureau Vlieland</strong>
       </p>
@@ -180,7 +201,7 @@ export const handler = async (req: Request): Promise<Response> => {
     //    Als item_ids is meegegeven, beperken we tot die subset (per-item versturen).
     let itemsQuery = supabase
       .from("program_request_items")
-      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status, awaiting_customer_for_partner_send")
+      .select("id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, skip_partner_notification, customer_approved_at, status, awaiting_customer_for_partner_send, partner_handling, billing_route")
       .eq("request_id", request_id)
       .neq("status", "cancelled");
 

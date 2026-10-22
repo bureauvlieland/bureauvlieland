@@ -33,6 +33,10 @@ const TONE_BY_STATUS: Record<ItemDisplayStatus, PillTone> = {
   niet_beschikbaar: "danger",
   self_arranged: "neutral",
   afgesloten_automatisch: "neutral",
+  // Geen offertetraject (lib/itemHandling).
+  bevestiging_gevraagd: "warning",
+  bevestigd: "success",
+  ter_kennisgeving: "neutral",
 };
 
 const ACTOR_LABEL: Record<string, string> = {
