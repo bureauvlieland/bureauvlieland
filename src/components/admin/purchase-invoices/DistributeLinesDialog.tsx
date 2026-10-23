@@ -10,13 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Notice, Pill } from "@/components/system";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Scissors, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useMoveLinesToProject,
   usePurchaseInvoiceLinesByInvoice,
+  useSplitInvoiceLines,
   type PurchaseInvoiceLineRow,
 } from "@/hooks/usePurchaseInvoiceLines";
+import { SplitLineEditor } from "./SplitLineEditor";
 import {
   PROJECT_MATCH_LABELS,
   suggestProjectFromText,
@@ -31,7 +33,9 @@ import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
  * docs/plan-inkoopfacturen-doorbelasten.md §3.5). De kop blijft één factuur;
  * elke regel krijgt een project. Suggesties per regel: ons referentienummer of
  * de klantnaam in de regeltekst, en bij overtochten de boekingsreferentie op
- * een onderdeel.
+ * een onderdeel. Eén verzamelregel voor meerdere klanten (Jan van Vlieland:
+ * "arrangementen sept.") kan hier eerst in delen worden geknipt, elk deel op
+ * zijn eigen project.
  */
 
 interface Props {
@@ -51,7 +55,9 @@ export function DistributeLinesDialog({ invoice, onClose }: Props) {
   const { data: lines, isLoading } = usePurchaseInvoiceLinesByInvoice(invoice?.id);
   const { data: projects } = usePickableProjects(open);
   const move = useMoveLinesToProject();
+  const split = useSplitInvoiceLines();
   const [choice, setChoice] = useState<Record<string, string | null>>({});
+  const [splittingId, setSplittingId] = useState<string | null>(null);
 
   // Boekingsreferenties (Doeksen) → onderdeel → project.
   const bookingRefs = useMemo(
@@ -95,6 +101,7 @@ export function DistributeLinesDialog({ invoice, onClose }: Props) {
   useEffect(() => {
     if (!open) {
       setChoice({});
+      setSplittingId(null);
       return;
     }
     if (!lines) return;
@@ -135,6 +142,7 @@ export function DistributeLinesDialog({ invoice, onClose }: Props) {
     const s = suggestions.get(line.id);
     const current = choice[line.id] ?? null;
     const suggestedProject = s ? projects?.find((p) => p.id === s.projectId) : undefined;
+    const splittable = line.charge_status === "open" || line.charge_status === "skipped";
     return (
       <div key={line.id} className="rounded-md border px-3 py-2 text-sm space-y-1.5">
         <div className="flex items-baseline justify-between gap-3">
@@ -156,7 +164,34 @@ export function DistributeLinesDialog({ invoice, onClose }: Props) {
               {line.charge_status === "skipped" ? "Niet doorbelast" : "Al verwerkt"}
             </Pill>
           )}
+          {splittable && splittingId !== line.id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setSplittingId(line.id)}
+              disabled={split.isPending}
+              title="Deze regel in delen knippen, elk deel op een eigen project"
+            >
+              <Scissors className="h-3.5 w-3.5 mr-1" /> Splitsen
+            </Button>
+          )}
         </div>
+        {splittingId === line.id && invoice && (
+          <SplitLineEditor
+            line={line}
+            otherLines={(lines ?? []).filter(
+              (o) => o.id !== line.id && (o.charge_status === "open" || o.charge_status === "skipped"),
+            )}
+            projects={projects}
+            saving={split.isPending}
+            onCancel={() => setSplittingId(null)}
+            onSave={async (splits) => {
+              await split.mutateAsync({ invoiceId: invoice.id, splits });
+              setSplittingId(null);
+            }}
+          />
+        )}
         {s && suggestedProject && s.projectId !== current && (
           <button
             type="button"
@@ -178,7 +213,7 @@ export function DistributeLinesDialog({ invoice, onClose }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && !move.isPending && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => !o && !move.isPending && !split.isPending && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Regels verdelen over projecten</DialogTitle>

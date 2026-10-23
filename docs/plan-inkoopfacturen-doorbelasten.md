@@ -157,6 +157,16 @@ als niet doorbelast); het maken van een kostenpost vanuit de sheet is weg,
 dat doet het werkblad. `partner_purchase_invoice_ticket_matches` werd nog
 gevuld maar niet meer gelezen en is in fase 4 verwijderd.
 
+Eén verzamelregel voor meerdere klanten (Jan van Vlieland: "Door u geboekte
+reserveringen, arrangementen sept." plus "Korting 25%") kan in dezelfde dialoog
+eerst worden gesplitst ("Splitsen" per nog niet doorbelaste regel,
+`SplitLineEditor`): per deel een bedrag incl. btw en een project, het laatste
+deel is het restant, en andere open regels (de korting) gaan desgewenst naar
+rato mee met dezelfde projecten. `purchaseInvoiceLineSplit.ts` rekent (btw per
+deel uit het tarief, het restant draagt de afronding, de delen zijn samen exact
+de regel); `useSplitInvoiceLines` vervangt de regel door zijn delen, hernummert
+en laat de kop de regels volgen.
+
 Snelstart (`forward-purchase-invoice`), de betaalbatch
 (`generate-payment-batch`), de batchpagina en de facturenlijst hebben een
 `left join` op het project: een verzamelfactuur is één betaling met

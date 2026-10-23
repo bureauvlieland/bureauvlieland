@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { reportError } from "@/lib/errorReporting";
+import type { SplitPart } from "@/lib/purchaseInvoiceLineSplit";
 
 export type ChargeStatus = "open" | "charged" | "kept_quote" | "skipped" | "legacy";
 
@@ -241,6 +242,84 @@ export function useMoveLinesToProject() {
     onError: (error: Error) => {
       reportError(error, { where: "useMoveLinesToProject" });
       toast.error(error.message || "Verplaatsen mislukt");
+    },
+  });
+}
+
+/**
+ * Eén of meer regels in delen knippen (src/lib/purchaseInvoiceLineSplit.ts
+ * rekent; hier wordt geschreven). De oorspronkelijke regel verdwijnt, de delen
+ * komen op zijn plek, elk met zijn eigen project en open om door te belasten.
+ * Alleen regels die nog niet zijn doorbelast kunnen worden gesplitst; een al
+ * doorbelaste regel heeft klantregels die eerst terug moeten.
+ */
+export function useSplitInvoiceLines() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      invoiceId: string;
+      splits: Array<{ line: PurchaseInvoiceLineRow; parts: SplitPart[] }>;
+    }) => {
+      for (const { line, parts } of input.splits) {
+        if (line.charge_status !== "open" && line.charge_status !== "skipped") {
+          throw new Error(`"${line.description}" is al doorbelast; maak dat eerst ongedaan in het werkblad.`);
+        }
+        if (parts.length < 2) throw new Error("Een splitsing heeft minstens twee delen.");
+        const rows = parts.map((p, idx) => ({
+          invoice_id: input.invoiceId,
+          description: p.description.slice(0, 500),
+          quantity: 1,
+          unit_price: p.unit_price,
+          amount_excl_vat: p.amount_excl_vat,
+          vat_rate: p.vat_rate,
+          vat_amount: p.vat_amount,
+          amount_incl_vat: p.amount_incl_vat,
+          // Tussen de buren van de oorspronkelijke regel; hieronder wordt hernummerd.
+          sort_order: line.sort_order * 1000 + idx + 1,
+          request_id: p.request_id,
+          item_id: null,
+          charge_status: "open",
+          skip_reason: null,
+          charged_at: null,
+          booking_reference: line.booking_reference,
+          departure_date: line.departure_date,
+        }));
+        const { error: insErr } = await supabase.from("purchase_invoice_lines").insert(rows);
+        if (insErr) throw insErr;
+        const { error: delErr } = await supabase.from("purchase_invoice_lines").delete().eq("id", line.id);
+        if (delErr) throw delErr;
+      }
+
+      // Hernummeren: de delen staan nu op sort_order × 1000, de rest op zijn oude
+      // nummer. Op volgorde van (sort_order, created_at) weer 0, 1, 2, … maken.
+      const { data: all, error: listErr } = await supabase
+        .from("purchase_invoice_lines")
+        .select("id, sort_order, created_at")
+        .eq("invoice_id", input.invoiceId)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (listErr) throw listErr;
+      const ordered = (all ?? []).map((r, idx) => ({ id: r.id, from: r.sort_order, to: idx }));
+      for (const r of ordered) {
+        if (r.from === r.to) continue;
+        const { error } = await supabase
+          .from("purchase_invoice_lines")
+          .update({ sort_order: r.to })
+          .eq("id", r.id);
+        if (error) throw error;
+      }
+
+      const { data, error } = await supabase.rpc("sync_collective_invoice_header", { p_invoice_id: input.invoiceId });
+      if (error) throw error;
+      return { split: input.splits.length, header: data as { changed: boolean; is_collective?: boolean } | null };
+    },
+    onSuccess: ({ split }) => {
+      invalidateAfterCharges(queryClient);
+      toast.success(split === 1 ? "Regel gesplitst" : `${split} regels gesplitst`);
+    },
+    onError: (error: Error) => {
+      reportError(error, { where: "useSplitInvoiceLines" });
+      toast.error(error.message || "Splitsen mislukt");
     },
   });
 }
