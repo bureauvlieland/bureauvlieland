@@ -7,6 +7,8 @@ export type AutoTodoType =
   | "invoicing_ready"
   | "availability_conflict"
   | "quote_review"
+  | "quote_headcount_review"
+  | "quote_headcount_pending_partner"
   | "quote_pending_partner"
   | "quote_pending_customer"
   | "request_no_response"
@@ -153,6 +155,12 @@ export const autoTodoTitles = {
   quote_review: (partnerName: string, customerName: string) =>
     `Nieuwe logiesofferte: ${partnerName} voor ${customerName}`,
 
+  quote_headcount_review: (partnerName: string, customerName: string) =>
+    `Nieuw aantal bevestigd: ${partnerName} voor ${customerName}`,
+
+  quote_headcount_pending_partner: (partnerName: string, customerName: string) =>
+    `Partner ${partnerName} heeft het nieuwe aantal gasten voor ${customerName} nog niet bevestigd`,
+
   quote_pending_partner: (partnerName: string, customerName: string) =>
     `Partner ${partnerName} heeft niet gereageerd op logiesverzoek ${customerName}`,
 
@@ -239,6 +247,16 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Offerte beoordelen",
     color: "text-teal-700",
     bgColor: "bg-teal-100",
+  },
+  quote_headcount_review: {
+    label: "Aantal logies beoordelen",
+    color: "text-teal-700",
+    bgColor: "bg-teal-100",
+  },
+  quote_headcount_pending_partner: {
+    label: "Aantal logies wacht op partner",
+    color: "text-orange-700",
+    bgColor: "bg-orange-100",
   },
   quote_pending_partner: {
     label: "Partner logies",

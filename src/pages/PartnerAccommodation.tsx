@@ -64,6 +64,10 @@ interface AccommodationQuote {
   invoiced_date: string | null;
   commission_percentage: number | null;
   commission_amount: number | null;
+  priced_for_guests?: number | null;
+  headcount_change_requested_at?: string | null;
+  headcount_proposal?: unknown;
+  headcount_confirmed_at?: string | null;
 }
 
 interface RequestWithQuote extends AccommodationRequest {

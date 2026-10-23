@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { FactList, FormField, Notice, OptionCard, OptionGroup, Pill, ResponsiveSheetContent, SuccessScreen } from "@/components/system";
 import { addDays, differenceInDays, format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { Ban, BedDouble, Building2, Calendar, Euro, FileText, Loader2, MapPin, Moon, Plus, Send, Trash2, Users, Utensils } from "lucide-react";
+import { Ban, BedDouble, Building2, Calendar, Check, Euro, FileText, Loader2, MapPin, Moon, Plus, Send, Trash2, Users, Utensils } from "lucide-react";
 import { ACCOMMODATION_TYPES, BOARD_TYPES, BUDGET_RANGES, LOCATION_PREFERENCES, ROOM_TYPES, getBoardLabel, validateBoardSelection } from "@/types/accommodation";
 import type { RoomConfiguration } from "@/types/accommodation";
 import { InvoiceRegistrationDialog, type InvoiceTarget } from "./InvoiceRegistrationDialog";
@@ -24,6 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
 import { partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
+import { needsHeadcountConfirmation, parseHeadcountProposal, recalculatePricePerPersonPerNight } from "@/lib/accommodationHeadcount";
+import { extractEdgeError } from "@/lib/edgeFunctionError";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
 import { SheetSection } from "./SheetSection";
@@ -93,6 +95,11 @@ interface AccommodationQuote {
   invoiced_date: string | null;
   commission_percentage: number | null;
   commission_amount: number | null;
+  // Aantalwijziging bij een gekozen offerte (src/lib/accommodationHeadcount.ts)
+  priced_for_guests?: number | null;
+  headcount_change_requested_at?: string | null;
+  headcount_proposal?: unknown;
+  headcount_confirmed_at?: string | null;
 }
 
 type RoomConfig = RoomConfiguration;
@@ -134,13 +141,14 @@ interface PartnerAccommodationQuoteSheetProps {
 const INCLUDE_OPTIONS = ["Ontbijt", "Lunch", "Diner", "Beddengoed", "Handdoeken", "Eindschoonmaak", "WiFi", "Parkeren", "Toeristenbelasting"];
 
 type ResponseType = "submit_quote" | "alternative_dates" | "decline";
-type Done = "submitted" | "alternative" | "declined" | "extended";
+type Done = "submitted" | "alternative" | "declined" | "extended" | "headcount";
 
 const DONE_TEXT: Record<Done, { title: string; intro: string }> = {
   submitted: { title: "Offerte verstuurd", intro: "Bureau Vlieland beoordeelt uw offerte en stuurt hem door naar de klant. U hoort het zodra de klant kiest." },
   alternative: { title: "Andere datums voorgesteld", intro: "Bureau Vlieland legt uw voorstel aan de klant voor en laat u weten wat hij kiest." },
   declined: { title: "Aanvraag afgewezen", intro: "Bureau Vlieland weet dat u geen plek heeft en zoekt verder voor de klant." },
   extended: { title: "Geldigheid verlengd", intro: "Uw offerte staat weer open voor de klant." },
+  headcount: { title: "Nieuw aantal bevestigd", intro: "Bureau Vlieland beoordeelt uw bevestiging en informeert de klant. Uw offerte blijft gekozen; u hoort het als er nog iets nodig is." },
 };
 
 
@@ -187,6 +195,12 @@ export const PartnerAccommodationQuoteSheet = ({
   const [billingDetails, setBillingDetails] = useState<BillingDetails | null>(null);
   const [isExtending, setIsExtending] = useState(false);
   const [newValidUntil, setNewValidUntil] = useState("");
+  // Nieuw aantal bevestigen bij een gekozen offerte.
+  const [headcountPrice, setHeadcountPrice] = useState("");
+  const [headcountNote, setHeadcountNote] = useState("");
+  const [headcountRooms, setHeadcountRooms] = useState<RoomConfig[]>([]);
+  const [headcountEditRooms, setHeadcountEditRooms] = useState(false);
+  const [isConfirmingHeadcount, setIsConfirmingHeadcount] = useState(false);
   const [searchParams] = useSearchParams();
   const { data: partnerRoomTypes = [] } = usePartnerRoomTypes(isDemo ? "" : partnerId);
 
@@ -265,6 +279,10 @@ export const PartnerAccommodationQuoteSheet = ({
     setProposedDepartureDate("");
     setBoardError(null);
     setNewValidUntil("");
+    setHeadcountPrice(existingQuote && existingQuote.price_total > 0 ? existingQuote.price_total.toString() : "");
+    setHeadcountRooms(Array.isArray(existingQuote?.room_configuration) ? (existingQuote.room_configuration as unknown as RoomConfig[]) : []);
+    setHeadcountNote("");
+    setHeadcountEditRooms(false);
   }, [isOpen, existingQuote, partnerName, partnerDescription, requestBoardPreference]);
 
   if (!request) return null;
@@ -282,6 +300,12 @@ export const PartnerAccommodationQuoteSheet = ({
   const isExpired = status.key === "expired";
   const isSelected = status.key === "selected";
   const showSummary = !canSubmit && existingQuote && existingQuote.submitted_at && status.key !== "declined";
+  // Aantal gasten gewijzigd na de keuze: bevestigen zonder nieuwe offerte of nieuwe keuze.
+  const headcountPending = existingQuote ? needsHeadcountConfirmation(existingQuote, request.number_of_guests) : false;
+  const headcountProposal = existingQuote ? parseHeadcountProposal(existingQuote.headcount_proposal) : null;
+  const headcountPriceNumber = parseFloat(headcountPrice);
+  const headcountReady = !Number.isNaN(headcountPriceNumber) && headcountPriceNumber > 0;
+  const headcountPppn = headcountReady ? recalculatePricePerPersonPerNight(headcountPriceNumber, request.number_of_guests, nights) : null;
   const pricePerPersonPerNight = priceTotal && !Number.isNaN(parseFloat(priceTotal)) ? parseFloat(priceTotal) / request.number_of_guests / nights : null;
 
   const requestFacts = [
@@ -297,14 +321,62 @@ export const PartnerAccommodationQuoteSheet = ({
   ];
 
   const toggleInclude = (item: string) => setIncludes((prev) => (prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]));
-  const addRoom = () => setRoomConfiguration((prev) => [...prev, { type: "", count: 1, price_per_night: 0, occupancy: 2 }]);
-  const addRoomFromPreset = (roomTypeId: string) => {
-    const roomType = partnerRoomTypes.find((rt) => rt.id === roomTypeId);
-    // Momentopname van het kamertype: de klant ziet foto's en faciliteiten zoals ze op het moment van offreren waren.
-    if (roomType) setRoomConfiguration((prev) => [...prev, roomSnapshotFromType(roomType)]);
+
+  // De kamerlijst, voor de offerte en voor het bevestigen van een nieuw aantal.
+  const renderRoomEditor = (rooms: RoomConfig[], setRooms: Dispatch<SetStateAction<RoomConfig[]>>) => {
+    const addRoom = () => setRooms((prev) => [...prev, { type: "", count: 1, price_per_night: 0, occupancy: 2 }]);
+    const addRoomFromPreset = (roomTypeId: string) => {
+      const roomType = partnerRoomTypes.find((rt) => rt.id === roomTypeId);
+      // Momentopname van het kamertype: de klant ziet foto's en faciliteiten zoals ze op het moment van offreren waren.
+      if (roomType) setRooms((prev) => [...prev, roomSnapshotFromType(roomType)]);
+    };
+    const updateRoom = (index: number, updates: Partial<RoomConfig>) => setRooms((prev) => prev.map((room, i) => (i === index ? { ...room, ...updates } : room)));
+    const removeRoom = (index: number) => setRooms((prev) => prev.filter((_, i) => i !== index));
+    return (
+      <>
+        {partnerRoomTypes.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {partnerRoomTypes.map((roomType) => (
+              <Button key={roomType.id} type="button" variant="outline" size="sm" onClick={() => addRoomFromPreset(roomType.id)}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                {roomType.name}
+                {roomType.price_per_night ? <span className="ml-1.5 text-muted-foreground">{formatEuro(roomType.price_per_night)}</span> : null}
+              </Button>
+            ))}
+          </div>
+        )}
+        {rooms.length > 0 && (
+          <ul className="space-y-2">
+            {rooms.map((room, index) => (
+              <li key={index} className="rounded-md border bg-muted/30 p-3">
+                <div className="grid grid-cols-[1fr_4.5rem_6.5rem_auto] items-end gap-2">
+                  <FormField label="Kamertype" htmlFor={`kamer-${index}-type`}>
+                    <Input value={room.type} onChange={(e) => updateRoom(index, { type: e.target.value })} />
+                  </FormField>
+                  <FormField label="Aantal" htmlFor={`kamer-${index}-aantal`}>
+                    <Input type="number" min={1} value={room.count} onChange={(e) => updateRoom(index, { count: parseInt(e.target.value, 10) || 0 })} />
+                  </FormField>
+                  <FormField label="Per nacht" htmlFor={`kamer-${index}-prijs`} leading={<Euro />}>
+                    <Input type="number" min={0} step="0.01" value={room.price_per_night || ""} onChange={(e) => updateRoom(index, { price_per_night: parseFloat(e.target.value) || 0 })} />
+                  </FormField>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeRoom(index)} aria-label="Kamer verwijderen">
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  {room.room_type_id ? `Gekoppeld aan uw kamertype · ${room.images?.length ?? 0} foto's · ${room.facilities?.length ?? 0} faciliteiten` : "Handmatig; zonder foto's en faciliteiten"}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Button type="button" variant="ghost" size="sm" onClick={addRoom}>
+          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          Kamer handmatig toevoegen
+        </Button>
+      </>
+    );
   };
-  const updateRoom = (index: number, updates: Partial<RoomConfig>) => setRoomConfiguration((prev) => prev.map((room, i) => (i === index ? { ...room, ...updates } : room)));
-  const removeRoom = (index: number) => setRoomConfiguration((prev) => prev.filter((_, i) => i !== index));
 
   const price = parseFloat(priceTotal);
   const submitReady = accommodationName.trim().length > 0 && !Number.isNaN(price) && price > 0;
@@ -380,7 +452,32 @@ export const PartnerAccommodationQuoteSheet = ({
     }
   };
 
-  const title = done ? DONE_TEXT[done].title : canSubmit ? (existingQuote?.submitted_at ? "Offerte aanpassen" : "Offerte indienen") : "Uw offerte";
+  const handleConfirmHeadcount = async () => {
+    if (!existingQuote || !headcountReady || isDemo) return;
+    setIsConfirmingHeadcount(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("confirm-accommodation-headcount", {
+        body: {
+          quoteId: existingQuote.id,
+          priceTotal: headcountPriceNumber,
+          roomConfiguration: headcountEditRooms ? headcountRooms : undefined,
+          note: headcountNote.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      onRefresh?.();
+      setDone("headcount");
+    } catch (err) {
+      reportError(err, { where: "PartnerAccommodationQuoteSheet: Error confirming headcount" });
+      const message = await extractEdgeError(err, "Kon het nieuwe aantal niet bevestigen. Probeer het opnieuw.");
+      toast({ title: "Bevestigen mislukt", description: message, variant: "destructive" });
+    } finally {
+      setIsConfirmingHeadcount(false);
+    }
+  };
+
+  const title = done ? DONE_TEXT[done].title : canSubmit ? (existingQuote?.submitted_at ? "Offerte aanpassen" : "Offerte indienen") : headcountPending ? "Nieuw aantal bevestigen" : "Uw offerte";
 
   // Samenvatting van een verstuurde offerte die niet meer te bewerken is.
   const summaryFacts = existingQuote
@@ -391,6 +488,9 @@ export const PartnerAccommodationQuoteSheet = ({
         ...(Array.isArray(existingQuote.includes) && existingQuote.includes.length > 0 ? [{ label: "Inbegrepen", value: (existingQuote.includes as string[]).join(", ") }] : []),
         ...(Array.isArray(existingQuote.room_configuration) && existingQuote.room_configuration.length > 0
           ? [{ label: "Kamers", value: (existingQuote.room_configuration as unknown as RoomConfig[]).map((r) => `${r.count} × ${r.type || "kamer"}`).join(", ") }]
+          : []),
+        ...(existingQuote.headcount_confirmed_at && existingQuote.priced_for_guests
+          ? [{ label: "Aantal bevestigd", value: `${existingQuote.priced_for_guests} gasten op ${format(parseISO(existingQuote.headcount_confirmed_at), "d MMMM yyyy", { locale: nl })}` }]
           : []),
         { label: "Geldig tot", value: format(parseISO(existingQuote.valid_until), "d MMMM yyyy", { locale: nl }) },
         ...(existingQuote.conditions ? [{ label: "Voorwaarden", value: existingQuote.conditions }] : []),
@@ -450,6 +550,35 @@ export const PartnerAccommodationQuoteSheet = ({
                       Verlengen
                     </Button>
                   </div>
+                </Notice>
+              )}
+              {isSelected && headcountPending && existingQuote && (
+                <Notice tone="warning" title={`Het aantal gasten is gewijzigd naar ${request.number_of_guests}`}>
+                  <p>
+                    Uw offerte gold voor {existingQuote.priced_for_guests} gasten ({formatEuro(existingQuote.price_total)}). Bevestig het nieuwe aantal met het totaal dat daarbij hoort; blijft de prijs gelijk, dan laat u het bedrag staan.
+                    De klant hoeft niet opnieuw te kiezen: Bureau Vlieland beoordeelt uw bevestiging en informeert de klant.
+                  </p>
+                  <div className="mt-3 space-y-4">
+                    <FormField label={`Totaalprijs voor ${request.number_of_guests} gasten`} htmlFor="headcountPrice" required leading={<Euro />} help={headcountPppn != null ? `${formatEuro(headcountPppn)} per persoon per nacht` : "Voor het hele verblijf, alle kamers samen, inclusief btw zoals uw offerte."}>
+                      <Input type="number" value={headcountPrice} onChange={(e) => setHeadcountPrice(e.target.value)} step="0.01" min="0" />
+                    </FormField>
+                    <div className="flex h-10 items-center gap-2">
+                      <Switch id="headcountEditRooms" checked={headcountEditRooms} onCheckedChange={setHeadcountEditRooms} />
+                      <Label htmlFor="headcountEditRooms">Kamerindeling aanpassen</Label>
+                    </div>
+                    {headcountEditRooms && <div className="space-y-3">{renderRoomEditor(headcountRooms, setHeadcountRooms)}</div>}
+                    <FormField label="Toelichting" htmlFor="headcountNote" help="Bureau Vlieland leest dit mee; de klant ziet het bij de bevestiging.">
+                      <Textarea value={headcountNote} onChange={(e) => setHeadcountNote(e.target.value)} rows={2} maxLength={1000} placeholder="Bijvoorbeeld: twee kamers minder, de rest blijft gelijk." />
+                    </FormField>
+                  </div>
+                </Notice>
+              )}
+              {isSelected && headcountProposal && (
+                <Notice tone="info" title="U heeft het nieuwe aantal bevestigd">
+                  <p>
+                    {headcountProposal.proposed_at ? `Op ${format(parseISO(headcountProposal.proposed_at), "d MMMM yyyy", { locale: nl })} bevestigde u` : "U bevestigde"} {headcountProposal.guests} gasten voor {formatEuro(headcountProposal.price_total)}
+                    {headcountProposal.price_total !== headcountProposal.previous_price_total ? ` (was ${formatEuro(headcountProposal.previous_price_total)})` : ""}. Bureau Vlieland beoordeelt de aanpassing en informeert de klant.
+                  </p>
                 </Notice>
               )}
               {isSelected && (
@@ -571,46 +700,7 @@ export const PartnerAccommodationQuoteSheet = ({
                   </SheetSection>
 
                   <SheetSection title="Kamers" help="Kies bij voorkeur een van uw kamertypes: de klant ziet dan de foto's, bedden en faciliteiten van die kamer. Handmatig invullen kan ook.">
-                    {partnerRoomTypes.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {partnerRoomTypes.map((roomType) => (
-                          <Button key={roomType.id} type="button" variant="outline" size="sm" onClick={() => addRoomFromPreset(roomType.id)}>
-                            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                            {roomType.name}
-                            {roomType.price_per_night ? <span className="ml-1.5 text-muted-foreground">{formatEuro(roomType.price_per_night)}</span> : null}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                    {roomConfiguration.length > 0 && (
-                      <ul className="space-y-2">
-                        {roomConfiguration.map((room, index) => (
-                          <li key={index} className="rounded-md border bg-muted/30 p-3">
-                            <div className="grid grid-cols-[1fr_4.5rem_6.5rem_auto] items-end gap-2">
-                              <FormField label="Kamertype" htmlFor={`kamer-${index}-type`}>
-                                <Input value={room.type} onChange={(e) => updateRoom(index, { type: e.target.value })} />
-                              </FormField>
-                              <FormField label="Aantal" htmlFor={`kamer-${index}-aantal`}>
-                                <Input type="number" min={1} value={room.count} onChange={(e) => updateRoom(index, { count: parseInt(e.target.value, 10) || 0 })} />
-                              </FormField>
-                              <FormField label="Per nacht" htmlFor={`kamer-${index}-prijs`} leading={<Euro />}>
-                                <Input type="number" min={0} step="0.01" value={room.price_per_night || ""} onChange={(e) => updateRoom(index, { price_per_night: parseFloat(e.target.value) || 0 })} />
-                              </FormField>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => removeRoom(index)} aria-label="Kamer verwijderen">
-                                <Trash2 className="h-4 w-4" aria-hidden="true" />
-                              </Button>
-                            </div>
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              {room.room_type_id ? `Gekoppeld aan uw kamertype · ${room.images?.length ?? 0} foto's · ${room.facilities?.length ?? 0} faciliteiten` : "Handmatig; zonder foto's en faciliteiten"}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <Button type="button" variant="ghost" size="sm" onClick={addRoom}>
-                      <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                      Kamer handmatig toevoegen
-                    </Button>
+                    {renderRoomEditor(roomConfiguration, setRoomConfiguration)}
                   </SheetSection>
 
                   <SheetSection title="Verzorging" help={requestBoardPreference ? `Voorkeur van de klant: ${getBoardLabel(requestBoardPreference)}.` : "Verplicht: zo weet de klant of ontbijt of pension in de prijs zit."}>
@@ -734,7 +824,13 @@ export const PartnerAccommodationQuoteSheet = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Sluiten
               </Button>
-              {isSelected && existingQuote && !existingQuote.invoiced_number && (
+              {isSelected && headcountPending && (
+                <Button type="button" onClick={() => void handleConfirmHeadcount()} disabled={isConfirmingHeadcount || !headcountReady || isDemo}>
+                  {isConfirmingHeadcount ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="mr-1.5 h-4 w-4" aria-hidden="true" />}
+                  Nieuw aantal bevestigen
+                </Button>
+              )}
+              {isSelected && existingQuote && !existingQuote.invoiced_number && !headcountPending && (
                 <Button
                   type="button"
                   disabled={isDemo}

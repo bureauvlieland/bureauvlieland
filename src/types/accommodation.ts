@@ -103,6 +103,12 @@ export interface AccommodationQuote {
   status: AccommodationQuoteStatus;
   submitted_at: string | null;
   selected_at: string | null;
+
+  // Aantalwijziging bij een gekozen offerte (src/lib/accommodationHeadcount.ts)
+  priced_for_guests?: number | null;
+  headcount_change_requested_at?: string | null;
+  headcount_proposal?: unknown;
+  headcount_confirmed_at?: string | null;
   
   // Partner notes
   partner_notes: string | null;

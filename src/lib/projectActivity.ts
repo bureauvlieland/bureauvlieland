@@ -68,6 +68,7 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
 
   // awaiting partner
   quote_pending_partner: "awaiting_partner",
+  quote_headcount_pending_partner: "awaiting_partner",
   partner_reminder: "awaiting_partner",
   quote_expiring_soon: "awaiting_partner",
   quote_expired_partner: "awaiting_partner",
@@ -97,6 +98,7 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
   purchase_invoice_inbox: "inbound",
   purchase_invoice_pending: "inbound",
   quote_review: "inbound",
+  quote_headcount_review: "inbound",
   partner_status_update: "inbound",
   accommodation_selected: "inbound",
   all_partners_responded: "inbound",

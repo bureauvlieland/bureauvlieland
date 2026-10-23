@@ -397,6 +397,9 @@ export function NotifyHeadcountChangeDialog({
               <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">
                 Logies-partners
               </h4>
+              <p className="text-xs text-muted-foreground mb-2">
+                De gekozen logiespartner krijgt het verzoek het nieuwe aantal te bevestigen in het partnerportaal. Het bureau beoordeelt daarna het nieuwe totaal; de klant hoeft niet opnieuw te kiezen.
+              </p>
               <div className="space-y-2">
                 {accommodationQuotes.map((q) => {
                   const partnerEmail = q.partners?.contact_email || q.partners?.email;

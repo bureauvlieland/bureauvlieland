@@ -158,6 +158,14 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
     linkLabel: "Bekijk offerte",
   },
+  quote_headcount_review: {
+    getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
+    linkLabel: "Beoordeel voorstel",
+  },
+  quote_headcount_pending_partner: {
+    getLink: (t) => t.related_request_id ? `/admin/logies/${t.related_request_id}` : "/admin/logies",
+    linkLabel: "Bekijk logies",
+  },
   quote_pending_partner: {
     getLink: (t) => t.related_partner_id ? `/admin/partners/${t.related_partner_id}` : "/admin/partners",
     linkLabel: "Bekijk partner",

@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
 import { partnerQuoteAction, partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
+import { hasPendingHeadcountProposal, needsHeadcountConfirmation } from "@/lib/accommodationHeadcount";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,8 @@ interface AccommodationQuote {
   submitted_at: string | null;
   valid_until: string;
   reset_reason?: string | null;
+  priced_for_guests?: number | null;
+  headcount_proposal?: unknown;
 }
 
 interface PartnerAccommodationRequestCardProps {
@@ -122,13 +125,16 @@ export const PartnerAccommodationRequestCard = ({ request, quote, onOpen, partne
   const dates = `${format(parseISO(request.arrival_date), "EEE d MMM", { locale: nl })} tot ${format(parseISO(request.departure_date), "EEE d MMM yyyy", { locale: nl })}`;
   const wishes = [...locationLabels, budgetLabel].filter(Boolean) as string[];
 
+  // Aantal gasten gewijzigd na de keuze: de partner bevestigt het nieuwe aantal in de sheet.
+  const headcountPending = quote ? needsHeadcountConfirmation(quote, request.number_of_guests) : false;
+  const headcountProposed = quote ? hasPendingHeadcountProposal(quote) : false;
   // Eén primaire knop per status (regel 3: de kaart opent de sheet).
-  const primary = partnerQuoteAction(quote?.status);
+  const primary = partnerQuoteAction(quote?.status, { headcountPending });
 
   return (
     <article
       id={`logies-${request.id}`}
-      className={cn("flex flex-col rounded-lg border bg-card p-4 transition-colors duration-base", status.tone === "warning" && "border-warning/40", closed && "opacity-70")}
+      className={cn("flex flex-col rounded-lg border bg-card p-4 transition-colors duration-base", (status.tone === "warning" || headcountPending) && "border-warning/40", closed && "opacity-70")}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -197,6 +203,16 @@ export const PartnerAccommodationRequestCard = ({ request, quote, onOpen, partne
         {status.key === "expired" && (
           <Notice tone="warning" title="De geldigheid is verstreken">
             <p>Verleng de offerte en hij staat weer open voor de klant.</p>
+          </Notice>
+        )}
+        {status.key === "selected" && headcountPending && (
+          <Notice tone="warning" title={`Het aantal gasten is gewijzigd naar ${request.number_of_guests}`}>
+            <p>Uw offerte gold voor {quote?.priced_for_guests} gasten. Bevestig het nieuwe aantal en pas zo nodig het totaal aan; de klant hoeft niet opnieuw te kiezen.</p>
+          </Notice>
+        )}
+        {status.key === "selected" && headcountProposed && (
+          <Notice tone="info" title="Nieuw aantal bevestigd">
+            <p>Bureau Vlieland beoordeelt uw bevestiging en informeert de klant.</p>
           </Notice>
         )}
         {status.key === "selected" && (

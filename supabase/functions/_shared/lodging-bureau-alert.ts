@@ -19,24 +19,27 @@ import {
 } from "./email-templates.ts";
 import { GENERAL_CONTACT_EMAIL } from "./bureau-contact.ts";
 
-export type LodgingAlertKind = "submitted" | "revised" | "declined";
+export type LodgingAlertKind = "submitted" | "revised" | "declined" | "headcount_confirmed";
 
 export const LodgingAlertEmailTypes: Record<LodgingAlertKind, string> = {
   submitted: "lodging_quote_submitted_bureau",
   revised: "lodging_quote_revised_bureau",
   declined: "lodging_quote_declined_bureau",
+  headcount_confirmed: "lodging_headcount_confirmed_bureau",
 };
 
 const ACTOR: Record<LodgingAlertKind, string> = {
   submitted: "system → bureau (logiesofferte ingediend)",
   revised: "system → bureau (logiesofferte herzien)",
   declined: "system → bureau (logiesaanvraag afgewezen)",
+  headcount_confirmed: "system → bureau (nieuw aantal gasten bevestigd)",
 };
 
 const HEADING: Record<LodgingAlertKind, string> = {
   submitted: "Nieuwe logiesofferte ontvangen",
   revised: "Herziene logiesofferte ontvangen",
   declined: "Logiesaanvraag afgewezen",
+  headcount_confirmed: "Partner bevestigt nieuw aantal gasten",
 };
 
 export interface LodgingAlertInput {
@@ -58,6 +61,8 @@ export interface LodgingAlertInput {
   };
   /** Alleen bij `declined` */
   declineReason?: string | null;
+  /** Alleen bij `headcount_confirmed`: de prijs die tot nu toe gold. */
+  previousPriceTotal?: number | null;
   proposedArrival?: string | null;
   proposedDeparture?: string | null;
   /** Origin van de aanroepende client (voor test-mode rerouting). */
@@ -78,9 +83,11 @@ export function buildLodgingAlertSubject(input: {
       ? "Nieuwe logiesofferte"
       : input.kind === "revised"
         ? "Herziene logiesofferte"
-        : input.hasAlternativeDates
-          ? "Logies: alternatieve datums"
-          : "Logiesaanvraag afgewezen";
+        : input.kind === "headcount_confirmed"
+          ? "Logies: nieuw aantal bevestigd"
+          : input.hasAlternativeDates
+            ? "Logies: alternatieve datums"
+            : "Logiesaanvraag afgewezen";
   const ref = input.referenceNumber ? ` (${input.referenceNumber})` : "";
   return `${prefixText} — ${input.partnerName} voor ${input.customerLabel}${ref}`;
 }
@@ -103,8 +110,11 @@ function buildHtml(input: LodgingAlertInput, adminUrl: string, hasAltDates: bool
     r.arrival_date ? row("Aankomst", formatDateNL(r.arrival_date)) : "",
     r.departure_date ? row("Vertrek", formatDateNL(r.departure_date)) : "",
     r.number_of_guests ? row("Gasten", String(r.number_of_guests)) : "",
+    input.kind === "headcount_confirmed" && typeof input.previousPriceTotal === "number"
+      ? row("Totaal tot nu toe", formatCurrencyNL(input.previousPriceTotal))
+      : "",
     input.kind !== "declined" && typeof input.priceTotal === "number"
-      ? row("Totaal (incl. btw)", formatCurrencyNL(input.priceTotal))
+      ? row(input.kind === "headcount_confirmed" ? "Voorgesteld totaal (incl. btw)" : "Totaal (incl. btw)", formatCurrencyNL(input.priceTotal))
       : "",
     input.kind !== "declined" && input.validUntil
       ? row("Geldig tot", formatDateNL(input.validUntil))
@@ -128,7 +138,7 @@ function buildHtml(input: LodgingAlertInput, adminUrl: string, hasAltDates: bool
 
   return `<div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; color:#0f172a;">
     <h2 style="color:#0F4C5C; margin-bottom:4px;">${HEADING[input.kind]}</h2>
-    <p style="margin:0 0 16px; color:#64748b; font-size:14px;">Interne melding — geen actie voor de klant of partner.</p>
+    <p style="margin:0 0 16px; color:#64748b; font-size:14px;">${input.kind === "headcount_confirmed" ? "Interne melding: beoordeel het voorstel in de admin, daarna informeren wij de klant." : "Interne melding — geen actie voor de klant of partner."}</p>
     <table style="width:100%; border-collapse:collapse; background:#f8fafc; border-radius:8px; padding:8px;">
       ${rows}
     </table>

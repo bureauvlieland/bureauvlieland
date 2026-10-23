@@ -101,7 +101,7 @@ export function EditProjectDetailsDialog({
         const arrivalDate = format(sortedDates[0], "yyyy-MM-dd");
         const departureDate = format(sortedDates[sortedDates.length - 1], "yyyy-MM-dd");
 
-        await supabase
+        const { error: accommodationError } = await supabase
           .from("accommodation_requests")
           .update({
             arrival_date: arrivalDate,
@@ -110,6 +110,20 @@ export function EditProjectDetailsDialog({
             updated_at: new Date().toISOString(),
           })
           .eq("id", linkedAccommodationId);
+        if (accommodationError) throw accommodationError;
+      }
+
+      // Spoor in de projecthistorie; voorheen was het nieuwe getal het enige bewijs.
+      if (people !== initialPeople) {
+        await supabase.from("program_request_history").insert({
+          request_id: requestId,
+          action: "people_changed",
+          actor: "admin",
+          actor_name: "Bureau Vlieland",
+          old_value: { people: initialPeople },
+          new_value: { people },
+          notes: `Aantal personen gewijzigd van ${initialPeople} naar ${people} (admin).`,
+        });
       }
 
       toast.success("Evenement details bijgewerkt");

@@ -70,6 +70,9 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "update-partner-item-status": "deno",
   "send-wedding-referral": "deno",
   "wedding-referral-claim": "deno",
+  "notify-headcount-change-bulk": "deno",
+  "confirm-accommodation-headcount": "deno",
+  "approve-accommodation-headcount": "deno",
 };
 
 type Row = { name: string; category: EdgeFunctionCategory; critical: boolean };
@@ -164,6 +167,8 @@ const REGISTRY: Row[] = [
   { name: "cleanup-stale-todos", category: "workflow", critical: false },
   { name: "create-quote-review-todo", category: "workflow", critical: false },
   { name: "decline-accommodation-quote", category: "workflow", critical: false },
+  { name: "confirm-accommodation-headcount", category: "workflow", critical: true },
+  { name: "approve-accommodation-headcount", category: "workflow", critical: true },
   { name: "create-request-from-sales-inbox", category: "workflow", critical: true },
   { name: "resolve-customer-token", category: "workflow", critical: true },
   { name: "check-pending-items", category: "workflow", critical: false },

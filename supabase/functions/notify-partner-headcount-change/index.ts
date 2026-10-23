@@ -20,6 +20,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Laatste Mailjet MessageID, voor email_log. Zonder deze declaratie gaf de
+// toewijzing hieronder een ReferenceError: de mail ging wel weg, maar logEmail
+// werd nooit bereikt en de function meldde de verzending als mislukt.
+let mailjetMessageId: string | null = null;
+
 const sendEmailViaMailjet = async (messages: unknown[]) => {
   const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
   const response = await fetch("https://api.mailjet.com/v3.1/send", {
