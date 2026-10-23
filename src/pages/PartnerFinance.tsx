@@ -23,6 +23,7 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { reportError } from "@/lib/errorReporting";
 import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
+import { defaultBilledToForProject, isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { formatEuro } from "@/lib/formatEuro";
 
@@ -107,6 +108,7 @@ const PartnerFinanceContent = () => {
           notes: payload.notes,
           filePath: payload.filePath,
           viaEmail: payload.viaEmail,
+          billedTo: payload.billedTo,
         }),
       });
       if (!response.ok) {
@@ -221,6 +223,8 @@ const PartnerFinanceContent = () => {
     priceTotal: q.price_total,
     priceIncludesVat: q.price_includes_vat ?? true,
     vatRate: Number(q.vat_rate ?? 9),
+    invoicingMode: q.accommodation_requests.invoicing_mode ?? null,
+    accommodationBilledDirectly: q.accommodation_requests.accommodation_billed_directly === true,
   });
 
   const pdfButton = (onClick: () => void) => (
@@ -231,9 +235,18 @@ const PartnerFinanceContent = () => {
   );
   const commissionPill = (status: string | null) => (status && COMMISSION_PILL[status] ? <Pill tone={COMMISSION_PILL[status].tone} size="sm">{COMMISSION_PILL[status].label}</Pill> : null);
   const missingPdfPill = <Pill tone="danger" size="sm" title="Niet in behandeling: voeg de pdf toe">Pdf ontbreekt</Pill>;
+  // De gast rekende rechtstreeks af: het bureau betaalt deze factuur niet, de commissie loopt gewoon.
+  const customerPaidPill = (billedTo: string | null | undefined) =>
+    isCustomerBilled({ billed_to: billedTo }) ? (
+      <Pill tone="info" size="sm" title="De gast heeft deze factuur rechtstreeks aan u betaald. Bureau Vlieland betaalt niets uit en rekent alleen commissie.">
+        Aan de gast
+      </Pill>
+    ) : null;
+  // Verzamelfactuur: de keuze "aan wie gericht" vooraf ingevuld vanuit het project.
+  const collectiveProject = collectiveRequestId ? data.items.find((i) => i.request_id === collectiveRequestId)?.program_requests : null;
 
   return (
-    <PartnerPage title="Facturatie" icon={<Receipt />} description="Uw facturen aan Bureau Vlieland en de commissiefacturen van het bureau aan u." status={missingPdf > 0 ? { label: missingPdf === 1 ? "1 pdf ontbreekt" : `${missingPdf} pdf's ontbreken`, tone: "danger" } : null}>
+    <PartnerPage title="Facturatie" icon={<Receipt />} description="Uw facturen aan Bureau Vlieland of rechtstreeks aan de gast, en de commissiefacturen van het bureau aan u." status={missingPdf > 0 ? { label: missingPdf === 1 ? "1 pdf ontbreekt" : `${missingPdf} pdf's ontbreken`, tone: "danger" } : null}>
       {missingPdf > 0 && <MissingPdfBanner count={missingPdf} showCta={false} />}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
@@ -342,7 +355,7 @@ const PartnerFinanceContent = () => {
       {activeTab === "invoiced" && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Uw geregistreerde facturen, met de commissie die Bureau Vlieland erover rekent.</p>
+            <p className="text-sm text-muted-foreground">Uw geregistreerde facturen, met de commissie die Bureau Vlieland erover rekent. Een factuur aan de gast telt alleen voor de commissie.</p>
             <ExportInvoicesButton items={invoicedItems} accommodationQuotes={invoicedAccommodations} variant="invoiced" />
           </div>
           {invoicedCount === 0 ? (
@@ -360,6 +373,7 @@ const PartnerFinanceContent = () => {
                     meta={`${request.customer_company || request.customer_name}${activityDate ? ` · ${format(parseISO(activityDate), "d MMM yyyy", { locale: nl })}` : ""}`}
                     pills={
                       <>
+                        {customerPaidPill(item.invoiced_billed_to)}
                         {commissionPill(item.commission_status)}
                         {!item.invoiced_file_path && missingPdfPill}
                       </>
@@ -379,6 +393,7 @@ const PartnerFinanceContent = () => {
                   meta={`${q.accommodation_requests.customer_company || q.accommodation_requests.customer_name} · ${format(parseISO(q.accommodation_requests.arrival_date), "d MMM", { locale: nl })} tot ${format(parseISO(q.accommodation_requests.departure_date), "d MMM yyyy", { locale: nl })}`}
                   pills={
                     <>
+                      {customerPaidPill(q.invoiced_billed_to)}
                       {commissionPill(q.commission_status)}
                       {!q.invoiced_file_path && missingPdfPill}
                     </>
@@ -417,6 +432,7 @@ const PartnerFinanceContent = () => {
         commissionPercentage={activityCommission}
         mode={collectiveMode}
         bureauDetails={bureauDetails}
+        defaultBilledTo={defaultBilledToForProject(collectiveProject, "item")}
         onSubmit={handleCollectiveInvoiceRegister}
       />
     </PartnerPage>

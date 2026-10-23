@@ -117,7 +117,7 @@ export async function loadReconciliationInputs(
     .select(
       "id, partner_id, request_id, item_id, invoice_number, invoice_date, amount_excl_vat, " +
         "amount_incl_vat, commission_exempt, commission_exempt_reason, commission_exempt_at, " +
-        "status, created_at, commission_invoiced_at, commission_invoice_id",
+        "status, created_at, commission_invoiced_at, commission_invoice_id, billed_to",
     );
   if (partnerIdFilter) invoicesQuery = invoicesQuery.eq("partner_id", partnerIdFilter);
 
@@ -127,7 +127,7 @@ export async function loadReconciliationInputs(
     .select(
       "id, request_id, partner_id, accommodation_name, price_total, price_includes_vat, vat_rate, " +
         "commission_percentage, commission_status, invoiced_number, invoiced_amount, status, " +
-        "purchase_invoice_id, commission_invoice_id, " +
+        "purchase_invoice_id, commission_invoice_id, invoiced_billed_to, " +
         "commission_exempt, commission_exempt_reason, commission_exempt_at, " +
         "accommodation_requests!inner(id, reference_number, customer_name, customer_company, " +
         "arrival_date, departure_date, completion_status, completed_at, linked_program_id)",
@@ -462,6 +462,8 @@ export async function loadReconciliationInputs(
       item_type: "accommodation" as const,
       commission_components: calculation.components.length > 0 ? calculation.components : null,
       purchase_invoice_applied: !!q.purchase_invoice_id,
+      // De gast betaalde de eindfactuur rechtstreeks aan de accommodatie.
+      invoice_billed_to: q.invoiced_billed_to === "customer" ? "customer" : "bureau",
       in_commission_draft: inDraft(q.commission_invoice_id),
       commission_exempt: q.commission_exempt ?? false,
       commission_exempt_reason: q.commission_exempt_reason ?? null,
@@ -493,6 +495,7 @@ export async function loadReconciliationInputs(
       commission_invoiced_at: i.commission_invoiced_at,
       in_commission_draft: inDraft(i.commission_invoice_id),
       created_at: i.created_at,
+      billed_to: i.billed_to === "customer" ? "customer" : "bureau",
       allocated_item_ids: allocMap.get(i.id) ?? [],
       allocation_amounts: allocAmountMap.get(i.id) ?? null,
     }));

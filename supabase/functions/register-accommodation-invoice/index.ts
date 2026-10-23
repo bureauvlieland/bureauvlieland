@@ -1,5 +1,6 @@
 // Deprecated: import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isValidBilledTo, normalizeBilledTo } from "../_shared/invoiceBilledTo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,8 @@ interface RegisterInvoiceRequest {
   invoicedAmount: number;
   invoicedNumber: string;
   invoicedDate: string;
+  /** "bureau" (default) of "customer": de gast betaalde rechtstreeks, alleen commissiegrondslag. */
+  billedTo?: string | null;
 }
 
 export const handler = async (req: Request): Promise<Response> => {
@@ -24,7 +27,7 @@ export const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { quoteId, partnerToken, invoicedAmount, invoicedNumber, invoicedDate }: RegisterInvoiceRequest = await req.json();
+    const { quoteId, partnerToken, invoicedAmount, invoicedNumber, invoicedDate, billedTo: billedToRaw }: RegisterInvoiceRequest = await req.json();
 
     // Validate input
     if (!quoteId || !partnerToken || !invoicedAmount || !invoicedNumber || !invoicedDate) {
@@ -33,6 +36,13 @@ export const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    if (billedToRaw !== undefined && billedToRaw !== null && !isValidBilledTo(billedToRaw)) {
+      return new Response(
+        JSON.stringify({ error: "Ongeldige waarde voor billedTo (bureau of customer)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const billedTo = normalizeBilledTo(billedToRaw);
 
     // Find partner by token
     const { data: partner, error: partnerError } = await supabase
@@ -95,6 +105,7 @@ export const handler = async (req: Request): Promise<Response> => {
         invoiced_amount: invoicedAmount,
         invoiced_number: invoicedNumber,
         invoiced_date: invoicedDate,
+        invoiced_billed_to: billedTo,
         commission_amount: commissionAmount,
         commission_status: "pending",
         updated_at: new Date().toISOString(),
@@ -106,12 +117,13 @@ export const handler = async (req: Request): Promise<Response> => {
       throw new Error("Fout bij registreren factuur");
     }
 
-    console.log(`Invoice registered for quote ${quoteId} by partner ${partner.name}: €${invoicedAmount} (commission: €${commissionAmount.toFixed(2)})`);
+    console.log(`Invoice registered for quote ${quoteId} by partner ${partner.name}: €${invoicedAmount} (commission: €${commissionAmount.toFixed(2)}, billed to ${billedTo})`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: "Factuur succesvol geregistreerd",
+        billedTo,
         commission: {
           percentage: commissionPercentage,
           amount: commissionAmount,

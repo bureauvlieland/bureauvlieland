@@ -97,6 +97,13 @@ export interface ReconItemInput {
    * minus de toeristenbelasting die er bewust uit gelaten is.
    */
   purchase_invoice_applied?: boolean | null;
+  /**
+   * Logies: aan wie de accommodatie de geregistreerde eindfactuur
+   * (`invoiced_number`/`invoiced_amount` op de offerte) richtte. `customer`
+   * = de gast heeft rechtstreeks betaald; de factuur is dan alleen
+   * commissiegrondslag (`accommodation_quotes.invoiced_billed_to`).
+   */
+  invoice_billed_to?: "bureau" | "customer" | null;
 }
 
 
@@ -126,6 +133,12 @@ export interface ReconInvoiceInput {
    * verzamelfacturen die over meerdere onderdelen zijn verdeeld.
    */
   allocation_amounts?: Record<string, number> | null;
+  /**
+   * Aan wie de partner factureerde (`partner_purchase_invoices.billed_to`).
+   * `customer` = de gast heeft rechtstreeks betaald: wél grondslag voor de
+   * commissie, maar geen post die het bureau doorstuurt of betaalt.
+   */
+  billed_to?: "bureau" | "customer" | null;
 }
 
 export interface ReconProjectInput {
@@ -225,6 +238,13 @@ export interface ReconRow {
    * deel). Hiermee is per factuur na te gaan of hij in de werklijst terugkomt.
    */
   purchaseInvoices?: ReconRowInvoice[];
+  /**
+   * De gast heeft de factuur rechtstreeks aan de partner betaald (alle
+   * facturen in de grondslag staan op `billed_to = customer`, of de
+   * logiesfactuur op de offerte). De commissie gaat gewoon over het
+   * factuurbedrag ex btw; alleen betaalt het bureau deze factuur niet.
+   */
+  customerPaid: boolean;
 }
 
 /** Bijdrage van één inkoopfactuur aan een werklijstregel. */
@@ -232,6 +252,13 @@ export interface ReconRowInvoice {
   id: string;
   invoiceNumber: string | null;
   amountExclVat: number;
+  /** Aan wie de factuur gericht was; `customer` = de gast betaalde rechtstreeks. */
+  billedTo: "bureau" | "customer";
+}
+
+/** Is deze inkoopfactuur door de gast betaald in plaats van door het bureau? */
+export function isCustomerBilledInvoice(inv: Pick<ReconInvoiceInput, "billed_to">): boolean {
+  return inv.billed_to === "customer";
 }
 
 
@@ -679,6 +706,12 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         (project?.completion_status &&
           COMPLETED_PROJECT_STATUSES.includes(project.completion_status)),
     );
+    // De gast betaalde rechtstreeks: alle facturen in de grondslag zijn aan
+    // de gast gericht, of (logies zonder gekoppelde inkoopfactuur) de
+    // eindfactuur op de offerte is dat. De grondslag blijft hetzelfde.
+    const customerPaid = activeInvoices.length > 0
+      ? activeInvoices.every((e) => isCustomerBilledInvoice(e.inv))
+      : purchaseExcl !== null && item.invoice_billed_to === "customer";
     const hasBase = salesBase !== null || purchaseExcl !== null;
     const readiness = !hasBase && !exemptItem
       ? "unknown_base"
@@ -747,7 +780,9 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
         id: e.inv.id,
         invoiceNumber: e.inv.invoice_number,
         amountExclVat: e.amount ?? 0,
+        billedTo: isCustomerBilledInvoice(e.inv) ? "customer" : "bureau",
       })),
+      customerPaid,
     });
   }
 
@@ -833,7 +868,13 @@ export function buildReconciliationRows(input: BuildReconInput): ReconRow[] {
       commissionComponents: null,
       hasMixedRates: false,
       inDraft: inv.in_commission_draft === true,
-      purchaseInvoices: [{ id: inv.id, invoiceNumber: inv.invoice_number, amountExclVat: purchaseExcl ?? 0 }],
+      purchaseInvoices: [{
+        id: inv.id,
+        invoiceNumber: inv.invoice_number,
+        amountExclVat: purchaseExcl ?? 0,
+        billedTo: isCustomerBilledInvoice(inv) ? "customer" : "bureau",
+      }],
+      customerPaid: isCustomerBilledInvoice(inv),
     });
   }
 

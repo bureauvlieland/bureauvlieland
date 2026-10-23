@@ -53,10 +53,13 @@ Deno.serve(async (req) => {
     // Inkoopfacturen met partner-IBAN en ingehouden commissie: een incasso
     // (Rederij Doeksen) wordt herkend op IBAN + bedrag, en bij een
     // verzamelfactuur overtochten is dat bedrag bruto minus commissie.
+    // Facturen die de gast rechtstreeks betaalde (billed_to = customer)
+    // komen nooit op ons afschrift en doen niet mee.
     const { data: purchaseInvoices, error: purchaseErr } = await supabase
       .from('partner_purchase_invoices')
       .select('id, invoice_number, amount_incl_vat, supplier_commission_excl_vat, supplier_commission_vat, partner_id, status, partners(iban, bank_iban, extra_ibans)')
       .is('bank_line_id', null)
+      .eq('billed_to', 'bureau')
       .neq('status', 'paid');
     if (purchaseErr) throw new Error(`Inkoopfacturen laden mislukt: ${purchaseErr.message}`);
     const { data: batches, error: batchErr } = await supabase

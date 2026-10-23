@@ -6,14 +6,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FormField, Notice, Pill } from "@/components/system";
-import { Loader2, Mail, Receipt } from "lucide-react";
+import { FormField, Notice, OptionCard, OptionGroup, Pill } from "@/components/system";
+import { Building2, Loader2, Mail, Receipt, UserRound } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { calculateFromInclVat } from "@/lib/vatCalculation";
 import type { PartnerItem } from "@/types/partner";
 import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
+import type { InvoiceBilledTo } from "@/lib/invoiceBilledTo";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,8 @@ export interface CollectiveInvoiceSubmitPayload {
   notes?: string;
   filePath?: string;
   viaEmail?: boolean;
+  /** Aan wie de factuur gericht is: bureau (default) of customer (de gast betaalde rechtstreeks). */
+  billedTo: InvoiceBilledTo;
 }
 
 interface Props {
@@ -54,15 +57,18 @@ interface Props {
   bureauDetails?: BureauDetails | null;
   /** `upload`: pdf verplicht; `email`: de partner bevestigt de verzending naar de inkoopinbox. */
   mode?: "upload" | "email";
+  /** Vooraf ingevulde keuze "aan wie gericht", afgeleid van het project. */
+  defaultBilledTo?: InvoiceBilledTo;
   onSubmit: (payload: CollectiveInvoiceSubmitPayload) => Promise<{ success: boolean }>;
 }
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 const parseAmount = (s: string) => parseFloat((s || "").replace(",", ".")) || 0;
 
-export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projectItems, initialSelectedIds, commissionPercentage, bureauDetails, mode = "upload", onSubmit }: Props) => {
+export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projectItems, initialSelectedIds, commissionPercentage, bureauDetails, mode = "upload", defaultBilledTo = "bureau", onSubmit }: Props) => {
   const isEmailMode = mode === "email";
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [billedTo, setBilledTo] = useState<InvoiceBilledTo>(defaultBilledTo);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -86,8 +92,9 @@ export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projec
     setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
     setNotes("");
     setFile(null);
+    setBilledTo(defaultBilledTo);
     setErrors({});
-  }, [isOpen, initialSelectedIds, projectItems]);
+  }, [isOpen, initialSelectedIds, projectItems, defaultBilledTo]);
 
   const project = projectItems[0]?.program_requests;
   const customerLabel = project?.customer_company || project?.customer_name || "";
@@ -180,6 +187,7 @@ export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projec
         notes: combinedNotes || undefined,
         filePath,
         viaEmail: isEmailMode,
+        billedTo,
       };
       const res = await onSubmit(payload);
       if (!res.success) setErrors({ submit: "Kon de factuur niet registreren. Probeer het opnieuw." });
@@ -205,10 +213,36 @@ export const RegisterCollectivePartnerInvoiceDialog = ({ isOpen, onClose, projec
         </DialogHeader>
 
         <div className="space-y-4">
-          <Notice tone="info" title={`Factureer aan ${bureauName}`}>
-            {bureauAddress && <p>{bureauAddress}</p>}
-            {bureauRegistration && <p>{bureauRegistration}</p>}
-          </Notice>
+          <OptionGroup label="Aan wie is deze factuur gericht?" columns={2}>
+            <OptionCard
+              selected={billedTo === "bureau"}
+              onSelect={() => setBilledTo("bureau")}
+              icon={<Building2 />}
+              title={bureauName}
+              description="Het bureau betaalt uw factuur en stuurt u apart een commissiefactuur."
+            />
+            <OptionCard
+              selected={billedTo === "customer"}
+              onSelect={() => setBilledTo("customer")}
+              icon={<UserRound />}
+              title="De gast, rechtstreeks afgerekend"
+              description="De gast heeft u al betaald. U ontvangt alleen een commissiefactuur."
+            />
+          </OptionGroup>
+
+          {billedTo === "customer" ? (
+            <Notice tone="info" title="Factuur aan de gast">
+              <p>
+                De gast heeft rechtstreeks met u afgerekend; de boeking liep via Bureau Vlieland. Het bureau betaalt
+                deze factuur niet en stuurt u alleen een commissiefactuur over het bedrag excl. btw.
+              </p>
+            </Notice>
+          ) : (
+            <Notice tone="info" title={`Factureer aan ${bureauName}`}>
+              {bureauAddress && <p>{bureauAddress}</p>}
+              {bureauRegistration && <p>{bureauRegistration}</p>}
+            </Notice>
+          )}
 
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium">Onderdelen op deze factuur, bedragen incl. btw</legend>

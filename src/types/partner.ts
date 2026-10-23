@@ -90,6 +90,8 @@ export interface PartnerItem {
   commission_percentage: number | null;
   commission_amount: number | null;
   commission_status: string | null;
+  /** Aan wie de geregistreerde factuur gericht was: bureau of customer (de gast betaalde rechtstreeks). */
+  invoiced_billed_to?: string | null;
   auto_closed_reason?: string | null;
   is_concept?: boolean;
   is_custom_quote?: boolean;
@@ -115,6 +117,8 @@ export interface PartnerItem {
     cancelled_at?: string | null;
     cancellation_reason?: string | null;
     invoicing_mode?: string; // 'partner_direct' | 'bureau_central'
+    /** Posten die het bureau van zijn factuur haalt; 'accommodation' = logies rechtstreeks door de accommodatie gefactureerd. */
+    excluded_fees?: string[] | null;
     // Billing details (shown to partner once invoicing is released, see lib/partnerInvoicing)
     billing_company_name?: string | null;
     billing_kvk_number?: string | null;
@@ -237,6 +241,8 @@ export interface PartnerAccommodationQuote {
   commission_percentage: number | null;
   commission_amount: number | null;
   commission_status: string | null;
+  /** Aan wie de eindfactuur gericht was: bureau of customer (de gast betaalde rechtstreeks). */
+  invoiced_billed_to?: string | null;
   accommodation_requests: {
     id: string;
     customer_name: string;
@@ -256,6 +262,8 @@ export interface PartnerAccommodationQuote {
     created_at: string;
     linked_program_id?: string | null;
     invoicing_mode?: string | null;
+    /** Uit het gekoppelde programma: logies van onze factuur gehaald, de accommodatie rekent rechtstreeks met de gast af. */
+    accommodation_billed_directly?: boolean;
     room_assignment?: string | null;
     /** Uit het gekoppelde programma (klantpagina): gastenlijst en dieetwensen. */
     program_guest_names?: string | null;

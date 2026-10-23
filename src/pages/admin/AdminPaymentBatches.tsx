@@ -165,6 +165,8 @@ export default function AdminPaymentBatches() {
         `)
         .eq("status", "forwarded")
         .eq("partners.pays_by_direct_debit", false)
+        // Facturen die de gast rechtstreeks betaalde zijn geen post van het bureau.
+        .eq("billed_to", "bureau")
         .is("payment_batch_id", null)
         .is("refund_pending_at", null)
         .order("invoice_date", { ascending: true });

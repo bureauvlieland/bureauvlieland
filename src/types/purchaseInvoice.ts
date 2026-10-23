@@ -1,4 +1,5 @@
 // Purchase Invoice types for bureau_central invoicing mode
+import type { InvoiceBilledTo } from "@/lib/invoiceBilledTo";
 
 export type InvoicingMode = 'bureau_central';
 
@@ -33,6 +34,8 @@ export interface PurchaseInvoice {
   supplier_commission_vat?: number | null;
   refund_pending_at?: string | null;
   refund_reason?: string | null;
+  /** Aan wie de partner factureerde: bureau (default) of customer (de gast betaalde rechtstreeks; alleen commissiegrondslag). */
+  billed_to?: InvoiceBilledTo | string | null;
 }
 
 export interface PurchaseInvoiceWithRelations extends PurchaseInvoice {
@@ -131,11 +134,14 @@ export interface PurchaseInvoiceInsert {
   pdf_total_incl_vat?: number | null;
   /** Reden waarom een afwijking tussen onze berekening en het PDF-totaal geaccepteerd is. */
   amount_mismatch_reason?: string | null;
+  /** `customer`: de gast betaalde deze factuur rechtstreeks aan de partner. */
+  billed_to?: InvoiceBilledTo;
 }
 
 
 export interface PurchaseInvoiceUpdate {
   status?: PurchaseInvoiceStatus;
+  billed_to?: InvoiceBilledTo;
   paid_at?: string | null;
   forwarded_to_accounting_at?: string | null;
   forwarded_by?: string | null;
@@ -145,12 +151,15 @@ export interface PurchaseInvoiceUpdate {
 export interface PurchaseInvoiceFilters {
   requestId?: string;
   partnerId?: string;
-  status?: PurchaseInvoiceStatus | 'all';
+  /** Een status, of het zicht `customer_billed` (door de gast betaalde facturen). */
+  status?: PurchaseInvoiceStatus | 'customer_billed' | 'all';
   search?: string;
 }
 
 export interface PurchaseInvoiceStats {
   pending: number;
+  /** Facturen die de gast rechtstreeks betaalde (alleen commissiegrondslag). */
+  customerBilled: number;
   awaitingPdf: number;
   forwarded: number;
   paid: number;

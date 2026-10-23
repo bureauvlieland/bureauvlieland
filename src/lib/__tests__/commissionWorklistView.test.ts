@@ -46,6 +46,7 @@ const row = (overrides: Partial<ReconRow> = {}): ReconRow => ({
   ageDays: 30,
   commissionComponents: null,
   hasMixedRates: false,
+  customerPaid: false,
   ...overrides,
 });
 
@@ -149,5 +150,22 @@ describe("zoeken, sorteren en groeperen", () => {
   it("sorteert op ouderdom en op bedrag", () => {
     expect(groupWorklistRows(rows, "age").map((g) => g.partnerName)).toEqual(["Zeezicht", "Oliva"]);
     expect(groupWorklistRows(rows, "amount").map((g) => g.partnerName)).toEqual(["Oliva", "Zeezicht"]);
+  });
+});
+
+describe("rowPills: gast betaalde rechtstreeks", () => {
+  it("toont de pill naast de gewone pills, zonder de bucket te veranderen", () => {
+    const paid = row({ customerPaid: true });
+    expect(bucketForRow(paid)).toBe("billable");
+    expect(rowPills(paid).map((p) => p.label)).toEqual(["Gast betaalde rechtstreeks"]);
+  });
+
+  it("komt vóór de afwijking en na 'niet gekoppeld'", () => {
+    const loose = row({ itemType: "purchase_invoice", status: "unlinked_invoice", customerPaid: true, itemId: null, invoiceId: "inv-1" });
+    expect(rowPills(loose).map((p) => p.label)).toEqual(["Niet gekoppeld", "Gast betaalde rechtstreeks"]);
+    const deviation = rowPills(row({ status: "deviation", differenceExclVat: 50, customerPaid: true })).map((p) => p.label);
+    expect(deviation).toHaveLength(2);
+    expect(deviation[0]).toBe("Gast betaalde rechtstreeks");
+    expect(deviation[1].startsWith("Afwijking +")).toBe(true);
   });
 });

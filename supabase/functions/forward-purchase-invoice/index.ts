@@ -1,3 +1,4 @@
+import { isCustomerBilled } from "../_shared/invoiceBilledTo.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
@@ -80,6 +81,18 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Invoice not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Een factuur aan de gast is geen kostenpost van het bureau: de gast heeft
+    // hem al betaald. Snelstart hoort hem niet te boeken.
+    if (isCustomerBilled(invoice)) {
+      return new Response(
+        JSON.stringify({
+          error: "Deze factuur is aan de gast gericht en door de gast betaald; hij hoort niet in onze boekhouding en wordt niet doorgestuurd.",
+          code: "customer_billed",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FactList, FormField, Notice, SuccessScreen } from "@/components/system";
-import { Euro, Loader2, Receipt } from "lucide-react";
+import { FactList, FormField, Notice, OptionCard, OptionGroup, SuccessScreen } from "@/components/system";
+import { Building2, Euro, Loader2, Receipt, UserRound } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import type { PartnerItem } from "@/types/partner";
@@ -15,6 +15,7 @@ import { isValidInvoiceNumberInput } from "@/lib/purchaseInvoiceConsistency";
 import { looksLikeProjectReference } from "@/lib/purchaseInvoiceDuplicateRules";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
+import { defaultBilledToForProject, type InvoiceBilledTo } from "@/lib/invoiceBilledTo";
 import { reportError } from "@/lib/errorReporting";
 import { formatEuro } from "@/lib/formatEuro";
 
@@ -50,6 +51,10 @@ export type InvoiceTarget =
       priceTotal: number;
       priceIncludesVat: boolean;
       vatRate: number;
+      /** Facturatiewijze van het gekoppelde programma (bureau_central of partner_direct). */
+      invoicingMode?: string | null;
+      /** Het bureau haalde het logies van zijn factuur: de accommodatie rekent rechtstreeks met de gast af. */
+      accommodationBilledDirectly?: boolean;
     };
 
 interface InvoiceRegistrationDialogProps {
@@ -70,10 +75,23 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  // Aan wie de factuur gericht is: Bureau Vlieland (het bureau betaalt) of de
+  // gast (die rekende rechtstreeks af; alleen commissie). Vooraf ingevuld
+  // vanuit het project, altijd om te zetten.
+  const [billedTo, setBilledTo] = useState<InvoiceBilledTo>("bureau");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState<{ commission: number } | null>(null);
   const { getSetting } = useAppSettings();
+
+  const defaultBilledTo: InvoiceBilledTo = !target
+    ? "bureau"
+    : target.kind === "item"
+      ? defaultBilledToForProject(target.item.program_requests, "item")
+      : defaultBilledToForProject(
+          { invoicing_mode: target.invoicingMode ?? null, excluded_fees: target.accommodationBilledDirectly ? ["accommodation"] : [] },
+          "accommodation",
+        );
 
   const item = target?.kind === "item" ? target.item : null;
   const { getItemVatRate } = useItemVatRates(item ? [{ block_id: item.block_id }] : []);
@@ -94,6 +112,7 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
     setInvoiceDate(format(new Date(), "yyyy-MM-dd"));
     setNotes("");
     setFile(null);
+    setBilledTo(defaultBilledTo);
     setErrors({});
     setDone(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,7 +128,8 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
 
   const subject = target.kind === "item" ? target.item.block_name : target.accommodationName;
   const customerLabel = target.kind === "item" ? target.item.program_requests.customer_company || target.item.program_requests.customer_name : target.customerLabel;
-  const billsBureau = target.kind === "accommodation" || target.item.program_requests?.invoicing_mode === "bureau_central";
+  const billsBureau = billedTo === "bureau";
+  const customerPaid = billedTo === "customer";
   const billingDetails = target.kind === "item" ? target.billingDetails : null;
 
   const bureau = {
@@ -177,6 +197,7 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
             invoicedDate: invoiceDate,
             notes: notes.trim() || undefined,
             filePath,
+            billedTo,
           }),
         });
         if (!response.ok) {
@@ -185,7 +206,7 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
         }
       } else {
         const { data, error } = await supabase.functions.invoke("register-accommodation-invoice", {
-          body: { quoteId: target.quoteId, partnerToken, invoicedAmount: amountExcl, invoicedNumber: invoiceNumber.trim(), invoicedDate: invoiceDate },
+          body: { quoteId: target.quoteId, partnerToken, invoicedAmount: amountExcl, invoicedNumber: invoiceNumber.trim(), invoicedDate: invoiceDate, billedTo },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -225,8 +246,10 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
             title={`Factuur ${invoiceNumber.trim()} is geregistreerd`}
             intro={
               commissionPercentage > 0
-                ? `Bureau Vlieland stuurt u een commissiefactuur van ${formatEuro(done.commission)} (${commissionPercentage}% over ${formatEuro(amountExcl)} excl. btw).`
-                : "Bureau Vlieland verwerkt uw factuur."
+                ? `Bureau Vlieland stuurt u een commissiefactuur van ${formatEuro(done.commission)} (${commissionPercentage}% over ${formatEuro(amountExcl)} excl. btw).${customerPaid ? " De gast heeft de factuur zelf betaald; het bureau betaalt u niets uit." : ""}`
+                : customerPaid
+                  ? "De factuur is vastgelegd. De gast heeft hem zelf betaald; het bureau betaalt u niets uit."
+                  : "Bureau Vlieland verwerkt uw factuur."
             }
             primary={{ label: "Sluiten", onClick: onClose }}
             className="py-4"
@@ -235,7 +258,32 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
           <div className="space-y-4">
             <FactList title="Te factureren" items={facts} />
 
-            {billsBureau ? (
+            <OptionGroup label="Aan wie is deze factuur gericht?" columns={2}>
+              <OptionCard
+                selected={billsBureau}
+                onSelect={() => setBilledTo("bureau")}
+                icon={<Building2 />}
+                title="Bureau Vlieland"
+                description="Het bureau betaalt uw factuur en stuurt u apart een commissiefactuur."
+              />
+              <OptionCard
+                selected={customerPaid}
+                onSelect={() => setBilledTo("customer")}
+                icon={<UserRound />}
+                title="De gast, rechtstreeks afgerekend"
+                description="De gast heeft u al betaald. U ontvangt alleen een commissiefactuur."
+              />
+            </OptionGroup>
+
+            {customerPaid ? (
+              <Notice tone="info" title="Factuur aan de gast">
+                <p>
+                  De gast heeft rechtstreeks met u afgerekend; de boeking liep via Bureau Vlieland. Het bureau betaalt
+                  deze factuur niet en stuurt u alleen een commissiefactuur over het bedrag excl. btw. Upload de pdf als
+                  onderbouwing.
+                </p>
+              </Notice>
+            ) : billsBureau ? (
               <Notice tone="info" title="Factureer aan Bureau Vlieland">
                 <p>
                   {bureau.name}
@@ -297,7 +345,13 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
               </Notice>
             )}
 
-            <FormField label="Pdf van de factuur" htmlFor="invoicePdf" required error={errors.file} help="Bureau Vlieland stuurt de pdf direct door naar de boekhouding (maximaal 10 MB).">
+            <FormField
+              label="Pdf van de factuur"
+              htmlFor="invoicePdf"
+              required
+              error={errors.file}
+              help={customerPaid ? "De pdf is de onderbouwing van de commissie (maximaal 10 MB)." : "Bureau Vlieland stuurt de pdf direct door naar de boekhouding (maximaal 10 MB)."}
+            >
               <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             </FormField>
 
