@@ -221,6 +221,9 @@ export type Database = {
           description: string | null
           deviation_reason: string | null
           forwarded_at: string | null
+          headcount_change_requested_at: string | null
+          headcount_confirmed_at: string | null
+          headcount_proposal: Json | null
           id: string
           images: Json
           includes: Json | null
@@ -234,6 +237,7 @@ export type Database = {
           price_includes_vat: boolean | null
           price_per_person_per_night: number | null
           price_total: number
+          priced_for_guests: number | null
           proforma_amount_excl_vat: number | null
           proforma_commission: number | null
           proforma_deadline: string | null
@@ -278,6 +282,9 @@ export type Database = {
           description?: string | null
           deviation_reason?: string | null
           forwarded_at?: string | null
+          headcount_change_requested_at?: string | null
+          headcount_confirmed_at?: string | null
+          headcount_proposal?: Json | null
           id?: string
           images?: Json
           includes?: Json | null
@@ -291,6 +298,7 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total: number
+          priced_for_guests?: number | null
           proforma_amount_excl_vat?: number | null
           proforma_commission?: number | null
           proforma_deadline?: string | null
@@ -335,6 +343,9 @@ export type Database = {
           description?: string | null
           deviation_reason?: string | null
           forwarded_at?: string | null
+          headcount_change_requested_at?: string | null
+          headcount_confirmed_at?: string | null
+          headcount_proposal?: Json | null
           id?: string
           images?: Json
           includes?: Json | null
@@ -348,6 +359,7 @@ export type Database = {
           price_includes_vat?: boolean | null
           price_per_person_per_night?: number | null
           price_total?: number
+          priced_for_guests?: number | null
           proforma_amount_excl_vat?: number | null
           proforma_commission?: number | null
           proforma_deadline?: string | null

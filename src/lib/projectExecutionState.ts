@@ -97,6 +97,8 @@ export function getProjectExecutionState(
  */
 export const PRE_EXECUTION_TODO_TYPES: readonly string[] = [
   "quote_pending_partner",
+  "quote_headcount_pending_partner",
+  "quote_headcount_review",
   "quote_pending_customer",
   "quote_expiring_soon",
   "quote_expired_partner",

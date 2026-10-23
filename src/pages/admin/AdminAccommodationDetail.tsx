@@ -77,6 +77,7 @@ import { SendAccommodationQuoteRequestDialog } from "@/components/admin/SendAcco
 import { ForwardQuoteToCustomerDialog } from "@/components/admin/ForwardQuoteToCustomerDialog";
 import { ProjectCommunicationsCard } from "@/components/admin/ProjectCommunicationsCard";
 import { AdminAccommodationQuoteSheet } from "@/components/admin/AdminAccommodationQuoteSheet";
+import { AccommodationHeadcountReviewCard } from "@/components/admin/AccommodationHeadcountReviewCard";
 import { EditAccommodationGuestsDialog } from "@/components/admin/EditAccommodationGuestsDialog";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 import { AdminAccommodationChatSheet } from "@/components/admin/AdminAccommodationChatSheet";
@@ -946,6 +947,23 @@ export default function AdminAccommodationDetail() {
                                 <span className="text-xs text-muted-foreground">€{Number(quote.price_per_person_per_night).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.p.n.</span>
                               )}
                             </div>
+                          )}
+
+                          {/* Aantalwijziging na de keuze: voorstel beoordelen of partner vragen */}
+                          {quote.status === "selected" && request && (
+                            <AccommodationHeadcountReviewCard
+                              quote={quote}
+                              requestGuests={request.number_of_guests}
+                              linkedProgramId={request.linked_program_id ?? null}
+                              partnerName={partner?.name || "Partner"}
+                              onChanged={() => {
+                                queryClient.invalidateQueries({ queryKey: ["admin-accommodation-quotes", id] });
+                                queryClient.invalidateQueries({ queryKey: ["admin-accommodation-request", id] });
+                                queryClient.invalidateQueries({ queryKey: ["admin-linked-program", id] });
+                                queryClient.invalidateQueries({ queryKey: ["project-communications"] });
+                                queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos"] });
+                              }}
+                            />
                           )}
 
                           {/* Alternative dates for declined */}

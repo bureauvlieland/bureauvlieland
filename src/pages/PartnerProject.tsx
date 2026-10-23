@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Users, Calendar, Building2, Mail, Phone, MessageSquare, Archive, FolderOpen, BedDouble, FileText } from "lucide-react";
 import { GuestDetailsBlock } from "@/components/partner-portal/GuestDetailsBlock";
 import { differenceInDays, format, parseISO } from "date-fns";
@@ -14,6 +14,7 @@ import { EmptyState, FactList, Notice, Pill } from "@/components/system";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { OTHER_TURN_STATUSES, PARTNER_TURN_STATUSES } from "@/lib/partnerProjectStatus";
 import { partnerQuoteAction, partnerQuoteStatus } from "@/lib/accommodationQuoteStatus";
+import { hasPendingHeadcountProposal, needsHeadcountConfirmation } from "@/lib/accommodationHeadcount";
 import { ACCOMMODATION_TYPES } from "@/types/accommodation";
 import { PartnerItemSheet } from "@/components/partner-portal/PartnerItemSheet";
 import { PartnerAccommodationQuoteSheet } from "@/components/partner-portal/PartnerAccommodationQuoteSheet";
@@ -43,6 +44,7 @@ interface Props {
 
 const PartnerProjectContent = ({ mode, projectId }: Props) => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const params = useParams<{ id: string }>();
   const id = projectId ?? params.id;
   const { toast } = useToast();
@@ -94,6 +96,17 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
       data.accommodationQuotes?.find((q) => q.accommodation_requests.id === id) ?? null
     );
   }, [data, mode, id]);
+
+  // Deep link uit de mail "Nieuw aantal bevestigen": /partner/logies/:id?actie=aantal
+  // opent de offertesheet direct; daarna halen we de parameter weg.
+  const wantsHeadcountAction = searchParams.get("actie") === "aantal";
+  useEffect(() => {
+    if (!wantsHeadcountAction || !accommodationQuote) return;
+    setShowQuoteSheet(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("actie");
+    setSearchParams(next, { replace: true });
+  }, [wantsHeadcountAction, accommodationQuote, searchParams, setSearchParams]);
 
   const postItemStatus = async (
     itemId: string,
@@ -528,11 +541,17 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
       invoiced_date: accommodationQuote.invoiced_date,
       commission_percentage: accommodationQuote.commission_percentage,
       commission_amount: accommodationQuote.commission_amount,
+      priced_for_guests: accommodationQuote.priced_for_guests ?? null,
+      headcount_change_requested_at: accommodationQuote.headcount_change_requested_at ?? null,
+      headcount_proposal: accommodationQuote.headcount_proposal ?? null,
+      headcount_confirmed_at: accommodationQuote.headcount_confirmed_at ?? null,
     },
   };
 
   const quoteStatus = partnerQuoteStatus(accommodationQuote.status);
-  const quoteAction = partnerQuoteAction(accommodationQuote.status);
+  const headcountPending = needsHeadcountConfirmation(accommodationQuote, req.number_of_guests);
+  const headcountProposed = hasPendingHeadcountProposal(accommodationQuote);
+  const quoteAction = partnerQuoteAction(accommodationQuote.status, { headcountPending });
   const nights = Math.max(1, differenceInDays(parseISO(req.departure_date), parseISO(req.arrival_date)));
   const accommodationFacts = [
     { label: "Verblijf", value: `${nights === 1 ? "1 nacht" : `${nights} nachten`}, ${req.number_of_guests} personen`, icon: Users },
@@ -553,7 +572,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
             <h2 className="font-display text-xl font-medium">Uw offerte</h2>
-            <article className={cn("rounded-lg border bg-card p-4", quoteStatus.tone === "warning" && "border-warning/40")}>
+            <article className={cn("rounded-lg border bg-card p-4", (quoteStatus.tone === "warning" || headcountPending) && "border-warning/40")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="break-words text-base font-medium leading-snug">{accommodationQuote.accommodation_name || partnerName}</h3>
@@ -580,6 +599,16 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
                 {quoteStatus.key === "expired" && (
                   <Notice tone="warning" title="De geldigheid is verstreken">
                     <p>Verleng de offerte en hij staat weer open voor de klant.</p>
+                  </Notice>
+                )}
+                {quoteStatus.key === "selected" && headcountPending && (
+                  <Notice tone="warning" title={`Het aantal gasten is gewijzigd naar ${req.number_of_guests}`}>
+                    <p>Uw offerte gold voor {accommodationQuote.priced_for_guests} gasten. Bevestig het nieuwe aantal en pas zo nodig het totaal aan; de klant hoeft niet opnieuw te kiezen.</p>
+                  </Notice>
+                )}
+                {quoteStatus.key === "selected" && headcountProposed && (
+                  <Notice tone="info" title="Nieuw aantal bevestigd">
+                    <p>Bureau Vlieland beoordeelt uw bevestiging en informeert de klant.</p>
                   </Notice>
                 )}
                 {quoteStatus.key === "selected" && (

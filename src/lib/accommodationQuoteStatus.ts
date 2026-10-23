@@ -49,8 +49,18 @@ export function partnerQuoteStatus(rawStatus: string | null | undefined): Partne
   return { key, ...STATUSES[key] };
 }
 
-/** De ene knop op de aanvraagkaart en de projectpagina: wat de partner nu kan doen. */
-export function partnerQuoteAction(rawStatus: string | null | undefined): { label: string; variant: "default" | "outline" | "ghost" } {
+/**
+ * De ene knop op de aanvraagkaart en de projectpagina: wat de partner nu kan
+ * doen. `headcountPending`: het aantal gasten is gewijzigd en de partner moet
+ * het nieuwe aantal nog bevestigen (src/lib/accommodationHeadcount.ts).
+ */
+export function partnerQuoteAction(
+  rawStatus: string | null | undefined,
+  options?: { headcountPending?: boolean },
+): { label: string; variant: "default" | "outline" | "ghost" } {
+  if (partnerQuoteStatusKey(rawStatus) === "selected" && options?.headcountPending) {
+    return { label: "Nieuw aantal bevestigen", variant: "default" };
+  }
   switch (partnerQuoteStatusKey(rawStatus)) {
     case "requested":
       return { label: "Offerte indienen", variant: "default" };

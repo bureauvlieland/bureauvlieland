@@ -191,6 +191,8 @@ Deno.serve(async (req) => {
             template_name: opts.logExtra.email_type,
             actor: opts.logExtra.email_type.startsWith("reminder_quote")
               ? "system → partner (offerte herinnering)"
+              : opts.logExtra.email_type.startsWith("reminder_headcount")
+              ? "system → partner (nieuw aantal bevestigen herinnering)"
               : opts.logExtra.email_type.startsWith("reminder_activity")
               ? "system → partner (activiteit herinnering)"
               : opts.logExtra.email_type.startsWith("reminder_")
@@ -438,6 +440,134 @@ Deno.serve(async (req) => {
               related_item_id: quote.id,
             },
           });
+        }
+      }
+    }
+
+    // =============================================
+    // CHECK 2b: gekozen logies, nieuw aantal nog niet bevestigd door de partner
+    // (docs/plan-logies-aantalwijziging.md). Dezelfde termijn als de gewone
+    // offerteherinnering; telt vanaf het moment dat de partner is gevraagd.
+    // =============================================
+    {
+      const headcountCutoff = new Date();
+      headcountCutoff.setDate(headcountCutoff.getDate() - partnerQuoteDays);
+      const todayIso = new Date().toISOString().slice(0, 10);
+
+      const { data: unconfirmedQuotes, error: unconfirmedError } = await supabase
+        .from("accommodation_quotes")
+        .select(`
+          id,
+          partner_id,
+          request_id,
+          accommodation_name,
+          price_total,
+          priced_for_guests,
+          headcount_change_requested_at,
+          partner:partners(name, email, contact_email),
+          request:accommodation_requests(
+            customer_name,
+            customer_company,
+            arrival_date,
+            departure_date,
+            number_of_guests,
+            status,
+            linked_program_id
+          )
+        `)
+        .eq("status", "selected")
+        .is("headcount_proposal", null)
+        .not("headcount_change_requested_at", "is", null)
+        .lt("headcount_change_requested_at", headcountCutoff.toISOString());
+
+      if (unconfirmedError) {
+        console.error("Error fetching quotes with unconfirmed headcount:", unconfirmedError);
+      } else {
+        for (const quote of unconfirmedQuotes || []) {
+          const req = quote.request as unknown as {
+            customer_name: string | null;
+            customer_company: string | null;
+            arrival_date: string | null;
+            departure_date: string | null;
+            number_of_guests: number | null;
+            status: string | null;
+            linked_program_id: string | null;
+          } | null;
+          if (!req || req.status === "cancelled") { totalSkipped++; continue; }
+          if (req.arrival_date && req.arrival_date < todayIso) { totalSkipped++; continue; }
+          // Inmiddels gelijk (bijv. teruggedraaid): niets te bevestigen.
+          if (quote.priced_for_guests != null && quote.priced_for_guests === req.number_of_guests) { totalSkipped++; continue; }
+          const linkedProgramId = req.linked_program_id ?? null;
+          if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+          if (isHot(linkedProgramId))     { totalSkipped++; continue; }
+
+          const { data: existingTodo } = await supabase
+            .from("admin_todos")
+            .select("id")
+            .eq("auto_type", "quote_headcount_pending_partner")
+            .eq("auto_entity_id", quote.id)
+            .neq("status", "done")
+            .maybeSingle();
+          if (existingTodo) { totalSkipped++; continue; }
+
+          const partnerData = quote.partner as unknown as { name: string | null; email: string | null; contact_email: string | null } | null;
+          const partnerName = partnerData?.name || "Onbekend";
+          const customerName = req.customer_company || req.customer_name || "Onbekend";
+          const daysSince = Math.floor(
+            (Date.now() - new Date(quote.headcount_change_requested_at as string).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const oldGuests = quote.priced_for_guests ?? null;
+          const newGuests = req.number_of_guests;
+
+          const { error: todoError } = await supabase
+            .from("admin_todos")
+            .insert({
+              title: `Partner ${partnerName} heeft het nieuwe aantal gasten voor ${customerName} nog niet bevestigd`,
+              description: `${daysSince} dagen geleden is ${partnerName} gevraagd ${oldGuests ? `${oldGuests} naar ` : ""}${newGuests} gasten te bevestigen voor "${quote.accommodation_name}". De offerte staat nog op ${oldGuests ?? "het oude aantal"} gasten.`,
+              priority: daysSince > partnerQuoteDays * 2 ? "high" : "normal",
+              status: "todo",
+              related_request_id: linkedProgramId,
+              related_partner_id: quote.partner_id,
+              auto_type: "quote_headcount_pending_partner",
+              auto_entity_id: quote.id,
+            });
+          if (!todoError) totalCreated++;
+
+          if (canSendEmail && partnerData) {
+            const partnerEmail = partnerData.contact_email || partnerData.email;
+            if (!partnerEmail) continue;
+            const portalUrl = `${portalBase}/partner/logies/${quote.request_id}?actie=aantal`;
+            const arrivalFormatted = req.arrival_date ? new Date(req.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+            const departureFormatted = req.departure_date ? new Date(req.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "";
+
+            await sendReminderEmail({
+              templateId: "reminder_headcount_pending",
+              recipientEmail: partnerEmail,
+              recipientName: partnerName,
+              subject: `Herinnering: nieuw aantal gasten bevestigen voor ${customerName}`,
+              variables: {
+                partner_name: partnerName,
+                customer_name: customerName,
+                arrival_date: arrivalFormatted,
+                departure_date: departureFormatted,
+                number_of_guests: String(newGuests ?? ""),
+                previous_number_of_guests: String(oldGuests ?? ""),
+                days_since: String(daysSince),
+                portal_url: portalUrl,
+              },
+              fallbackHtml: `<p>Beste ${partnerName},</p>
+                <p>Wij hebben u ${daysSince} dagen geleden gevraagd het nieuwe aantal gasten te bevestigen voor ${customerName} (${arrivalFormatted} tot ${departureFormatted}): ${oldGuests ? `${oldGuests} wordt ` : ""}${newGuests} gasten. Wij hebben nog geen bevestiging ontvangen.</p>
+                <p>De klant heeft uw offerte al gekozen; die blijft staan. Wilt u in het partnerportaal het nieuwe aantal bevestigen en, als dat nodig is, het totaal aanpassen? Bureau Vlieland beoordeelt uw bevestiging en informeert de klant.</p>
+                <p><a href="${portalUrl}" style="display:inline-block;padding:10px 20px;background-color:#2563eb;color:white;text-decoration:none;border-radius:6px;">Nieuw aantal bevestigen</a></p>
+                <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+              logExtra: {
+                email_type: "reminder_headcount_pending",
+                related_partner_id: quote.partner_id,
+                related_request_id: linkedProgramId ?? undefined,
+                related_item_id: quote.id,
+              },
+            });
+          }
         }
       }
     }
