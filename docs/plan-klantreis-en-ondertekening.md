@@ -412,9 +412,9 @@ die nu rechtstreeks. De visuele referenties worden via de workflow
 Aanvulling 26 oktober: de drie stappen van "Zo werkt het" hebben een echte
 foto in plaats van een icoon in een cirkel (principe 3 van het
 ontwerpsysteem): de wegwijzer op het strand bij "u vertelt wat u zoekt",
-Erwin zelf bij "wij stellen het samen" en de lange tafel in de avondzon bij
+Erwin zelf bij "wij stellen het samen" en de juichende groep in de duinen bij
 "u geeft akkoord". De foto's zijn 4:3-uitsneden van bestaande beelden als
-webp van 35 tot 58 KB (`src/assets/stap-*.webp`); op mobiel staan ze in
+webp van 35 tot 95 KB (`src/assets/stap-*.webp`); op mobiel staan ze in
 16:9 zodat de drie kaarten onder elkaar niet te lang worden.
 
 **Fase 2: één formulier en de voorbeelden (2 tot 3 dagen).** Programma op

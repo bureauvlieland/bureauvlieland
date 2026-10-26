@@ -19,7 +19,6 @@ import { openPreSalesChat } from "@/components/site/openPreSalesChat";
 interface Step {
   image: string;
   alt: string;
-  caption?: string;
   title: string;
   text: string;
 }
@@ -34,13 +33,12 @@ const STEPS: Step[] = [
   {
     image: stapSamenstellen,
     alt: "Erwin Soolsma van Bureau Vlieland aan een picknicktafel op het strand",
-    caption: "Erwin, oprichter",
     title: "Wij stellen het samen",
     text: `${RESPONSE_TIME.short}, met prijzen per onderdeel. Van eilanders die alle partners kennen en weten wat bij uw groep past.`,
   },
   {
     image: stapAkkoord,
-    alt: "Lange gedekte tafel in de avondzon met de vuurtoren van Vlieland op de achtergrond",
+    alt: "Grote groep juicht in de duinen van Vlieland",
     title: "U geeft akkoord in uw portaal",
     text: "Eén akkoord, één factuur. Wij boeken alle eilandpartners en blijven uw aanspreekpunt, ook tijdens uw verblijf.",
   },
@@ -67,11 +65,6 @@ export const HowItWorks = ({ number }: { number: string }) => (
                 loading="lazy"
                 className="h-full w-full object-cover"
               />
-              {step.caption && (
-                <span className="absolute bottom-3 left-3 rounded-full bg-card/90 px-3 py-1 text-xs font-medium text-foreground">
-                  {step.caption}
-                </span>
-              )}
             </div>
             <div className="p-6">
               <span className="text-eyebrow font-medium uppercase text-primary">Stap {idx + 1}</span>
