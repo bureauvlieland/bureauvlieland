@@ -69,8 +69,8 @@ const OnzeWerkwijze = () => {
           eyebrow="Werkwijze"
           title="Onze werkwijze"
           intro="Eén partij, één factuur: zo organiseren wij uw programma op Vlieland. Zelf samenstellen of op maat, altijd met één vast aanspreekpunt."
-          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
-          secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
+          secondary={{ label: "Liever zelf samenstellen?", to: "/programma-samenstellen" }}
         />
         <RouteCards number={routes.number} tone={routes.tone} />
         <ProcessSteps number={process.number} tone={process.tone} />

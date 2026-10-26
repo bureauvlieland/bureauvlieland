@@ -31,8 +31,9 @@ test("self-service submit landt met items én juiste datum in DB", async ({ page
   const stamp = Date.now();
   const email = `e2e+${stamp}@bureauvlieland.nl`;
 
-  await page.goto(BASE);
-  await page.getByRole("link", { name: /start uw aanvraag/i }).first().click();
+  // "Start uw aanvraag" opent sinds fase 1 van het klantreisplan het
+  // aanvraagformulier; de programma-bouwer heeft zijn eigen pad.
+  await page.goto(`${BASE}/programma-samenstellen`);
 
   // Navigeer naar activiteiten en voeg er eentje toe — selectors aanpassen
   // zodra de configurator-UI verandert (dat is het hele punt van deze test).

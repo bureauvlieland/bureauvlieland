@@ -37,7 +37,7 @@ export const MobileNav = ({ onClose }: MobileNavProps) => {
       <div className="flex flex-col gap-1 py-6 px-2">
         {/* Primary CTA */}
         <div className="px-2 mb-6">
-          <Link to="/#routes" onClick={onClose}>
+          <Link to="/programma-op-maat" onClick={onClose}>
             <Button
               variant="default"
               className="w-full"

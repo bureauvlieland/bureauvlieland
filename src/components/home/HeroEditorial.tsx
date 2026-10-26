@@ -59,7 +59,7 @@ export const HeroEditorial = () => {
             voor uw groep.
           </span>
           <span className="mt-5 block max-w-2xl text-[clamp(1.25rem,1.8vw,1.75rem)] leading-snug tracking-normal text-sand">
-            Van 50 tot 150 personen, van boot tot borrel.
+            Van 8 tot 150 personen, van boot tot borrel.
           </span>
         </motion.h1>
 
@@ -85,13 +85,13 @@ export const HeroEditorial = () => {
             className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
           >
             <Button asChild size="xl">
-              <a href="#routes">
+              <Link to="/programma-op-maat">
                 <Sparkles aria-hidden="true" />
                 Start uw aanvraag
                 <ArrowRight aria-hidden="true" />
-              </a>
+              </Link>
             </Button>
-            <p className="text-sm text-sand/80 lg:text-right">Voor groepen vanaf 50 personen.</p>
+            <p className="text-sm text-sand/80 lg:text-right">Vrijblijvend, binnen 5 werkdagen een voorstel.</p>
             <div className="flex items-center gap-2 text-sm text-sand/90 lg:justify-end">
               <RatingStars value={rating} small />
               <span className="font-medium text-primary-foreground">{rating.toFixed(1).replace(".", ",")}</span>
@@ -99,12 +99,12 @@ export const HeroEditorial = () => {
               <span>200+ groepen sinds 2017</span>
             </div>
             <p className="text-sm text-sand/80 lg:text-right">
-              Liever volledig op maat?{" "}
+              Liever eerst inspiratie?{" "}
               <Link
-                to="/programma-op-maat"
+                to="/voorbeeldprogrammas"
                 className="text-sand underline underline-offset-4 decoration-sand/40 hover:text-primary-foreground hover:decoration-sand transition-colors"
               >
-                Vraag een programma op maat aan
+                Bekijk voorbeeldprogramma's
               </Link>
             </p>
           </motion.div>
@@ -118,7 +118,7 @@ export const HeroEditorial = () => {
           className="mt-auto pt-12 lg:pt-16 border-t border-sand/20 grid grid-cols-2 md:grid-cols-4 gap-8"
         >
           {[
-            { num: "50-150", label: "personen per groep" },
+            { num: "8-150", label: "personen per groep" },
             { num: "200+", label: "programma's sinds 2017" },
             { num: "0", label: "eigen bedden te vullen" },
             { num: "1", label: "factuur, alles geregeld" },

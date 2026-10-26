@@ -66,11 +66,11 @@ const VoorWie = () => {
           eyebrow="Voor wie"
           title="Voor wie"
           intro="Groepen die kwaliteit en één aanspreekpunt centraal stellen: bedrijven en teams, directies, organisaties en de bureaus en trainers die met hen werken."
-          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
-          secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
+          secondary={{ label: "Liever zelf samenstellen?", to: "/programma-samenstellen" }}
         />
         <ForWho />
-        <RouteChooser title="Herkent u uw groep hierin?" intro="Vrijblijvend, en binnen 5 werkdagen een voorstel. Kies de route die bij u past." />
+        <RouteChooser title="Herkent u uw groep hierin?" intro="Vrijblijvend, en binnen 5 werkdagen een voorstel." />
         <FaqSection schemaId="voor-wie" pageUrl={URL} items={FAQ} />
         <RelatedLinks />
       </main>

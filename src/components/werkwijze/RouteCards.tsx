@@ -7,32 +7,32 @@ import { Checklist } from "@/components/landing/sections";
 
 const routes = [
   {
-    pill: "Direct online",
+    pill: "Met persoonlijk advies",
+    icon: Compass,
+    title: "Vertel ons wat u zoekt",
+    description: `Groepsgrootte, periode en wensen in twee minuten. Wij denken met u mee en sturen ${RESPONSE_TIME.within} een vrijblijvend voorstel, met prijzen per onderdeel.`,
+    points: [
+      "Voor elke groep, van 8 tot 150 personen",
+      "Voorstel op basis van uw doel en sfeer",
+      "Volledige flexibiliteit in opzet",
+      "Eén vast aanspreekpunt gedurende het traject",
+    ],
+    cta: { label: "Start uw aanvraag", to: "/programma-op-maat" },
+    primary: true,
+  },
+  {
+    pill: "Zelf doen",
     icon: Sparkles,
     title: "Zelf uw programma samenstellen",
     description:
-      "U weet ongeveer wat u wilt? Stel uw programma direct samen uit onze bouwstenen. Prijzen per onderdeel, transparant en in een paar minuten klaar.",
+      "U weet al precies wat u wilt? Stel uw programma zelf samen uit onze bouwstenen. Prijzen per onderdeel, transparant en in een paar minuten klaar.",
     points: [
       "Direct inzicht in beschikbaarheid en prijzen",
       "Bouwstenen van alle eilandpartners",
       RESPONSE_TIME.short,
       "Aanpassen kan altijd in overleg",
     ],
-    cta: { label: "Stel uw programma samen", to: "/programma-samenstellen" },
-    primary: true,
-  },
-  {
-    pill: "Met persoonlijk advies",
-    icon: Compass,
-    title: "Programma op maat",
-    description: `Complexere wens, groot gezelschap of liever sparren? Wij denken met u mee en stellen ${RESPONSE_TIME.within} een voorstel op maat samen.`,
-    points: [
-      "Persoonlijk gesprek met een eilandkenner",
-      "Voorstel op basis van uw doel en sfeer",
-      "Volledige flexibiliteit in opzet",
-      "Eén vast aanspreekpunt gedurende het traject",
-    ],
-    cta: { label: "Vraag maatwerk aan", to: "/programma-op-maat" },
+    cta: { label: "Open de programma-bouwer", to: "/programma-samenstellen" },
     primary: false,
   },
 ];
@@ -45,7 +45,7 @@ export const RouteCards = ({ number, tone }: { number: string; tone: SectionTone
         eyebrow="Werkwijze"
         number={number}
         title="Twee manieren om met ons te starten"
-        intro="Of u nu direct aan de slag wilt of liever met ons meedenkt: beide routes leiden tot één compleet programma met één factuur."
+        intro="Vertel ons wat u zoekt, of puzzel zelf: beide routes leiden tot één compleet programma met één factuur."
         align="center"
       />
       <div className="mt-12 grid gap-4 md:grid-cols-2">

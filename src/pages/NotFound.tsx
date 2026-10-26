@@ -50,8 +50,8 @@ const getRedirectDestination = (pathname: string): string | null => {
 };
 
 const QUICK_LINKS = [
-  { to: "/programma-samenstellen", title: "Stel uw programma samen", desc: "Bouw zelf uw dag uit losse activiteiten, catering en boot.", icon: PenLine },
-  { to: "/programma-op-maat", title: "Programma op maat", desc: "Wij denken mee en bouwen een programma rond uw groep.", icon: MessageSquareHeart },
+  { to: "/programma-op-maat", title: "Start uw aanvraag", desc: "Vertel ons wat u zoekt, wij sturen een vrijblijvend voorstel.", icon: MessageSquareHeart },
+  { to: "/programma-samenstellen", title: "Zelf samenstellen", desc: "Bouw zelf uw dag uit losse activiteiten, catering en boot.", icon: PenLine },
   { to: "/voorbeeldprogrammas", title: "Voorbeeldprogramma's", desc: "Laat u inspireren door kant-en-klare programma's van eerdere groepen.", icon: BookOpen },
   { to: "/contact", title: "Contact", desc: "Liever even sparren? Stuur ons een bericht.", icon: Mail },
 ];

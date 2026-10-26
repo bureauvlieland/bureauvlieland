@@ -8,9 +8,11 @@ import { SectionHeader } from "./SectionHeader";
 
 /**
  * Het keuzeblok onderaan een marketingpagina (ontwerpsysteem fase 3):
- * drie routes naar een aanvraag, met "zelf samenstellen" als de primaire.
- * Vervangt de CTA-band en het losse routeblok. Een pagina met een ander
- * publiek (Samenwerken) geeft eigen `routes` mee; de vorm blijft gelijk.
+ * drie routes naar een aanvraag, met het formulier als de primaire (plan
+ * klantreis en ondertekening, fase 1), de voorbeeldprogramma's als
+ * inspiratie en de programma-bouwer voor wie zelf wil puzzelen. Vervangt de
+ * CTA-band en het losse routeblok. Een pagina met een ander publiek
+ * (Samenwerken) geeft eigen `routes` mee; de vorm blijft gelijk.
  */
 export interface RouteChooserRoute {
   icon: LucideIcon;
@@ -33,26 +35,26 @@ interface RouteChooserProps {
 
 const DEFAULT_ROUTES: RouteChooserRoute[] = [
   {
-    icon: PenLine,
-    title: "Stel zelf uw programma samen",
-    text: "Kies activiteiten, catering en vervoer in een paar stappen. U ziet meteen prijzen per onderdeel.",
-    to: "/programma-samenstellen",
-    label: "Begin met samenstellen",
-    primary: true,
-  },
-  {
     icon: MessageSquareHeart,
-    title: "Programma op maat",
-    text: "Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij een persoonlijk voorstel.",
+    title: "Vertel ons wat u zoekt",
+    text: "Groepsgrootte, periode en wensen in twee minuten. Wij stellen het programma samen en sturen een vrijblijvend voorstel.",
     to: "/programma-op-maat",
-    label: "Vertel ons uw wensen",
+    label: "Start uw aanvraag",
+    primary: true,
   },
   {
     icon: BookOpen,
     title: "Voorbeeldprogramma's",
-    text: "Kant-en-klare dagindelingen van eerdere groepen, om van te starten of ideeën op te doen.",
+    text: "Kant-en-klare dagindelingen van eerdere groepen, om ideeën op te doen of als startpunt voor uw aanvraag.",
     to: "/voorbeeldprogrammas",
     label: "Bekijk de voorbeelden",
+  },
+  {
+    icon: PenLine,
+    title: "Zelf samenstellen",
+    text: "Liever zelf puzzelen? Kies activiteiten, catering en vervoer en zie meteen prijzen per onderdeel.",
+    to: "/programma-samenstellen",
+    label: "Open de programma-bouwer",
   },
 ];
 
@@ -60,7 +62,7 @@ export const RouteChooser = ({
   id,
   eyebrow = "Uw volgende stap",
   title = "Klaar om te beginnen?",
-  intro = "Vrijblijvend, en binnen 5 werkdagen een voorstel. Kies de route die bij u past.",
+  intro = "Vrijblijvend, en binnen 5 werkdagen een voorstel.",
   routes = DEFAULT_ROUTES,
 }: RouteChooserProps) => (
   <Section id={id} tone="dark" className={id ? "scroll-mt-24" : undefined}>

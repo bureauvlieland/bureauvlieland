@@ -28,19 +28,19 @@ const DURATION_OPTIONS: { id: DurationFilter; label: string }[] = [
 
 const routes: RouteChooserRoute[] = [
   {
-    icon: PenLine,
-    title: "Stel zelf uw programma samen",
-    text: "Kies activiteiten, catering en vervoer in een paar stappen. U ziet meteen prijzen per onderdeel.",
-    to: "/programma-samenstellen",
-    label: "Begin met samenstellen",
+    icon: MessageSquareHeart,
+    title: "Vertel ons wat u zoekt",
+    text: "Noem het voorbeeld dat u aanspreekt, uw groepsgrootte en periode. Wij maken er uw programma van en sturen een vrijblijvend voorstel.",
+    to: "/programma-op-maat",
+    label: "Start uw aanvraag",
     primary: true,
   },
   {
-    icon: MessageSquareHeart,
-    title: "Programma op maat",
-    text: "Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij een persoonlijk voorstel.",
-    to: "/programma-op-maat",
-    label: "Vertel ons uw wensen",
+    icon: PenLine,
+    title: "Zelf samenstellen",
+    text: "Liever zelf puzzelen? Open een voorbeeld in de programma-bouwer en pas het aan. U ziet meteen prijzen per onderdeel.",
+    to: "/programma-samenstellen",
+    label: "Open de programma-bouwer",
   },
   {
     icon: BookOpen,
@@ -127,8 +127,8 @@ const VoorbeeldprogrammaOverzicht = () => {
           eyebrow="Voorbeeldprogramma's"
           title="Kant-en-klare programma's voor uw groep"
           intro="Dagindelingen van eerdere groepen, van een actieve eilanddag tot een meerdaagse heisessie. Laat u inspireren en pas ze naar wens aan; elk programma is volledig aanpasbaar."
-          cta={{ label: "Stel zelf uw programma samen", to: "/programma-samenstellen" }}
-          secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
+          secondary={{ label: "Liever zelf samenstellen?", to: "/programma-samenstellen" }}
         />
 
         <Section spacing="compact">

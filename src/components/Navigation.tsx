@@ -121,7 +121,7 @@ export const Navigation = () => {
               {renderDropdown("overons", "Over ons", overOnsClass, OverOnsDropdown)}
 
               {/* CTA */}
-              <Link to="/#routes">
+              <Link to="/programma-op-maat">
                 <Button
                   variant="default"
                   size="sm"
