@@ -5,7 +5,7 @@ import { getSubjectPrefix, getRecipientEmail, getRenderedTemplate, wrapEmailHtml
 // eens per zoveel dagen (voorheen: nooit een tweede keer).
 const REMINDER_REPEAT_DAYS = 7;
 import { logEmail } from "../_shared/email-logger.ts";
-import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
+import { cooldownFor, fetchLastContactByProject, fetchReferredRequestIds } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
 import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
 import { allItemsConfirmedForTerms, buildTermsCallTodo, buildTermsMailCopy, pickTermsMail, termsStageFor, TERMS_MAIL_TYPES, type TermsItemLike } from "../_shared/customerTermsReminder.ts";
@@ -51,8 +51,16 @@ Deno.serve(async (req) => {
       .select("id")
       .gt("snoozed_until", nowIso);
     const snoozedRequestIds = new Set<string>((snoozedRows || []).map((r: any) => r.id));
-    const isSnoozed = (id?: string | null): boolean => !!id && snoozedRequestIds.has(id);
     console.log(`Snoozed projects skipped this run: ${snoozedRequestIds.size}`);
+
+    // Doorverwezen bruiloften (docs/plan-bruiloftsdoorverwijzingen.md) gedragen
+    // zich als permanent gesnoozed: de partner regelt het, het bureau krijgt er
+    // geen taken of herinneringen meer voor.
+    const referredRequestIds = await fetchReferredRequestIds(supabase);
+    console.log(`Referred projects skipped this run: ${referredRequestIds.size}`);
+
+    const isPaused = (id?: string | null): boolean =>
+      !!id && (snoozedRequestIds.has(id) || referredRequestIds.has(id));
 
     // Cooldown-set: projecten met contact in de laatste 2 dagen krijgen géén
     // nieuwe reminder-todos (zou anders direct na een opvolgmail terug ploppen).
@@ -243,7 +251,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${pendingItems?.length || 0} pending activity items older than ${partnerActivityDays} days`);
 
       for (const item of pendingItems || []) {
-        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
+        if (isPaused(item.request_id)) { totalSkipped++; continue; }
         if (isHot(item.request_id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -369,7 +377,7 @@ Deno.serve(async (req) => {
 
       for (const quote of activeQuotes) {
         const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
-        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+        if (isPaused(linkedProgramId)) { totalSkipped++; continue; }
         if (isHot(linkedProgramId))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -498,7 +506,7 @@ Deno.serve(async (req) => {
           // Inmiddels gelijk (bijv. teruggedraaid): niets te bevestigen.
           if (quote.priced_for_guests != null && quote.priced_for_guests === req.number_of_guests) { totalSkipped++; continue; }
           const linkedProgramId = req.linked_program_id ?? null;
-          if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+          if (isPaused(linkedProgramId)) { totalSkipped++; continue; }
           if (isHot(linkedProgramId))     { totalSkipped++; continue; }
 
           const { data: existingTodo } = await supabase
@@ -609,7 +617,7 @@ Deno.serve(async (req) => {
 
       for (const quote of activeForwarded) {
         const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
-        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+        if (isPaused(linkedProgramId)) { totalSkipped++; continue; }
         if (isHot(linkedProgramId))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -663,7 +671,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${inactiveRequests?.length || 0} inactive program requests older than ${customerRequestDays} days`);
 
       for (const req of inactiveRequests || []) {
-        if (isSnoozed(req.id)) { totalSkipped++; continue; }
+        if (isPaused(req.id)) { totalSkipped++; continue; }
         if (isHot(req.id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -766,7 +774,7 @@ Deno.serve(async (req) => {
 
       for (const quote of activeExpired) {
         const linkedProgramId = (quote.request as any)?.linked_program_id ?? null;
-        if (isSnoozed(linkedProgramId)) { totalSkipped++; continue; }
+        if (isPaused(linkedProgramId)) { totalSkipped++; continue; }
         // Update status to expired
         const { error: updateError } = await supabase
           .from("accommodation_quotes")
@@ -955,7 +963,7 @@ Deno.serve(async (req) => {
           : "n.t.b.";
 
       for (const item of executedItems) {
-        if (isSnoozed(item.request_id)) { totalSkipped++; continue; }
+        if (isPaused(item.request_id)) { totalSkipped++; continue; }
         const req = execReqMap.get(item.request_id) as any;
         const customerName = req?.customer_company || req?.customer_name || "Onbekend";
         const referenceNumber = req?.reference_number || "—";
@@ -1153,7 +1161,7 @@ Deno.serve(async (req) => {
       );
 
       for (const reqRow of eligibleRequests || []) {
-        if (isSnoozed(reqRow.id)) { totalSkipped++; continue; }
+        if (isPaused(reqRow.id)) { totalSkipped++; continue; }
         if (!reqRow.customer_email) continue;
         if (reqRow.aftersales_sent_at) continue;
         if (reqRow.cancelled_at || reqRow.status === "cancelled") continue;
@@ -1246,7 +1254,7 @@ Deno.serve(async (req) => {
         new Date(s).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
       for (const item of upcomingItems || []) {
-        if (isSnoozed(item.request_id)) continue;
+        if (isPaused(item.request_id)) continue;
         const reqRow: any = Array.isArray(item.program_requests)
           ? item.program_requests[0]
           : item.program_requests;
@@ -1355,7 +1363,7 @@ Deno.serve(async (req) => {
       console.log(`Found ${expiringPrograms?.length || 0} quotes expiring within 3 days`);
 
       for (const prog of expiringPrograms || []) {
-        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isPaused(prog.id)) { totalSkipped++; continue; }
         if (isHot(prog.id))     { totalSkipped++; continue; }
         const { data: existingTodo } = await supabase
           .from("admin_todos")
@@ -1442,7 +1450,7 @@ Deno.serve(async (req) => {
       }
 
       for (const prog of phaseBPrograms || []) {
-        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isPaused(prog.id)) { totalSkipped++; continue; }
         if (isHot(prog.id))     { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         const anyApproved = items.some(
@@ -1532,7 +1540,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching phase C programs:", phaseCError);
     } else {
       for (const prog of phaseCPrograms || []) {
-        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isPaused(prog.id)) { totalSkipped++; continue; }
         if (isHot(prog.id))     { totalSkipped++; continue; }
         const items = (prog.items as any[]) || [];
         // Phase C = at least one approved item that was/should be sent to a partner,
@@ -1618,7 +1626,7 @@ Deno.serve(async (req) => {
       console.error("Error fetching near-event programs:", nearEventError);
     } else {
       for (const prog of nearEventPrograms || []) {
-        if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+        if (isPaused(prog.id)) { totalSkipped++; continue; }
         const dates = Array.isArray(prog.selected_dates)
           ? (prog.selected_dates as string[])
           : [];
@@ -1724,7 +1732,7 @@ Deno.serve(async (req) => {
         }
 
         for (const prog of unsignedPrograms || []) {
-          if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+          if (isPaused(prog.id)) { totalSkipped++; continue; }
           const termsStage = termsStageFor(prog, now);
           if (!termsStage) continue;
           const items = (prog.items as Array<TermsItemLike & BureauItemLike>) || [];
@@ -1851,7 +1859,7 @@ Deno.serve(async (req) => {
               .maybeSingle();
             relatedRequestId = prog?.id ?? null;
           }
-          if (relatedRequestId && isSnoozed(relatedRequestId)) { totalSkipped++; continue; }
+          if (relatedRequestId && isPaused(relatedRequestId)) { totalSkipped++; continue; }
 
           const { error: todoError } = await supabase
             .from("admin_todos")

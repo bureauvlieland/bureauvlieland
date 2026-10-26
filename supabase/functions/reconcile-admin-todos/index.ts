@@ -3,6 +3,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   fetchLastContactByProject,
+  fetchReferredRequestIds,
+  REFERRAL_PAUSED_AUTO_TYPES,
   REMINDER_TYPES_GUARDED_BY_COOLDOWN,
 } from "../_shared/project-activity.ts";
 import {
@@ -607,6 +609,24 @@ Deno.serve(async (req) => {
                 : null;
             if (projectId && snoozedSet.has(projectId)) {
               markClosed(t.id, "snoozed");
+            }
+          }
+        }
+
+        // Doorverwezen bruiloften: de projecttaken vervallen (de partner regelt
+        // het), maar inbound en de taken van de doorverwijzing zelf blijven.
+        const referredSet = await fetchReferredRequestIds(supabase, [...candidateRequestIds]);
+        if (referredSet.size > 0) {
+          for (const t of list) {
+            if (!t.auto_type || !REFERRAL_PAUSED_AUTO_TYPES.has(t.auto_type)) continue;
+            const projectId =
+              t.related_request_id && isUuid(t.related_request_id)
+                ? t.related_request_id
+                : t.auto_entity_id && isUuid(t.auto_entity_id)
+                ? t.auto_entity_id
+                : null;
+            if (projectId && referredSet.has(projectId)) {
+              markClosed(t.id, "referred");
             }
           }
         }

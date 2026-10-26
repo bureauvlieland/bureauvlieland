@@ -348,6 +348,46 @@ aan het bureau (`hallo@`), naar het voorbeeld van de logies-alert
   als "failed" in het e-maillog; de partner merkt er niets van.
 - De werkbanktaak blijft leidend; de mail is een extra signaal.
 
+## Werkbank: een doorverwezen dossier is stil (gebouwd 26 oktober)
+
+Melding van Erwin: een doorverwezen bruiloft (Karlijn Smit, BV-2606-0029)
+stond nog steeds in de Werkbank-inbox als "Aan zet — Werk concept uit / stel
+offerte op voor klant", met de taak "Aanvraag … is inactief". De
+doorverwijzing was voor de Werkbank onzichtbaar: die keek alleen naar
+offertestatus, onderdelen en mails, en het projectdossier bleef gewoon een
+concept zonder onderdelen. Het projectenoverzicht liet doorverwezen
+projecten al wel weg (`splitReferred`).
+
+- **Communicatiestatus "Doorverwezen"** (`resolveProjectCommunicationState`
+  in `projectCommunication.ts`): heeft een project een rij in
+  `wedding_referrals`, dan is de status `doorverwezen`, wat de sporen ook
+  zeggen. Zo'n dossier komt niet meer als "Aan zet" of "Stilte" in de inbox
+  en krijgt geen actie-hints. In de lijst Projecten van de Werkbank blijft
+  het staan, met de badge "Doorverwezen"; het detailpaneel toont partner,
+  datum en een link naar Bruiloften. De status van de doorverwijzing
+  (geboekt, niet doorgegaan, vervallen) maakt niet uit: het bureau voert
+  de bruiloft in geen van die gevallen uit.
+- **Automatische taken vervallen** voor de taken die het bureau aan het
+  project laten werken (de clusters "Aan zet", "Wacht op partner", "Wacht
+  op klant" en "Na uitvoering" uit `projectActivity.ts`):
+  `isTodoPausedByReferral` in de frontend, de gespiegelde lijst
+  `REFERRAL_PAUSED_AUTO_TYPES` in `_shared/project-activity.ts`;
+  `referralPause.test.ts` houdt beide gelijk. Wat blijft: handmatige taken,
+  inbound (het bruidspaar kan op de doorverwijsmail antwoorden; reply-to
+  staat op het project), de taken van de doorverwijzing zelf
+  (`wedding_referral_claim`) en systeemtaken.
+- **`check-pending-items`** slaat doorverwezen projecten over, precies zoals
+  gesnoozede projecten (`isPaused`): geen nieuwe taken en geen
+  herinneringsmails aan het bruidspaar namens het bureau.
+- **`reconcile-admin-todos`** sluit de openstaande projecttaken van
+  doorverwezen projecten met reden `referred`, naast de snooze-sweep. De
+  Werkbank roept reconcile bij het openen aan, dus bestaande taken
+  verdwijnen bij het eerste bezoek na de deploy; tot die tijd verbergt de
+  inbox ze al (`assembleInbox`).
+- Niet veranderd: de melding na het doorverwijzen ("Gaat de aanvraag niet
+  verder als project? Annuleer hem dan via het menu.") blijft; annuleren
+  kan, maar hoeft niet meer om de Werkbank rustig te houden.
+
 ## Partnerafspraken met akkoord in het portaal (gebouwd 29 september)
 
 Vraag van Erwin: kunnen we de afspraken met partners in het portaal

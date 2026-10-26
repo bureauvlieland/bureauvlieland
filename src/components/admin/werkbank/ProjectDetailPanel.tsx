@@ -24,6 +24,7 @@ import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
+import { REFERRAL_STATUS_LABEL, type ReferralStatus } from "@/lib/weddingReferrals";
 
 type ItemRow = Pick<
   Tables<"program_request_items">,
@@ -393,6 +394,31 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
         </TabsList>
 
         <TabsContent value="overzicht" className="space-y-3">
+          {project.weddingReferral && (
+            <div className="rounded-md border border-pink-200 bg-pink-50 p-3 text-sm dark:border-pink-900/60 dark:bg-pink-950/40">
+              <div className="font-medium text-pink-900 dark:text-pink-200">
+                ↗️ Doorverwezen naar {project.weddingReferral.partnerName}
+                {" · "}
+                {new Date(project.weddingReferral.referredAt).toLocaleDateString("nl-NL", {
+                  day: "numeric", month: "long", year: "numeric",
+                })}
+                {project.weddingReferral.status !== "referred" && (
+                  <> · {REFERRAL_STATUS_LABEL[project.weddingReferral.status as ReferralStatus] ?? project.weddingReferral.status}</>
+                )}
+              </div>
+              <p className="mt-1 text-pink-800 dark:text-pink-300">
+                De partner regelt deze bruiloft; dit dossier vraagt geen actie meer van het bureau en krijgt
+                geen automatische taken of herinneringen. Binnenkomende berichten blijven zichtbaar.{" "}
+                <button
+                  type="button"
+                  className="underline underline-offset-2"
+                  onClick={() => navigate("/admin/bruiloften")}
+                >
+                  Naar Bruiloften
+                </button>
+              </p>
+            </div>
+          )}
           {project.comm === "bij_bureau" && project.bureauActionHints?.length ? (
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/60 dark:bg-blue-950/40">
               <div className="font-medium text-blue-900 dark:text-blue-200">🟢 Aan zet — Bureau Vlieland</div>

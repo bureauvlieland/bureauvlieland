@@ -31,6 +31,7 @@ function project(id: string, overrides: Partial<ProjectSummary> = {}): ProjectSu
     hasProgram: true,
     hasLodging: false,
     bureauActionHints: [],
+    weddingReferral: null,
     snoozedUntil: null,
     snoozedReason: null,
     snoozedAt: null,
@@ -146,5 +147,73 @@ describe("assembleInbox: dossiers", () => {
     const contact = new Map([["p1", "2026-10-26T09:00:00Z"]]);
     const items = assembleInbox({ todos, projects: [p], lastContactByProject: contact, today: TODAY, now: NOW });
     expect(items).toHaveLength(0);
+  });
+});
+
+describe("doorverwezen bruiloften", () => {
+  const referred = project("p-ref", {
+    comm: "doorverwezen",
+    programComm: "bij_bureau",
+    weddingReferral: { partnerName: "Paal 50", referredAt: "2026-10-04", status: "referred" },
+  });
+
+  it("komt zonder taken niet in de inbox: niet 'Aan zet', geen stilte", () => {
+    const items = assembleInbox({
+      todos: [],
+      projects: [referred],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+    });
+    expect(items).toEqual([]);
+  });
+
+  it("verbergt de automatische projecttaken (inactief, offerte, herinneringen)", () => {
+    const items = assembleInbox({
+      todos: [
+        todo("t1", { auto_type: "request_no_response", related_request_id: "p-ref", title: "Aanvraag X is inactief" }),
+        todo("t2", { auto_type: "quote_pending_customer", related_request_id: "p-ref" }),
+        todo("t3", { auto_type: "new_program_request", related_request_id: "p-ref" }),
+      ],
+      projects: [referred],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+    });
+    expect(items).toEqual([]);
+  });
+
+  it("toont wel handmatige taken, inbound en de taken van de doorverwijzing zelf", () => {
+    const items = assembleInbox({
+      todos: [
+        todo("t1", { auto_type: "request_no_response", related_request_id: "p-ref" }),
+        todo("m1", { auto_type: null, related_request_id: "p-ref", title: "Vergoeding factureren" }),
+        todo("i1", { auto_type: "inbound_email", related_request_id: "p-ref", title: "Antwoord bruidspaar" }),
+        todo("w1", { auto_type: "wedding_referral_claim", related_request_id: "p-ref", title: "Paal 50 meldt: al bekend" }),
+      ],
+      projects: [referred],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].projectId).toBe("p-ref");
+    expect(items[0].comm).toBe("doorverwezen");
+    expect(items[0].todos.map((t) => t.id).sort()).toEqual(["i1", "m1", "w1"]);
+    // De verborgen projecttaak telt niet als "stil" (dat is de cooldown-demping).
+    expect(items[0].suppressedCount).toBe(0);
+  });
+
+  it("raakt niet-doorverwezen dossiers niet", () => {
+    const gewoon = project("p-normaal", { comm: "bij_bureau", bureauActionHints: ["Werk concept uit"] });
+    const items = assembleInbox({
+      todos: [todo("t1", { auto_type: "request_no_response", related_request_id: "p-normaal" })],
+      projects: [gewoon, referred],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+    });
+    expect(items.map((i) => i.projectId)).toEqual(["p-normaal"]);
+    expect(items[0].todos).toHaveLength(1);
   });
 });
