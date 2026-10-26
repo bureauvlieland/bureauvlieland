@@ -22,7 +22,7 @@ const FAQ = [
   {
     question: "Hoe kan ik contact opnemen met Bureau Vlieland?",
     answer:
-      "Bel 0562 700 208, mail naar hallo@bureauvlieland.nl of start vrijblijvend een [aanvraag](/programma-samenstellen). Op een bericht reageren wij doorgaans binnen één werkdag.",
+      "Bel 0562 700 208, mail naar hallo@bureauvlieland.nl of start vrijblijvend een [aanvraag](/programma-op-maat). Op een bericht reageren wij doorgaans binnen één werkdag.",
   },
   {
     question: "Wat zijn de openingstijden?",
@@ -68,7 +68,7 @@ const Contact = () => {
           title="Neem contact op"
           intro="Benieuwd naar de mogelijkheden? Bel of mail ons, of start vrijblijvend een aanvraag: u ontvangt binnen 5 werkdagen een voorstel."
           cta={{ label: "Stuur ons een bericht", to: "mailto:hallo@bureauvlieland.nl" }}
-          secondary={{ label: "Start uw aanvraag", to: "/programma-samenstellen" }}
+          secondary={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
         />
 
         <Section tone={channels.tone}>

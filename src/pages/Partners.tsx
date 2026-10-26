@@ -127,7 +127,7 @@ const Partners = () => {
           eyebrow="Eilandpartners"
           title="Onze eilandpartners"
           intro="Lokale ondernemers, restaurants, gidsen en accommodaties die uw programma op Vlieland mogelijk maken. Wij kennen ze persoonlijk en boeken ze voor u."
-          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
           secondary={{ label: "Bekijk de bouwstenen", to: "/bouwstenen" }}
         />
 

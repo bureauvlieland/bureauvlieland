@@ -109,8 +109,8 @@ export const LandingPage = ({ content }: { content: LandingContent }) => {
           eyebrow={content.hero.eyebrow}
           title={content.hero.title}
           intro={content.hero.intro}
-          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
-          secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
+          secondary={{ label: "Liever zelf samenstellen?", to: "/programma-samenstellen" }}
         />
 
         <Section>

@@ -198,10 +198,10 @@ const ProgrammaOpMaat = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Programma op maat – Bureau Vlieland</title>
+        <title>Start uw aanvraag – Bureau Vlieland</title>
         <meta
           name="description"
-          content="Laat Bureau Vlieland uw programma op Vlieland samenstellen. Vrijblijvend en op basis van uw wensen."
+          content="Vertel ons wat u zoekt voor uw groep op Vlieland. Wij stellen het programma samen en sturen binnen 5 werkdagen een vrijblijvend voorstel."
         />
         <link rel="canonical" href="https://bureauvlieland.nl/programma-op-maat" />
       </Helmet>
@@ -210,9 +210,9 @@ const ProgrammaOpMaat = () => {
       <main id="main-content">
         {!isSuccess && (
           <FunnelHead
-            eyebrow="Programma op maat"
-            title="Laat ons uw programma samenstellen"
-            intro={`Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij ${RESPONSE_TIME.within} een persoonlijk voorstel.`}
+            eyebrow="Uw aanvraag"
+            title="Vertel ons wat u zoekt"
+            intro={`Wij stellen het programma voor u samen en sturen ${RESPONSE_TIME.within} een vrijblijvend voorstel, met prijzen per onderdeel. Twee minuten werk.`}
           />
         )}
 
@@ -339,9 +339,9 @@ const ProgrammaOpMaat = () => {
                 <WizardFooter nextType="submit" nextLabel="Aanvraag versturen" nextLoading={isSubmitting} note={<SubmitNote />} />
 
                 <p className="text-center text-sm text-muted-foreground">
-                  Liever zelf samenstellen?{" "}
+                  Liever zelf samenstellen en direct prijzen zien?{" "}
                   <Link to="/programma-samenstellen" className="text-primary underline underline-offset-2">
-                    Stel zelf uw programma samen
+                    Open de programma-bouwer
                   </Link>
                   .
                 </p>

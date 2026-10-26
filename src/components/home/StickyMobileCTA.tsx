@@ -13,7 +13,7 @@ interface StickyMobileCTAProps {
   to?: string;
 }
 
-export const StickyMobileCTA = ({ label = "Start uw aanvraag", to = "/programma-samenstellen" }: StickyMobileCTAProps) => {
+export const StickyMobileCTA = ({ label = "Start uw aanvraag", to = "/programma-op-maat" }: StickyMobileCTAProps) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

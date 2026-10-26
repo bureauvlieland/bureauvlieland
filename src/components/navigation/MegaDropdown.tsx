@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Zap,
   BookMarked,
+  PenLine,
 } from "lucide-react";
 
 interface NavItem {
@@ -59,6 +60,12 @@ const watWeOrganiserenItems: NavItem[] = [
     href: "/evenementen",
     description: "Zakelijke evenementen en bijzondere gelegenheden",
     icon: PartyPopper,
+  },
+  {
+    label: "Zelf samenstellen",
+    href: "/programma-samenstellen",
+    description: "Liever zelf puzzelen? Bouw een programma en zie direct prijzen",
+    icon: PenLine,
   },
 ];
 

@@ -1,9 +1,9 @@
 # Plan: de klantreis omdraaien en eerder tekenen
 
 Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
-overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten) is op 26
-oktober gebouwd; de overige fasen volgen in de volgorde 1, 2, 4, 5, elk in
-een eigen pull request. Het plan zelf is van 25 oktober, op basis van de
+overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten) en fase 1
+(de voordeur) zijn op 26 oktober gebouwd; de overige fasen volgen in de
+volgorde 2, 4, 5, elk in een eigen pull request. Het plan zelf is van 25 oktober, op basis van de
 productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
 richting (één voordeur, wizard naar de tweede laag, handtekening bij
 akkoord).
@@ -372,6 +372,35 @@ weg. Direct boeken en de live agenda van de homepage af. Hero-cijfers
 aangepast. Landingssjabloon, routekaarten en `internalLinks.ts` naar het
 formulier. Visuele referenties opnieuw maken. Dit kan vóór fase 2, omdat
 Programma op maat al een werkend formulier is.
+
+Fase 1 is op 26 oktober gebouwd. Homepage: `RoutePicker` is weg, in zijn
+plaats staat `HowItWorks` als hoofdstuk 01 (drie stappen: u vertelt wat u
+zoekt, wij stellen het samen, u geeft akkoord in uw portaal) met de knop
+naar het formulier, de voorbeeldprogramma's als tweede regel, "Stel uw
+vraag via de chat" (opent de chatwidget via `openPreSalesChat`) en de
+programma-bouwer als tekstlink. De live agenda staat niet meer op de
+homepage maar op Activiteiten op Vlieland; de kaart "Losse activiteiten
+direct boeken" is daarmee ook van de homepage af (de pagina en het menu-item
+blijven). De hero zegt "van 8 tot 150 personen" in plaats van "50 tot
+150", de knop gaat naar het formulier met "vrijblijvend, binnen 5 werkdagen
+een voorstel" eronder en "Liever eerst inspiratie?" als tweede regel; het
+cijfer onderin is "8-150". Alle "Start uw aanvraag"-knoppen (menu, mobiel
+menu, voettekst, zwevende knop, slotblok) gaan naar `/programma-op-maat`;
+het anker `#routes` bestaat niet meer. Het keuzeblok op de marketingpagina's
+(`RouteChooser`) heeft het formulier als primaire kaart, de voorbeelden als
+tweede en de programma-bouwer als derde; het landingssjabloon, de
+routekaarten op Onze werkwijze, de hero's van Voor wie, Partners,
+Veelgestelde vragen, Voorbeeldprogramma's, Contact en Activiteiten op
+Vlieland, de linkregels (`internalLinks.ts`), de 404-pagina, de sitemap en
+de linkpagina volgen. Het menu "Wat we organiseren" kreeg "Zelf
+samenstellen" zodat de bouwer bereikbaar blijft. Het formulier zelf heet nu
+"Vertel ons wat u zoekt" (eyebrow "Uw aanvraag", paginatitel "Start uw
+aanvraag"); de velden zijn ongewijzigd tot fase 2, dus een datum is nog
+verplicht. Het label "meest gekozen" is verdwenen met het keuzeblok.
+Getest: typecheck, lint onder het plafond, strict op 26, design debt 0,
+volledige Vitest-suite, build; de handmatige e2e-test voor de bouwer opent
+die nu rechtstreeks. De visuele referenties worden via de workflow
+"Visuele referenties vernieuwen" op de branch opnieuw gemaakt.
 
 **Fase 2: één formulier en de voorbeelden (2 tot 3 dagen).** Programma op
 maat uitgebreid met soort, de vinkjes en de voorinvulling vanuit een
