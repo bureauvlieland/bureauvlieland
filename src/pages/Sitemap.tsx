@@ -13,8 +13,8 @@ const sections: SitemapSection[] = [
     title: "Start",
     links: [
       { label: "Home", href: "/" },
-      { label: "Stel zelf uw programma samen", href: "/programma-samenstellen" },
-      { label: "Programma op maat", href: "/programma-op-maat" },
+      { label: "Start uw aanvraag", href: "/programma-op-maat" },
+      { label: "Zelf samenstellen", href: "/programma-samenstellen" },
       { label: "Contact", href: "/contact" },
     ],
   },

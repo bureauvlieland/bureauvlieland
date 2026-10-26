@@ -40,6 +40,7 @@ import {
   Archive,
   ArchiveRestore,
   Sparkles,
+  FilePlus2,
 } from "lucide-react";
 
 
@@ -457,6 +458,24 @@ export function ChatPanel({
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {!activeConversation.request_id &&
+                  (activeConversation.source === "presales" || activeConversation.source === "whatsapp") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      title="Maak van dit gesprek een aanvraag; naam en e-mail gaan mee, het gesprek wordt aan het project gekoppeld"
+                      onClick={() => {
+                        const params = new URLSearchParams({ chat: activeConversation.id });
+                        if (activeConversation.visitor_name) params.set("naam", activeConversation.visitor_name);
+                        if (activeConversation.visitor_email) params.set("email", activeConversation.visitor_email);
+                        if (activeConversation.phone_number) params.set("telefoon", activeConversation.phone_number);
+                        navigate(`/admin/programma-nieuw?${params.toString()}`);
+                      }}
+                    >
+                      <FilePlus2 className="h-4 w-4 mr-1" />
+                      Aanvraag aanmaken
+                    </Button>
+                  )}
                 {activeConversation.request_id && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>

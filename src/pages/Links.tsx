@@ -15,9 +15,9 @@ import {
 
 const links = [
   {
-    to: "/programma-samenstellen",
-    label: "Stel uw programma samen",
-    description: "Online configurator — boot, fietsen en activiteiten in één keer",
+    to: "/programma-op-maat",
+    label: "Start uw aanvraag",
+    description: "Vertel ons wat u zoekt, wij sturen een vrijblijvend voorstel",
     icon: Compass,
     highlight: true,
   },
@@ -28,9 +28,9 @@ const links = [
     icon: Sparkles,
   },
   {
-    to: "/programma-op-maat",
-    label: "Programma op maat",
-    description: "Grotere of complexere groep? Wij bouwen het voor u",
+    to: "/programma-samenstellen",
+    label: "Zelf samenstellen",
+    description: "Online programma-bouwer: boot, fietsen en activiteiten in één keer",
     icon: Sparkles,
   },
   {

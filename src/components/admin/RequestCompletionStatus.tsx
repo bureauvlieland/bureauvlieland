@@ -7,6 +7,7 @@ import {
   type CompletionStatus,
 } from "@/types/bureauInvoice";
 import { MarkReadyForInvoiceButton } from "./MarkReadyForInvoiceButton";
+import { SendTermsRequestButton } from "./SendTermsRequestButton";
 
 interface ProgramRequestItem {
   id: string;
@@ -22,6 +23,8 @@ interface RequestCompletionStatusProps {
   status: string;
   completionStatus: CompletionStatus | null;
   termsAcceptedAt: string | null;
+  /** Nodig voor de knop "Ondertekenverzoek sturen". */
+  customerEmail?: string | null;
   items: ProgramRequestItem[];
   outstandingAmount: number;
   quoteStatus?: string | null;
@@ -33,6 +36,7 @@ export const RequestCompletionStatus = ({
   status,
   completionStatus,
   termsAcceptedAt,
+  customerEmail,
   items,
   outstandingAmount,
   quoteStatus,
@@ -158,6 +162,19 @@ export const RequestCompletionStatus = ({
             {termsAccepted ? "Voorwaarden geaccepteerd" : "Voorwaarden nog niet geaccepteerd"}
           </span>
         </div>
+        {!termsAccepted && requestId && status !== "cancelled" && (
+          <div className="pl-6">
+            <SendTermsRequestButton
+              requestId={requestId}
+              customerEmail={customerEmail}
+              termsAcceptedAt={termsAcceptedAt}
+              onDone={onRefresh}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Mailt de klant een directe link naar het tabblad Akkoord, ongeacht de offertefase.
+            </p>
+          </div>
+        )}
 
         {/* Ondertekend terwijl er nog onderdelen open staan → onder voorbehoud */}
         {termsAccepted && !allItemsConfirmed && (
@@ -195,6 +212,7 @@ export const RequestCompletionStatus = ({
           <div className="pt-2 border-t mt-2">
             <MarkReadyForInvoiceButton
               programId={requestId}
+              termsAccepted={termsAccepted}
               onDone={onRefresh}
             />
             <p className="text-xs text-muted-foreground mt-1">

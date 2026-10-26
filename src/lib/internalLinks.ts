@@ -1,4 +1,3 @@
-import { RESPONSE_TIME } from "@/content/promises";
 /**
  * Centrale interne linkstructuur.
  *
@@ -45,9 +44,9 @@ const L = {
     description: "Van lunch tot shared dining op locatie",
   },
   cateringAanvragen: {
-    href: "/catering-aanvragen",
+    href: "/programma-op-maat?nodig=eten",
     label: "Catering aanvragen",
-    description: "Vraag direct een cateringvoorstel aan",
+    description: "Vertel ons wat u wilt eten en drinken, wij sturen een voorstel",
   },
   evenementen: {
     href: "/evenementen",
@@ -61,13 +60,13 @@ const L = {
   },
   samenstellen: {
     href: "/programma-samenstellen",
-    label: "Stel uw programma samen",
-    description: "Bouw zelf een programma in een paar stappen",
+    label: "Zelf samenstellen",
+    description: "Liever zelf puzzelen? Bouw een programma uit bouwstenen",
   },
   opMaat: {
     href: "/programma-op-maat",
-    label: "Programma op maat",
-    description: "Wij werken een voorstel voor u uit",
+    label: "Start uw aanvraag",
+    description: "Vertel ons wat u zoekt, wij sturen een voorstel",
   },
   losseActiviteiten: {
     href: "/activiteiten-boeken",
@@ -88,11 +87,6 @@ const L = {
     href: "/veelgestelde-vragen",
     label: "Veelgestelde vragen",
     description: "Prijzen, offertes, vervoer en groepsgroottes",
-  },
-  offerte: {
-    href: "/offerte",
-    label: "Offerte aanvragen",
-    description: RESPONSE_TIME.short,
   },
   contact: {
     href: "/contact",
@@ -191,8 +185,8 @@ const CLUSTERS: Record<string, Cluster> = {
     links: [L.zeehonden, L.activiteitenVlieland, L.bouwstenen, L.voorbeeldprogrammas, L.catering, L.logies],
   },
   "/voorbeeldprogrammas": {
-    title: "Zelf verder bouwen",
-    links: [L.samenstellen, L.opMaat, L.bouwstenen, L.logies, L.catering, L.werkwijze],
+    title: "Verder met uw programma",
+    links: [L.opMaat, L.samenstellen, L.bouwstenen, L.logies, L.catering, L.werkwijze],
   },
   "/logies-vlieland": {
     title: "Maak het compleet",
@@ -208,11 +202,11 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/evenementen": {
     title: "Ook interessant",
-    links: [L.zakelijk, L.jubileum, L.catering, L.logies, L.voorbeeldprogrammas, L.offerte],
+    links: [L.opMaat, L.zakelijk, L.jubileum, L.catering, L.logies, L.voorbeeldprogrammas],
   },
   "/onze-werkwijze": {
     title: "Zo begint u",
-    links: [L.samenstellen, L.opMaat, L.snelAanvragen, L.voorbeeldprogrammas, L.faq, L.overOns],
+    links: [L.opMaat, L.voorbeeldprogrammas, L.samenstellen, L.snelAanvragen, L.faq, L.overOns],
   },
   "/over-ons": {
     title: "Verder lezen",
@@ -224,13 +218,13 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/contact": {
     title: "Misschien zoekt u dit",
-    links: [L.faq, L.offerte, L.werkwijze, L.voorbeeldprogrammas, L.bouwstenen, L.overOns],
+    links: [L.opMaat, L.faq, L.werkwijze, L.voorbeeldprogrammas, L.bouwstenen, L.overOns],
   },
   "/veelgestelde-vragen": {
     title: "Direct verder",
-    links: [L.werkwijze, L.offerte, L.samenstellen, L.voorbeeldprogrammas, L.logies, L.contact],
+    links: [L.opMaat, L.werkwijze, L.voorbeeldprogrammas, L.samenstellen, L.logies, L.contact],
   },
-  "/offerte": {
+  "/programma-op-maat": {
     title: "Eerst oriënteren?",
     links: [L.voorbeeldprogrammas, L.bouwstenen, L.werkwijze, L.faq, L.logies, L.catering],
   },
@@ -240,7 +234,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/activiteiten-boeken": {
     title: "Liever een compleet programma?",
-    links: [L.samenstellen, L.voorbeeldprogrammas, L.bouwstenen, L.activiteitenVlieland, L.logies, L.opMaat],
+    links: [L.opMaat, L.voorbeeldprogrammas, L.samenstellen, L.bouwstenen, L.activiteitenVlieland, L.logies],
   },
   "/bedrijfsuitje-vlieland": {
     title: "Ook relevant voor bedrijven",
@@ -264,7 +258,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/zakelijk-evenement-vlieland": {
     title: "Ook relevant voor bedrijven",
-    links: [L.evenementen, L.heisessie, L.incentive, L.catering, L.logies, L.offerte],
+    links: [L.opMaat, L.evenementen, L.heisessie, L.incentive, L.catering, L.logies],
   },
   "/incentive-reis-vlieland": {
     title: "Ook relevant voor bedrijven",
@@ -272,7 +266,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/bedrijfsuitje-ideeen-vlieland": {
     title: "Van idee naar programma",
-    links: [L.bouwstenen, L.voorbeeldprogrammas, L.bedrijfsuitje, L.teamuitje, L.samenstellen, L.activiteitenVlieland],
+    links: [L.opMaat, L.voorbeeldprogrammas, L.bouwstenen, L.bedrijfsuitje, L.teamuitje, L.samenstellen],
   },
   "/groepsweekend-vlieland": {
     title: "Ook interessant",
@@ -280,7 +274,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/jubileum-vlieland": {
     title: "Ook interessant",
-    links: [L.evenementen, L.groepsweekend, L.catering, L.logies, L.bouwstenen, L.offerte],
+    links: [L.opMaat, L.evenementen, L.groepsweekend, L.catering, L.logies, L.bouwstenen],
   },
   "/familieweekend-vlieland": {
     title: "Ook interessant",

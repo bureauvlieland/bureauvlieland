@@ -18,6 +18,7 @@ import {
 } from "@/lib/projectCommunication";
 import type { ProjectSummary } from "@/lib/getProject";
 import { MarkReadyForInvoiceButton } from "@/components/admin/MarkReadyForInvoiceButton";
+import { SendTermsRequestButton } from "@/components/admin/SendTermsRequestButton";
 import { PracticalInfoCard } from "@/components/admin/werkbank/PracticalInfoCard";
 import { SnoozeProjectButton } from "@/components/admin/SnoozeProjectButton";
 import { cn } from "@/lib/utils";
@@ -402,15 +403,43 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
               </ul>
             </div>
           ) : null}
+          {!project.termsAcceptedAt && project.hasProgram && project.pipeline !== "geannuleerd" && (
+            <div className={cn(
+              "rounded-md border p-3",
+              project.programPipeline === "akkoord_ontvangen" || project.programPipeline === "facturatie"
+                ? "border-amber-300 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/40"
+                : "bg-card",
+            )}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm">
+                  <div className="font-medium">Voorwaarden nog niet ondertekend</div>
+                  <p className="text-xs text-muted-foreground">
+                    {project.programPipeline === "akkoord_ontvangen" || project.programPipeline === "facturatie"
+                      ? "De klant heeft akkoord gegeven maar nog niet getekend. Stuur een verzoek met een directe link naar het tabblad Akkoord."
+                      : "Stuur de klant een directe link om akkoord te geven en te tekenen, bijvoorbeeld na een telefonisch akkoord."}
+                  </p>
+                </div>
+                <SendTermsRequestButton
+                  requestId={project.id}
+                  customerEmail={project.customer.email}
+                  termsAcceptedAt={project.termsAcceptedAt}
+                  onDone={() => queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] })}
+                />
+              </div>
+            </div>
+          )}
           {(project.programPipeline === "akkoord_ontvangen"
             || project.programPipeline === "av_getekend") && (
             <div className="rounded-md border bg-card p-3">
               <MarkReadyForInvoiceButton
                 programId={project.id}
+                termsAccepted={!!project.termsAcceptedAt}
                 onDone={() => queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] })}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Project verschuift naar Facturatie, ook zonder AV-acceptatie via de portal.
+                {project.termsAcceptedAt
+                  ? "Project verschuift naar Facturatie."
+                  : "Let op: de voorwaarden zijn nog niet ondertekend. Stuur liever eerst een ondertekenverzoek."}
               </p>
             </div>
           )}

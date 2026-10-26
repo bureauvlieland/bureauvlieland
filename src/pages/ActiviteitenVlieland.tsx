@@ -15,6 +15,7 @@ import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { SeeAlsoActivities } from "@/components/SeeAlsoActivities";
 import { ActivityFilter } from "@/components/ActivityFilter";
 import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
+import { UpcomingActivitiesFeed } from "@/components/home/UpcomingActivitiesFeed";
 import { BodySection, Paragraphs } from "@/components/landing/sections";
 import { sectionCounter } from "@/components/landing/sectionCounter";
 import { Container, FactList, LinkCard, PageHero, RouteChooser, Section, SectionHeader } from "@/components/system";
@@ -190,7 +191,7 @@ const ActiviteitenVlieland = () => {
           title="Activiteiten op Vlieland: wat kunt u doen?"
           intro="Het complete overzicht van wat er op het eiland te beleven valt. Los te boeken, of in één keer geregeld als compleet programma."
           cta={{ label: "Bekijk alle bouwstenen", to: "/bouwstenen" }}
-          secondary={{ label: "Stel een programma samen", to: "/programma-samenstellen" }}
+          secondary={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
         />
 
         <Section>
@@ -220,6 +221,9 @@ const ActiviteitenVlieland = () => {
             </div>
           </Container>
         </Section>
+
+        {/* De live agenda stond tot fase 1 van het klantreisplan op de homepage; hier hoort hij thuis. */}
+        <UpcomingActivitiesFeed />
 
         <Section tone={themesAt.tone}>
           <Container size="wide">

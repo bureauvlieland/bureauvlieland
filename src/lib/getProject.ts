@@ -89,6 +89,8 @@ export interface ProjectSummary {
   numberOfPeople: number;
   /** Rauwe offertefase (`program_requests.quote_status`) — nodig voor itemstatus-labels. */
   quoteStatus: string | null;
+  /** Handtekening onder de voorwaarden (`program_requests.terms_accepted_at`). */
+  termsAcceptedAt: string | null;
 
 
   pipeline: ProjectPipelineStage;
@@ -296,6 +298,7 @@ export async function listProjectsForWerkbank(opts: {
         : [],
       numberOfPeople: p.number_of_people ?? 0,
       quoteStatus: p.quote_status ?? null,
+      termsAcceptedAt: p.terms_accepted_at ?? null,
 
       pipeline: overallPipeline,
       programPipeline,

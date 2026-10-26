@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { OPEN_CHAT_EVENT } from "@/components/site/openPreSalesChat";
 import { Link, useLocation } from "react-router-dom";
 import { MessageCircle, X, Send, ShoppingCart, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,13 @@ export const PreSalesChatWidget = () => {
     const params = new URLSearchParams(location.search);
     if (params.get("chat") === "open") setOpen(true);
   }, [location.search]);
+
+  // "Stel uw vraag via de chat" elders op de site (openPreSalesChat()).
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_CHAT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
+  }, []);
 
 
   const hideOnPortal =
@@ -218,8 +226,11 @@ export const PreSalesChatWidget = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
                     maxLength={4000}
-                    placeholder="Waar kunnen we u bij helpen?"
+                    placeholder="Waar kunnen we u bij helpen? Noem alvast uw groepsgrootte, de periode en wat u nodig heeft."
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Met groepsgrootte, periode en wat u nodig heeft (activiteiten, eten en drinken, overnachting) kunnen wij meteen een voorstel doen.
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-2">

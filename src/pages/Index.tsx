@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { StructuredData } from "@/components/StructuredData";
@@ -8,28 +6,16 @@ import { Testimonials } from "@/components/Testimonials";
 import { Helmet } from "react-helmet";
 import { HeroEditorial } from "@/components/home/HeroEditorial";
 import { ActivitiesShowcase } from "@/components/home/ActivitiesShowcase";
-import { UpcomingActivitiesFeed } from "@/components/home/UpcomingActivitiesFeed";
 import { ProgramTemplatesPreview } from "@/components/home/ProgramTemplatesPreview";
 import { ErwinManifesto } from "@/components/home/ErwinManifesto";
 import { FinalCTA } from "@/components/home/FinalCTA";
-import { RoutePicker } from "@/components/home/RoutePicker";
+import { HowItWorks } from "@/components/home/HowItWorks";
 import { CateringHighlight } from "@/components/home/CateringHighlight";
 import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { useHomepageAnalytics } from "@/hooks/useHomepageAnalytics";
 
 const Index = () => {
-  const location = useLocation();
   useHomepageAnalytics();
-
-  useEffect(() => {
-    if (location.hash === "#routes") {
-      // Wait one frame so the section is mounted
-      requestAnimationFrame(() => {
-        const el = document.getElementById("routes");
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  }, [location.hash]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,10 +35,9 @@ const Index = () => {
       <CookieConsent />
       <Navigation />
       <main id="main-content">
-        {/* Genummerde hoofdstukken; de live agenda telt niet mee, die is soms leeg. */}
+        {/* Genummerde hoofdstukken. Eén voordeur: het formulier (plan klantreis en ondertekening, fase 1). */}
         <div data-analytics-section="hero"><HeroEditorial /></div>
-        <div data-analytics-section="routes"><RoutePicker number="01" /></div>
-        <div data-analytics-section="upcoming"><UpcomingActivitiesFeed /></div>
+        <div data-analytics-section="how-it-works"><HowItWorks number="01" /></div>
         <div data-analytics-section="testimonials"><Testimonials number="02" /></div>
         <div data-analytics-section="activities"><ActivitiesShowcase number="03" /></div>
         <div data-analytics-section="catering"><CateringHighlight number="04" /></div>

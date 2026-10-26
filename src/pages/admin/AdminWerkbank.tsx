@@ -17,6 +17,7 @@ import {
   type ProjectSummary,
   type ProjectKind,
 } from "@/lib/getProject";
+import { isWonUnsigned } from "@/lib/projectWorkflow";
 import {
   COMMUNICATION_STATE_META,
   type ProjectCommunicationState,
@@ -34,7 +35,8 @@ type QuickView =
   | "wacht_op_mij"
   | "wacht_op_klant"
   | "wacht_op_partner"
-  | "stilte";
+  | "stilte"
+  | "niet_getekend";
 
 const QUICK_VIEWS: { id: QuickView; label: string; match?: ProjectCommunicationState[] }[] = [
   { id: "alles", label: "Alle openstaande" },
@@ -42,6 +44,7 @@ const QUICK_VIEWS: { id: QuickView; label: string; match?: ProjectCommunicationS
   { id: "wacht_op_klant", label: "Wacht op klant", match: ["wacht_op_klant"] },
   { id: "wacht_op_partner", label: "Wacht op partner", match: ["wacht_op_partner", "wacht_op_logies"] },
   { id: "stilte", label: "Stilte — opvolgen", match: ["stilte"] },
+  { id: "niet_getekend", label: "Gewonnen, niet getekend" },
 ];
 
 function CommBadge({ state }: { state: ProjectCommunicationState }) {
@@ -178,6 +181,14 @@ export default function AdminWerkbank() {
     if (kindFilter !== "all") list = list.filter((p) => p.kind === kindFilter);
     const qv = QUICK_VIEWS.find((v) => v.id === view);
     if (qv?.match) list = list.filter((p) => qv.match!.includes(p.comm));
+    if (view === "niet_getekend") {
+      // Akkoord zonder handtekening, de eerste programmadag voorop: wie het
+      // eerst komt, moet het eerst tekenen.
+      list = list
+        .filter(isWonUnsigned)
+        .slice()
+        .sort((a, b) => (a.dates[0] ?? "9999").localeCompare(b.dates[0] ?? "9999"));
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -216,6 +227,7 @@ export default function AdminWerkbank() {
       wacht_op_klant:    list.filter((p) => p.comm === "wacht_op_klant").length,
       wacht_op_partner:  list.filter((p) => p.comm === "wacht_op_partner" || p.comm === "wacht_op_logies").length,
       stilte:            list.filter((p) => p.comm === "stilte").length,
+      niet_getekend:     list.filter(isWonUnsigned).length,
     };
   }, [projects]);
 
@@ -336,6 +348,7 @@ export default function AdminWerkbank() {
                       v.id === "wacht_op_klant" ? counts.wacht_op_klant :
                       v.id === "wacht_op_partner" ? counts.wacht_op_partner :
                       v.id === "stilte" ? counts.stilte :
+                      v.id === "niet_getekend" ? counts.niet_getekend :
                       (projects?.length ?? 0);
                     return (
                       <button

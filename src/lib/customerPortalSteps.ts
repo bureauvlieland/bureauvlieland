@@ -22,6 +22,10 @@ export interface PortalStepInput {
   hasQuotesToChoose?: boolean;
   /** Aantal onderdelen dat op de klant wacht. */
   customerActionsCount?: number;
+  /** De klant kan nu tekenen op het tabblad Akkoord (zie customerPortalStatus). */
+  canSignNow?: boolean;
+  /** Tekenen omvat het akkoord op het voorstel (voorstelfase). */
+  signingIncludesProposal?: boolean;
 }
 
 export function portalSteps(isMultiDay: boolean): StepperStep[] {
@@ -37,6 +41,9 @@ export function currentPortalStep(input: PortalStepInput): PortalStepKey | null 
   if (input.isCancelled) return null;
   const lodgingDone = !input.isMultiDay || input.hasSelectedAccommodation;
   if (!lodgingDone) return "lodging";
+  // Sinds fase 4 van het klantreisplan tekent de klant bij akkoord, niet pas
+  // als alles bevestigd is: zodra tekenen kan, is dat de stap.
+  if (!input.termsAccepted && input.canSignNow) return "accept";
   if (!input.programDone) return "program";
   if (!input.termsAccepted) return "accept";
   return null;
@@ -96,21 +103,25 @@ export function nextPortalStep(input: PortalStepInput): NextStep | null {
           };
     }
     case "accept":
-      return input.billingComplete
+      // De facturatiegegevens horen bij het tekenen zelf (fase 4); er is
+      // geen aparte stap meer vooraf.
+      return input.signingIncludesProposal
         ? {
             step,
-            title: "Onderteken de voorwaarden",
-            text: "Alles is bevestigd. Met uw handtekening wordt de boeking definitief.",
-            buttonLabel: "Voorwaarden ondertekenen",
+            title: "Geef akkoord en onderteken",
+            text: "Uw voorstel staat klaar. Met uw akkoord en handtekening leggen wij alles vast bij de aanbieders.",
+            buttonLabel: "Akkoord en ondertekenen",
             target: "accept",
             tone: "warning",
           }
         : {
             step,
-            title: "Vul uw facturatiegegevens in",
-            text: "Alles is bevestigd. Vul eerst in aan wie de factuur gericht is, daarna kunt u ondertekenen.",
-            buttonLabel: "Facturatiegegevens invullen",
-            target: "billing",
+            title: "Onderteken de voorwaarden",
+            text: input.programDone
+              ? "Alles is bevestigd. Met uw handtekening wordt de boeking definitief."
+              : "De aanbieders bevestigen de onderdelen; u tekent alvast onder voorbehoud van die bevestiging.",
+            buttonLabel: "Voorwaarden ondertekenen",
+            target: "accept",
             tone: "warning",
           };
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { format, addDays } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -59,18 +59,23 @@ interface FormData {
 
 const AdminProgramNewContent = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Vanuit een websitechat of WhatsApp-gesprek (knop "Aanvraag aanmaken" in
+  // Berichten): naam, e-mail en telefoon komen mee, het gesprek wordt na het
+  // aanmaken aan het project gekoppeld (plan klantreis en ondertekening, fase 5).
+  const fromChatId = searchParams.get("chat");
   const [currentStep, setCurrentStep] = useState<WizardStep>("type");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     programType: "quote",
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
+    customerName: searchParams.get("naam") ?? "",
+    customerEmail: searchParams.get("email") ?? "",
+    customerPhone: searchParams.get("telefoon") ?? "",
     customerCompany: "",
     numberOfPeople: 20,
     selectedDates: [],
-    generalNotes: "",
+    generalNotes: fromChatId ? "Aanvraag aangemaakt vanuit een chatgesprek (zie Berichten)." : "",
     quoteValidUntil: suggestQuoteValidUntil({}).date,
   });
 
@@ -157,11 +162,20 @@ const AdminProgramNewContent = () => {
             : null,
           admin_created_by: user?.id || null,
           status: "active",
+          ...(fromChatId ? { attribution: { chat_conversation_id: fromChatId, form_source: "chat" } } : {}),
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      if (fromChatId) {
+        const { error: linkError } = await supabase
+          .from("chat_conversations")
+          .update({ request_id: data.id })
+          .eq("id", fromChatId);
+        if (linkError) console.error("Chat niet aan project gekoppeld:", linkError);
+      }
 
       toast.success("Programma aangemaakt!");
       navigate(`/admin/aanvragen/${data.id}`);

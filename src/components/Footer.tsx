@@ -73,7 +73,7 @@ export const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Wat we organiseren</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link to="/#routes" className="hover:text-primary transition-colors font-medium text-foreground">
+                <Link to="/programma-op-maat" className="hover:text-primary transition-colors font-medium text-foreground">
                   Start uw aanvraag
                 </Link>
               </li>
@@ -184,8 +184,7 @@ export const Footer = () => {
             <Link to="/snel-aanvragen" className="hover:text-primary transition-colors">Snel aanvragen</Link>
             <Link to="/activiteiten-boeken" className="hover:text-primary transition-colors">Losse activiteiten boeken</Link>
             <Link to="/programma-samenstellen" className="hover:text-primary transition-colors">Programma samenstellen</Link>
-            <Link to="/offerte" className="hover:text-primary transition-colors">Offerte aanvragen</Link>
-            <Link to="/catering-aanvragen" className="hover:text-primary transition-colors">Catering aanvragen</Link>
+            <Link to="/programma-op-maat?nodig=eten" className="hover:text-primary transition-colors">Catering aanvragen</Link>
           </nav>
         </div>
 

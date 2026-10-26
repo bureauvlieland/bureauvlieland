@@ -1,16 +1,12 @@
-import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import {
-  CheckCircle2,
-  Loader2,
   Clock,
   Sparkles,
   MessageCircle,
   ArrowDown,
   AlertTriangle,
+  FileSignature,
 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -19,41 +15,32 @@ import { cn } from "@/lib/utils";
 interface ProposalHeroCardProps {
   quoteValidUntil?: string | null;
   hasUnapprovedItems: boolean;
-  onAcceptQuoteProposal: () => Promise<boolean>;
+  /** Naar het tabblad Akkoord, waar akkoord en handtekening één stap zijn. */
+  onGoToAccept: () => void;
   bureauItemCount: number;
   partnerItemCount: number;
 }
 
 /**
- * Eén centrale "voorstel-akkoord" kaart voor fase 2 (offerte_verstuurd).
- * Vervangt het oude duo ActionRequiredCard + ProgramIntroCard in deze fase.
+ * Eén centrale kaart voor fase 2 (offerte_verstuurd). Sinds fase 4 van het
+ * klantreisplan geeft de klant hier geen los akkoord meer: akkoord en
+ * handtekening zijn één stap op het tabblad Akkoord, met de factuurgegevens
+ * erbij. Deze kaart legt uit wat er klaarstaat en wijst de weg.
  *
  * Doel: in één oogopslag duidelijk:
-  *   1. Wat moet ik doen? → programma goedkeuren
+ *   1. Wat moet ik doen? → akkoord geven en ondertekenen
  *   2. Wat als ik iets wil wijzigen? → zelf aanpassen of via chat
  *   3. Wat gebeurt er daarna? → wij vragen beschikbaarheid op
  */
 export const ProposalHeroCard = ({
   quoteValidUntil,
   hasUnapprovedItems,
-  onAcceptQuoteProposal,
+  onGoToAccept,
   bureauItemCount,
   partnerItemCount,
 }: ProposalHeroCardProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
-
   const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
   const isExpired = validUntil ? validUntil < new Date() : false;
-
-  const handleAccept = async () => {
-    setIsLoading(true);
-    try {
-      await onAcceptQuoteProposal();
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const scrollToProgram = () => {
     document.getElementById("program")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -116,13 +103,13 @@ export const ProposalHeroCard = ({
               {bureauItemCount > 0 && (
                 <>
                   {" "}
-                  Onderdelen die wij zelf verzorgen regelen wij na uw goedkeuring.
+                  Onderdelen die wij zelf verzorgen regelen wij na uw akkoord.
                 </>
               )}
               {partnerItemCount > 0 && (
                 <>
                   {" "}
-                  Voor de overige onderdelen vragen wij, zodra u deze goedkeurt,
+                  Voor de overige onderdelen vragen wij, zodra u akkoord geeft,
                   beschikbaarheid en definitieve prijzen op bij onze aanbieders.
                 </>
               )}
@@ -133,45 +120,15 @@ export const ProposalHeroCard = ({
         {/* CTA blok */}
         {hasUnapprovedItems && (
           <div className="rounded-lg bg-background/70 backdrop-blur-sm border border-primary/20 p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="proposal-akkoord-checkbox"
-                checked={isChecked}
-                onCheckedChange={(v) => setIsChecked(!!v)}
-                className="mt-0.5"
-              />
-              <Label
-                htmlFor="proposal-akkoord-checkbox"
-                className="text-sm cursor-pointer leading-snug"
-              >
-                Ik keur dit programmavoorstel met de getoonde indicatieve prijzen goed.
-                <span className="block text-xs text-muted-foreground mt-0.5">
-                  Definitieve boeking volgt pas na bevestiging door de aanbieders én ondertekening van de algemene voorwaarden.
-                </span>
-              </Label>
-            </div>
-
-            <Button
-              onClick={handleAccept}
-              disabled={isLoading || !isChecked}
-              size="lg"
-              className={cn(
-                "w-full sm:w-auto transition-transform",
-                isChecked && !isLoading && "hover:scale-[1.02] shadow-medium shadow-primary/20",
-                isChecked && !isLoading && "animate-[pulse_2.5s_ease-in-out_infinite]"
-              )}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Verwerken…
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-5 w-5 mr-2" />
-                  Programma goedkeuren
-                </>
-              )}
+            <p className="text-sm text-foreground">
+              Akkoord geven en de voorwaarden ondertekenen doet u in één stap, met uw factuurgegevens erbij.
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                De onderdelen zijn definitief zodra de aanbieders beschikbaarheid en prijs bevestigen; tot die tijd staat uw boeking onder voorbehoud.
+              </span>
+            </p>
+            <Button onClick={onGoToAccept} size="lg" className="w-full sm:w-auto shadow-medium shadow-primary/20">
+              <FileSignature className="h-5 w-5 mr-2" />
+              Akkoord en ondertekenen
             </Button>
           </div>
         )}

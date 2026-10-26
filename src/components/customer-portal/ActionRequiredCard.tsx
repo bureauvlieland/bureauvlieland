@@ -50,6 +50,10 @@ interface ActionRequiredCardProps {
   cancelledAt?: string | null;
   /** Alle open onderdelen in één keer goedkeuren; dan is dat de primaire knop. */
   onBulkApprove?: () => Promise<unknown>;
+  /** De klant kan nu tekenen op het tabblad Akkoord (customerPortalStatus.canSignNow). */
+  canSignNow?: boolean;
+  /** Het voorstel is verlopen; tekenen kan pas na een nieuw voorstel. */
+  proposalExpired?: boolean;
   className?: string;
 }
 
@@ -91,6 +95,8 @@ export const ActionRequiredCard = ({
   completionStatus = null,
   cancelledAt = null,
   onBulkApprove,
+  canSignNow = false,
+  proposalExpired = false,
   className,
 }: ActionRequiredCardProps) => {
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -147,9 +153,27 @@ export const ActionRequiredCard = ({
       };
     }
 
-    // FASE 2 — voorstel klaar: handled door ProposalHeroCard (geen duplicaat hier).
+    // FASE 2 — voorstel klaar: akkoord en ondertekenen in één stap op het
+    // tabblad Akkoord (plan klantreis en ondertekening, fase 4).
     if (isProposalPhase) {
-      return null;
+      if (proposalExpired) {
+        return {
+          type: "terms",
+          title: "Uw voorstel is verlopen",
+          description: "Neem contact op met Bureau Vlieland voor een nieuw voorstel; daarna kunt u akkoord geven en ondertekenen.",
+          icon: <AlertCircle className="h-5 w-5" />,
+          variant: "warning",
+        };
+      }
+      return {
+        type: "terms",
+        title: "Uw voorstel staat klaar: geef akkoord en onderteken",
+        description:
+          "Bekijk het programma hieronder. Met uw akkoord en handtekening leggen wij alles vast bij de aanbieders; prijzen zijn indicatief tot zij bevestigen.",
+        icon: <FileText className="h-5 w-5" />,
+        variant: "warning",
+        cta: onScrollToTerms ? { label: "Akkoord en ondertekenen", onClick: onScrollToTerms } : undefined,
+      };
     }
 
 
@@ -208,6 +232,22 @@ export const ActionRequiredCard = ({
         };
       }
 
+      // 3a-teken — akkoord gegeven maar nog niet getekend: dat gaat vóór het
+      // wachten op aanbieders, want de klant tekent onder voorbehoud.
+      if (!termsAccepted && canSignNow) {
+        return {
+          type: "terms",
+          title: "Onderteken nog de voorwaarden",
+          description:
+            statusSummary.pending > 0 || statusSummary.total === 0
+              ? "De aanbieders bevestigen uw onderdelen; daar hoeft u niet op te wachten. Met uw handtekening leggen wij de boeking vast, onder voorbehoud van die bevestiging."
+              : "Alles is bevestigd. Met uw handtekening wordt de boeking definitief.",
+          icon: <CheckCircle className="h-5 w-5" />,
+          variant: "warning",
+          cta: onScrollToTerms ? { label: "Ondertekenen", onClick: onScrollToTerms } : undefined,
+        };
+      }
+
       // 3b — tegenvoorstel staat open bij partner.
       if ((statusSummary.counter_proposed || 0) > 0) {
         return {
@@ -257,23 +297,8 @@ export const ActionRequiredCard = ({
       };
     }
 
-    // Priority 5: Billing incomplete
-    if (!billingComplete && allConfirmed) {
-      return {
-        type: "billing",
-        title: "Facturatiegegevens invullen",
-        description: "Vul uw bedrijfsgegevens in zodat Bureau Vlieland kan factureren.",
-        icon: <FileText className="h-5 w-5" />,
-        variant: "warning",
-        cta: {
-          label: "Gegevens invullen",
-          onClick: onOpenBilling,
-        },
-      };
-    }
-
-    // Priority 6: Ready for signing
-    if (allConfirmed && billingComplete && !termsAccepted) {
+    // Priority 6: Ready for signing (de facturatiegegevens horen bij het tekenen)
+    if (allConfirmed && !termsAccepted) {
       return {
         type: "terms",
         title: "Programma gereed voor ondertekening",

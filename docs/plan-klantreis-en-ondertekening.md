@@ -1,10 +1,15 @@
 # Plan: de klantreis omdraaien en eerder tekenen
 
-Status: voorstel, 25 oktober 2026, op basis van de productiecijfers van
-dezelfde dag. Erwin is op 25 oktober akkoord gegaan met de richting (één
-voordeur, wizard naar de tweede laag, handtekening bij akkoord). Uitvoeren
-per fase, elk in een eigen pull request, na antwoord op de vragen onder
-"Besluiten gevraagd".
+Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
+overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten), fase 1
+(de voordeur), fase 2 (één formulier en de voorbeelden) en fase 4 (akkoord
+en ondertekenen in één stap) zijn op 26 oktober gebouwd, net als fase 5 (meten). Daarmee is het plan uitgevoerd; wat
+openstaat, staat onder "Na uitvoering". Eén afwijking
+van het plan in fase 2: de pagina's voor losse catering- en
+logiesaanvragen blijven bestaan, zie de toelichting bij fase 2. Het plan zelf is van 25 oktober, op basis van de
+productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
+richting (één voordeur, wizard naar de tweede laag, handtekening bij
+akkoord).
 
 Aanleiding (Erwin, 25 oktober): de homepage biedt te veel keuzes. Het meest
 laagdrempelige pad moet winnen, en dat is maatwerk met voorbeeldprogramma's
@@ -29,8 +34,10 @@ gedachtestreepjes, gewone interpunctie. Aanspreekvorm op de site blijft "u".
   de gemarkeerde hoofdroute in de hero, de zwevende knop, het slotblok en op
   zo'n 25 pagina's. Het label "meest gekozen" is daarmee een selffulfilling
   prophecy.
-- De chat is met 152 gesprekken in 2026 de meest gebruikte ingang, meer dan
-  alle aanvraagformulieren samen.
+- Correctie (26 oktober, fase 5): de 152 chatgesprekken van 2026 zijn
+  vooral partnerchats (118) en portaalchats van klanten (26). De websitechat
+  had 1 gesprek en WhatsApp 8. De chat is dus geen drukke ingang; de
+  koppeling naar een aanvraag is gebouwd, maar klein gehouden.
 - Van de 21 gewonnen projecten in 2026 zijn er 6 nooit getekend, samen
   € 119.000 van de € 233.000 omzet, waaronder de twee grootste projecten van
   het jaar. Van de 15 handtekeningen kwamen er 5 pas na het evenement. De
@@ -73,7 +80,9 @@ klopt niet").
 Overig:
 
 - Chat: 152 gesprekken in 2026 (`chat_conversations`), waarvan 78 in juni.
-  Kwaliteit niet beoordeeld.
+  Correctie op 26 oktober: 118 daarvan zijn partnerchats, 26 portaalchats
+  van klanten over hun programma, 8 WhatsApp en 1 via de websitechat. Als
+  ingang voor nieuwe aanvragen telt alleen die laatste groep.
 - Instappagina (`attribution.entry_path`, vastgelegd sinds juni, 20
   aanvragen): 14 keer de homepage, 4 keer `/bouwstenen`, 2 keer
   `/wadlopen-vlieland`, 3 keer `/catering`. De twaalf landingspagina's komen
@@ -371,6 +380,35 @@ aangepast. Landingssjabloon, routekaarten en `internalLinks.ts` naar het
 formulier. Visuele referenties opnieuw maken. Dit kan vóór fase 2, omdat
 Programma op maat al een werkend formulier is.
 
+Fase 1 is op 26 oktober gebouwd. Homepage: `RoutePicker` is weg, in zijn
+plaats staat `HowItWorks` als hoofdstuk 01 (drie stappen: u vertelt wat u
+zoekt, wij stellen het samen, u geeft akkoord in uw portaal) met de knop
+naar het formulier, de voorbeeldprogramma's als tweede regel, "Stel uw
+vraag via de chat" (opent de chatwidget via `openPreSalesChat`) en de
+programma-bouwer als tekstlink. De live agenda staat niet meer op de
+homepage maar op Activiteiten op Vlieland; de kaart "Losse activiteiten
+direct boeken" is daarmee ook van de homepage af (de pagina en het menu-item
+blijven). De hero zegt "van 8 tot 150 personen" in plaats van "50 tot
+150", de knop gaat naar het formulier met "vrijblijvend, binnen 5 werkdagen
+een voorstel" eronder en "Liever eerst inspiratie?" als tweede regel; het
+cijfer onderin is "8-150". Alle "Start uw aanvraag"-knoppen (menu, mobiel
+menu, voettekst, zwevende knop, slotblok) gaan naar `/programma-op-maat`;
+het anker `#routes` bestaat niet meer. Het keuzeblok op de marketingpagina's
+(`RouteChooser`) heeft het formulier als primaire kaart, de voorbeelden als
+tweede en de programma-bouwer als derde; het landingssjabloon, de
+routekaarten op Onze werkwijze, de hero's van Voor wie, Partners,
+Veelgestelde vragen, Voorbeeldprogramma's, Contact en Activiteiten op
+Vlieland, de linkregels (`internalLinks.ts`), de 404-pagina, de sitemap en
+de linkpagina volgen. Het menu "Wat we organiseren" kreeg "Zelf
+samenstellen" zodat de bouwer bereikbaar blijft. Het formulier zelf heet nu
+"Vertel ons wat u zoekt" (eyebrow "Uw aanvraag", paginatitel "Start uw
+aanvraag"); de velden zijn ongewijzigd tot fase 2, dus een datum is nog
+verplicht. Het label "meest gekozen" is verdwenen met het keuzeblok.
+Getest: typecheck, lint onder het plafond, strict op 26, design debt 0,
+volledige Vitest-suite, build; de handmatige e2e-test voor de bouwer opent
+die nu rechtstreeks. De visuele referenties worden via de workflow
+"Visuele referenties vernieuwen" op de branch opnieuw gemaakt.
+
 **Fase 2: één formulier en de voorbeelden (2 tot 3 dagen).** Programma op
 maat uitgebreid met soort, de vinkjes en de voorinvulling vanuit een
 voorbeeld. `/offerte`, `/catering-aanvragen` en `/logies-aanvragen` als
@@ -380,13 +418,79 @@ programma aanvragen" primair, wizard als tekstlink. Bevestigingsmail
 `program_request_customer` nalopen op de nieuwe velden. Admin: de vinkjes
 zichtbaar op de aanvraag. Tests voor de voorinvulling en de doorverwijzingen.
 
+Fase 2 is op 26 oktober gebouwd. Het formulier op `/programma-op-maat`
+(alias `/aanvraag`) heeft nu vier blokken: wat voor groep (zakelijk of
+privé, plus optioneel de soort uit tien keuzes; een soort zet het type
+mee), wat heeft u nodig (vinkjes activiteiten, eten en drinken,
+overnachting, boot en fietsen), wanneer en met hoeveel (datums, of "ik
+weet de datum nog niet" met een periode als tekst; de aanvraag krijgt dan
+een lege datumlijst in plaats van een verzonnen datum) en uw gegevens met
+uw wensen. Voorinvulling via de URL: `?template=<slug>` zet het
+voorbeeldprogramma per dag in de wensen en vinkt aan wat erin zit (uit de
+categorieën van de onderdelen en de duur), `?nodig=eten,overnachting` zet
+vinkjes (ook de oude namen catering en logies), `?soort=heisessie` de
+soort. De logica staat in `src/lib/requestForm.ts` met Vitest-tests. Wat er
+wordt vastgelegd: `program_description` als één regel ("Maatwerk zakelijk ·
+Heisessie / MT-dag · activiteiten, eten en drinken · periode: voorjaar 2027
+· voorbeeld: Eilanddag compleet"), dezelfde samenvatting als eerste alinea
+van de notities (die ook in de bevestigingsmail staat), en in `attribution`
+de velden `template_id`, `needs`, `event_type`, `date_unknown` en
+`period_text`. De telefoonregel eist nu minstens tien tekens, net als de
+bevestigingsmail al deed. Het offerteformulier `/offerte` is weg: route,
+`_redirects` (301), sitemap, `llms.txt`, 404-kaart en linkregels verwijzen
+naar het formulier. Op de voorbeeldpagina's is "Dit programma aanvragen"
+de primaire knop (naar het voorgevulde formulier) en de programma-bouwer de
+tweede; de pagina Logies, de homepage-cateringsectie, de voettekst, het
+menu en de linkregels sturen catering- en logiesaanvragen naar het
+formulier met het vinkje voorgeselecteerd.
+
+Afwijking van het plan: `/catering-aanvragen` en `/logies-aanvragen` zijn
+níet doorverwezen. De logiesaanvraag is de vervolgstap vanuit het
+klantportaal en de programma-bouwer (de logiesbanner, het tabblad Logies,
+de boekingsstatus) en draagt daarbij de programmagegevens mee; de
+cateringaanvraag krijgt vanaf de cateringpagina een soort mee (BBQ,
+borrel, maatwerk) met eigen velden. Die twee stromen blijven werken; alleen
+de algemene ingangen gaan via het ene formulier. Erwin maakt van een
+aanvraag met alleen het vinkje overnachting of eten in de admin wat het
+moet worden. Niet gedaan: een aparte weergave van de vinkjes in de admin
+(de regel in `program_description` staat bovenaan het project) en de
+voorinvulling van het aantal personen vanuit een voorbeeld (de doelgroep
+van een voorbeeld is tekst, geen getal).
+
 **Fase 3: tekenen zonder te wachten (1 dag).** Knop "Ondertekenverzoek
 sturen" in de admin (edge function, hergebruik van de template). Trigger van
 de herinneringsreeks losgekoppeld van partnerbevestiging, met Deno-tests op
 `pickTermsMail` en de nieuwe voorwaarde. Lijst "Gewonnen, niet getekend" op
-de werkbank. Waarschuwing bij partners sturen en factureren. Direct daarna
-de zes openstaande projecten een verzoek sturen, te beginnen met BV-2608-0002
-(aankomst 5 november).
+de werkbank. Waarschuwing bij partners sturen en factureren.
+
+Fase 3 is op 26 oktober gebouwd. De logica staat in
+`_shared/customerTermsReminder.ts`: `termsStageFor` bepaalt of een project
+in aanmerking komt (akkoord ontvangen, of een voorstel dat zeven dagen
+zonder akkoord staat en niet verlopen is), `buildTermsMailCopy` levert één
+tekst voor de cron en de admin-knop (na akkoord: "onderteken, onder
+voorbehoud als er nog iets open staat"; zonder akkoord: "geef akkoord en
+onderteken"; handmatig: neutrale intro), `buildTermsCallTodo` de beltaak
+vanaf drie dagen vooraf. In `check-pending-items` is de voorwaarde "alle
+onderdelen bevestigd" vervallen; snooze, "hot" en de uitsluiting van
+projecten in facturatie blijven, dus de zes al gefactureerde projecten
+krijgen niets (besluit 7). De link in de mail opent met `?view=akkoord`
+direct het tabblad Akkoord in het portaal. Nieuw: edge function
+`send-terms-request` (alleen admins; weigert geannuleerde, verwijderde en
+al getekende projecten; werkt ook bij status concept voor telefonisch
+gesloten projecten; logt als `customer_terms_request` met actor "admin →
+klant (ondertekenverzoek)"), knop `SendTermsRequestButton` bij
+Voltooiingsstatus in het projectdossier en in het overzicht van de
+werkbank, snelle weergave "Gewonnen, niet getekend" op de werkbank
+(akkoord of facturatie zonder handtekening, eerste programmadag voorop),
+waarschuwing in de dialoog "Verstuur naar partners" en in "Markeer als
+klaar voor facturatie" zolang de handtekening ontbreekt. Getest: 18
+Deno-tests (fasebepaling, reeks, teksten, beltaak, toegangscontrole van de
+functie), Vitest voor `isWonUnsigned`, typecheck, lint onder het plafond,
+strict op 26, design debt 0, build. Bij de eerstvolgende nachtelijke run
+krijgt BV-2608-0002 (RMD Trainingen, 8 personen, aankomst 5 november) het
+eerste verzoek; BV-2604-0003 staat gesnoozed tot januari en wordt
+overgeslagen. Niet gedaan: de blokkade bij "Naar partners sturen" (fase 4,
+besluit 3).
 
 **Fase 4: akkoord en ondertekenen in één stap (2 tot 3 dagen).** `AcceptView`
 herbouwd op het ontwerpsysteem met voorwaarden, handtekening en bedrijf
@@ -394,33 +498,109 @@ plus adres; `accept-quote-proposal` uitgebreid; actiekaart in de nieuwe
 volgorde; bevestigingsmail aangepast; optioneel de blokkade met overrule.
 Deno-tests voor de nieuwe aanroep, Vitest voor de actiekaart.
 
+Fase 4 is op 26 oktober gebouwd. In het portaal is het tabblad Akkoord
+vanaf het verstuurde voorstel de ene plek: de kaart "Akkoord en
+ondertekenen" (`AcceptTermsCard`, modus akkoord) met de voorwaarden, het
+vinkje, de naam als handtekening en, als ze nog ontbreken, bedrijfsnaam en
+adres (verplicht, besluit 4; contactpersoon en e-mail komen van de
+aanvrager, KvK en btw blijven optioneel bij Facturatie). Partnerbevestigingen
+blokkeren niets meer: staat er iets open, dan tekent de klant onder
+voorbehoud met de bestaande erkenning. `customerPortalStatus` kreeg
+`canSignNow` (vanaf het voorstel zolang het niet verlopen is, na akkoord
+zodra niets meer op de klant wacht), `signingIncludesProposal` en
+`proposalExpired`; de voortgangsbalk, de actiekaart (vanaf het voorstel
+"Uw voorstel staat klaar: geef akkoord en onderteken", na akkoord
+"Onderteken nog de voorwaarden" vóór het wachten op aanbieders, geen aparte
+facturatiestap meer) en de splash volgen. De voorstelkaart op het tabblad
+Programma heeft geen eigen akkoordknop meer en verwijst naar Akkoord.
+
+De drie serverstappen zijn niet samengevoegd maar in één klik achter elkaar
+gezet (`handleAcceptTerms` in `CustomerProgram`): factuurgegevens opslaan,
+handtekening (`update-customer-program`), en in de voorstelfase daarna het
+akkoord (`accept-quote-proposal`). Zo blijven de bestaande controles,
+geschiedenis en mails gelden; de akkoordmail zegt nu dat de voorwaarden al
+getekend zijn en dat de boeking onder voorbehoud van de bevestigingen staat.
+Eén noodzakelijke correctie: een handtekening zette het project altijd
+meteen op "klaar voor facturatie", wat bij tekenen op het moment van akkoord
+het portaal op "uitgevoerd" zou zetten en de dagelijkse controles zou
+uitschakelen. Dat gebeurt nu alleen nog als de eerste programmadag voorbij
+is (`_shared/signingCompletion.ts`, met Deno-tests); anders doet
+`auto-close-past-execution` het de dag na afloop, zoals bij elk project. De
+facturatietaak wordt wel aangemaakt, gesnoozed tot na het evenement.
+
+Admin (besluit 3): "Verstuur naar partners" eist zonder handtekening een
+reden van minstens vijf tekens; per onderdeel versturen vraagt dezelfde
+reden. `send-items-to-partners` legt de verzending dan vast als
+`admin_sent_to_partners_without_terms` met de reden in de geschiedenis.
+Interne aanroepen (na een klantakkoord per onderdeel) blijven ongemoeid.
+Getest: 25 Vitest-tests voor status, stappen en actiekaart (nieuw of
+aangepast), volledige suite groen, 368 Deno-tests, typecheck, lint onder
+het plafond, strict op 26, design debt 0, build. Niet gedaan: de
+pipeline-telling op "akkoord" (fase 5).
+
 **Fase 5: meten (1 dag).** Tabel per herkomst in de admin, `template_id` en
 `needs` in `attribution`, GA4-events, chatkoppeling naar `sales_inbox`,
 pipeline-telling op "akkoord".
+
+Fase 5 is op 26 oktober gebouwd. Attributie heeft een nieuw eerste tabblad
+"Per ingang": per herkomst aanvragen, geannuleerd, gewonnen (actief en
+uitgevoerd, gefactureerd of akkoord ontvangen), getekend, vooraf getekend,
+omzet en mediaan groepsgrootte, met een totaalregel en de periode "Dit
+kalenderjaar"; daaronder de ondertekening van gewonnen projecten (vooraf,
+achteraf, nog niet; nulmeting 10 van 21), via welke weg het formulier
+geopend werd en hoeveel websitechats en WhatsApp-gesprekken een aanvraag
+werden. De telling staat in `src/lib/requestMetrics.ts` met Vitest-tests en
+is dezelfde als de query in de bijlage. Het formulier stuurt `form_start`
+(eerste invoer) en `form_submit` naar GA4 met de weg waarlangs het geopend
+is (homepage, voorbeeldprogramma, landingspagina, vinkje, soort, direct) en
+legt die vast als `attribution.form_source`; `template_id` en `needs`
+zaten er sinds fase 2 al in. Chat (besluit 6): de websitechat vraagt in de
+begroeting om groepsgrootte, periode en wat u nodig heeft; in Berichten
+heeft een websitechat of WhatsApp-gesprek zonder project de knop "Aanvraag
+aanmaken", die het nieuwe-programmascherm opent met naam, e-mail en
+telefoon voorgevuld en het gesprek na het aanmaken aan het project koppelt
+(`chat_conversations.request_id`, `attribution.chat_conversation_id`). De
+pipeline-telling op "akkoord" is de kolom Gewonnen in dezelfde tabel; de
+werkbank heeft sinds fase 3 de lijst "Gewonnen, niet getekend". Niet
+gedaan: GA4 zelf; `form_start` en `form_submit` moeten daar net als
+`wizard_step_view` als gebeurtenis geregistreerd worden (zie Open in de
+roadmap).
+
+## Na uitvoering
+
+- In GA4 de gebeurtenissen `form_start`, `form_submit`, `wizard_step_view`
+  en `program_request_submitted` registreren (Erwin).
+- Na een seizoen de tabel "Per ingang" naast de nulmeting leggen: minder
+  ruis in de aanvragen, een hoger aandeel gewonnen, en vrijwel alles vooraf
+  getekend. Dan ook het besluit over de wizard (tweede laag of dicht) en het
+  geparkeerde plan voor grote groepen.
+- `/catering-aanvragen` en `/logies-aanvragen` blijven bestaan voor het
+  portaal en de bouwer; als de losse aanvragen daar opdrogen, kunnen de
+  pagina's weg.
 
 Samen 7 tot 9 bouwdagen. Fase 1 en 3 zijn klein en onafhankelijk; die
 zou ik als eerste doen, in deze volgorde: 3 (het geld), dan 1 (de
 voordeur), dan 2, 4, 5.
 
-## Besluiten gevraagd
+## Besluiten (Erwin, 26 oktober 2026)
 
-1. **Wizard:** tweede laag (voorstel) of helemaal dicht? Voorstel: tweede
-   laag, en in het voorjaar van 2027 opnieuw bekijken samen met het plan
-   voor grote groepen, met de cijfers van een seizoen.
-2. **Offerteformulier `/offerte`:** opheffen als doorverwijzing (voorstel)
-   of behouden? De tien soorten uitje gaan in het ene formulier.
-3. **Grens zonder handtekening:** alleen waarschuwen (fase 3), of ook
-   blokkeren bij "Naar partners sturen" met overrule (fase 4)? Voorstel:
-   waarschuwen in fase 3, blokkeren in fase 4.
+Alle voorstellen overgenomen; uitvoering begint met fase 3.
+
+1. **Wizard:** tweede laag; in het voorjaar van 2027 opnieuw bekijken samen
+   met het plan voor grote groepen, met de cijfers van een seizoen.
+2. **Offerteformulier `/offerte`:** opheffen als doorverwijzing; de tien
+   soorten uitje gaan in het ene formulier.
+3. **Grens zonder handtekening:** waarschuwen in fase 3, blokkeren bij
+   "Naar partners sturen" met overrule in fase 4.
 4. **Verplicht bij akkoord:** bedrijfsnaam en adres verplicht, KvK en btw
-   optioneel (voorstel). Of alles verplicht zoals nu bij de facturatiestap?
+   optioneel.
 5. **Direct boeken en de live agenda** van de homepage af naar de
-   activiteitenpagina's (voorstel), of op de homepage laten staan?
+   activiteitenpagina's.
 6. **Chat:** de koppeling naar een aanvraag en de drie kernvragen in de
-   begroeting nu meenemen (fase 5), of later?
-7. **De zes ongetekende projecten:** alle zes alsnog een ondertekenverzoek,
-   of alleen de lopende (BV-2608-0002) en de rest laten rusten omdat ze al
-   gefactureerd en betaald zijn?
+   begroeting gaan nu mee, in fase 5.
+7. **De zes ongetekende projecten:** laten rusten. Geen verzoek achteraf aan
+   de al gefactureerde projecten; het lopende project BV-2608-0002 krijgt
+   het eerste verzoek automatisch via de nieuwe trigger.
 
 ## Wat dit plan bewust niet doet
 

@@ -32,12 +32,12 @@ export const FinalCTA = ({ number }: { number: string }) => {
                   Uw volgende eilanddag <span className="italic text-primary">begint nu.</span>
                 </>
               }
-              intro="Vijf minuten om uw programma samen te stellen. Vijf werkdagen tot een gedetailleerde offerte. Volledig vrijblijvend."
+              intro="Twee minuten om uw wensen door te geven. Binnen vijf werkdagen een vrijblijvend voorstel, met prijzen per onderdeel."
             />
 
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button asChild size="xl">
-                <Link to="/programma-samenstellen">
+                <Link to="/programma-op-maat">
                   Start uw aanvraag
                   <ArrowUpRight aria-hidden="true" />
                 </Link>

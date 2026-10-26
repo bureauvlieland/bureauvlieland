@@ -192,3 +192,61 @@ describe("goedkeuring geldt de activiteit zelf (geen herbevestiging bij wijzigin
     expect(status.allConfirmed).toBe(true);
   });
 });
+
+describe("canSignNow: tekenen bij akkoord (plan klantreis en ondertekening, fase 4)", () => {
+  const future = [new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)];
+  const inFuture = (d: number) => new Date(Date.now() + d * 24 * 60 * 60 * 1000).toISOString();
+
+  it("vanaf het verstuurde voorstel kan de klant akkoord geven en tekenen in één stap", () => {
+    const s = getCustomerPortalStatus({
+      program: { quote_status: "offerte_verstuurd", quote_valid_until: inFuture(10), selected_dates: future },
+      items: [item({ status: "pending", item_quote_status: "offerte_verstuurd" })],
+    });
+    expect(s.canSignNow).toBe(true);
+    expect(s.signingIncludesProposal).toBe(true);
+    expect(s.proposalExpired).toBe(false);
+  });
+
+  it("een verlopen voorstel kan niet meer getekend worden", () => {
+    const s = getCustomerPortalStatus({
+      program: { quote_status: "offerte_verstuurd", quote_valid_until: inFuture(-1), selected_dates: future },
+      items: [item({ status: "pending" })],
+    });
+    expect(s.proposalExpired).toBe(true);
+    expect(s.canSignNow).toBe(false);
+  });
+
+  it("na het akkoord kan de klant tekenen zonder op de aanbieders te wachten", () => {
+    const s = getCustomerPortalStatus({
+      program: { quote_status: "akkoord_ontvangen", selected_dates: future },
+      items: [
+        item({ id: "a", status: "pending", customer_approved_at: "2026-06-02T10:00:00Z", customer_accepted_at: "2026-06-02T10:00:00Z" }),
+        item({ id: "b", status: "confirmed", customer_approved_at: "2026-06-02T10:00:00Z", customer_accepted_at: "2026-06-02T10:00:00Z" }),
+      ],
+    });
+    expect(s.allConfirmed).toBe(false);
+    expect(s.canSignNow).toBe(true);
+    expect(s.signingIncludesProposal).toBe(false);
+  });
+
+  it("maar niet zolang er een partnervoorstel op de klant wacht", () => {
+    const s = getCustomerPortalStatus({
+      program: { quote_status: "akkoord_ontvangen", selected_dates: future },
+      items: [item({ status: "alternative", customer_approved_at: null })],
+    });
+    expect(s.customerActionsCount).toBeGreaterThan(0);
+    expect(s.canSignNow).toBe(false);
+  });
+
+  it("niet als er al getekend is, en niet in de voorbereiding", () => {
+    expect(
+      getCustomerPortalStatus({
+        program: { quote_status: "akkoord_ontvangen", terms_accepted_at: "2026-06-03T10:00:00Z", selected_dates: future },
+        items: [item({ status: "confirmed" })],
+      }).canSignNow,
+    ).toBe(false);
+    expect(
+      getCustomerPortalStatus({ program: { quote_status: "concept", selected_dates: future }, items: [item({ status: "pending" })] }).canSignNow,
+    ).toBe(false);
+  });
+});

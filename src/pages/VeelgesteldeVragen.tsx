@@ -122,7 +122,7 @@ export default function VeelgesteldeVragen() {
           eyebrow="Veelgestelde vragen"
           title="Veelgestelde vragen"
           intro="De meestgestelde vragen over programma's, prijzen en praktische zaken op Vlieland. Staat uw vraag er niet bij? Stel hem via de chat of neem contact op."
-          cta={{ label: "Stel uw programma samen", to: "/programma-samenstellen" }}
+          cta={{ label: "Start uw aanvraag", to: "/programma-op-maat" }}
           secondary={{ label: "Neem contact op", to: "/contact" }}
         />
 

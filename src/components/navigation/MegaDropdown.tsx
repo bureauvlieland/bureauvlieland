@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Zap,
   BookMarked,
+  PenLine,
 } from "lucide-react";
 
 interface NavItem {
@@ -60,6 +61,12 @@ const watWeOrganiserenItems: NavItem[] = [
     description: "Zakelijke evenementen en bijzondere gelegenheden",
     icon: PartyPopper,
   },
+  {
+    label: "Zelf samenstellen",
+    href: "/programma-samenstellen",
+    description: "Liever zelf puzzelen? Bouw een programma en zie direct prijzen",
+    icon: PenLine,
+  },
 ];
 
 // "Populair op Vlieland" — long-tail landingspagina's, ook vanuit het menu bereikbaar.
@@ -68,7 +75,7 @@ const populairItems: NavItem[] = [
   { label: "Zeehondentochten", href: "/zeehondentochten-vlieland" },
   { label: "Wadlopen", href: "/wadlopen-vlieland" },
   { label: "Direct boeken", href: "/activiteiten-boeken" },
-  { label: "Catering aanvragen", href: "/catering-aanvragen" },
+  { label: "Catering aanvragen", href: "/programma-op-maat?nodig=eten" },
 ];
 
 // "Inspiratie" — oriëntatie, geen directe aanvraag.

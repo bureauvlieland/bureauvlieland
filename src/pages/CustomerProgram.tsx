@@ -42,7 +42,10 @@ const CustomerProgram = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
-  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">("splash");
+  // ?view=akkoord (uit de voorwaardenmail) opent direct het tabblad Akkoord.
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">(
+    () => (searchParams.get("view") === "akkoord" ? "accept" : "splash"),
+  );
   
   const {
     program,
@@ -232,26 +235,59 @@ const CustomerProgram = () => {
     return success;
   };
 
-  const handleAcceptTerms = async (signatureName: string, underReservation?: boolean) => {
-    const success = await acceptTerms(signatureName, underReservation);
+  // Akkoord en ondertekenen in één stap (plan klantreis en ondertekening,
+  // fase 4): eerst de factuurgegevens als die meekomen, dan de handtekening,
+  // en in de voorstelfase daarna het akkoord op het voorstel. De drie
+  // bestaande serverstappen blijven zoals ze zijn; alleen de volgorde en de
+  // ene klik zijn nieuw.
+  const handleAcceptTerms = async (signatureName: string, underReservation?: boolean, billing?: BillingDetails) => {
+    const includesProposal = program?.quote_status === "offerte_verstuurd";
 
-    if (success) {
-      toast({
-        title: underReservation ? "Ondertekend onder voorbehoud" : "Boeking ondertekend",
-        description: underReservation
-          ? "Uw akkoord is vastgelegd. De onderdelen die nog op bevestiging wachten houden wij voor u in de gaten."
-          : "Uw boeking is nu definitief bevestigd. U ontvangt een bevestigingsmail.",
-      });
+    if (billing) {
+      const saved = await updateBillingDetails(billing);
+      if (!saved) {
+        toast({
+          title: "Factuurgegevens niet opgeslagen",
+          description: "Controleer de gegevens en probeer het opnieuw.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
 
-    } else {
+    const signed = await acceptTerms(signatureName, underReservation);
+    if (!signed) {
       toast({
         title: "Er ging iets mis",
         description: "Probeer het later opnieuw of neem contact met ons op.",
         variant: "destructive",
       });
+      return false;
     }
 
-    return success;
+    if (includesProposal) {
+      const accepted = await acceptQuoteProposal();
+      if (!accepted) {
+        toast({
+          title: "Ondertekend, maar het akkoord is nog niet verwerkt",
+          description: "Uw handtekening staat. Geef het akkoord op het voorstel opnieuw via het tabblad Programma, of neem contact met ons op.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
+    toast({
+      title: includesProposal
+        ? "Akkoord gegeven en ondertekend"
+        : underReservation
+          ? "Ondertekend onder voorbehoud"
+          : "Boeking ondertekend",
+      description: includesProposal || underReservation
+        ? "Uw akkoord is vastgelegd. Wij leggen de onderdelen vast bij de aanbieders en houden u op de hoogte."
+        : "Uw boeking is nu definitief bevestigd. U ontvangt een bevestigingsmail.",
+    });
+    return true;
   };
 
   const handleCancelRequest = async (reason?: string, cancelAccommodation?: boolean) => {
@@ -546,8 +582,8 @@ const CustomerProgram = () => {
             : undefined,
           accept: termsAccepted
             ? { label: "✓", tone: "success" as const }
-            : allConfirmed && !isPostExecution
-            ? { label: "Klaar", tone: "warning" as const }
+            : portalStatus.canSignNow || (allConfirmed && !isPostExecution)
+            ? { label: "Aan zet", tone: "warning" as const }
             : undefined,
         };
         return (
