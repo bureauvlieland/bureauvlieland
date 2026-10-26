@@ -169,8 +169,13 @@ export const handler = async (req: Request): Promise<Response> => {
       // "force": ook items die al verzonden zijn — gebruikt voor herinneringen
       //   en het forceren van een verzending vóór formeel klantakkoord.
       mode?: "auto" | "force";
+      // Reden van het bureau om te versturen terwijl de klant de voorwaarden
+      // nog niet heeft ondertekend (plan klantreis en ondertekening, fase 4).
+      // De admin eist de reden; hier wordt hij in de geschiedenis vastgelegd.
+      override_reason?: string;
     }
-    const { request_id, origin, dry_run, item_ids, mode = "auto" }: SendItemsBody = await req.json();
+    const { request_id, origin, dry_run, item_ids, mode = "auto", override_reason }: SendItemsBody = await req.json();
+    const overrideReason = typeof override_reason === "string" ? override_reason.trim().slice(0, 500) : "";
     const isForce = mode === "force";
 
     if (!request_id) {
@@ -535,12 +540,16 @@ export const handler = async (req: Request): Promise<Response> => {
       .neq("status", "done");
 
     // 10. Log history
+    const withoutTerms = !program.terms_accepted_at;
     await supabase.from("program_request_history").insert({
       request_id: program.id,
-      action: "admin_sent_to_partners",
+      action: withoutTerms ? "admin_sent_to_partners_without_terms" : "admin_sent_to_partners",
       actor: "admin",
       actor_name: "Admin",
-      notes: `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) vrijgegeven.` : ""}`,
+      notes:
+        `Admin heeft ${groups.size} partner(s) genotificeerd over ${partnerItems.length} item(s).${bureauItems.length > 0 ? ` ${bureauItems.length} bureau-item(s) vrijgegeven.` : ""}` +
+        (withoutTerms ? ` Voorwaarden nog niet ondertekend door de klant${overrideReason ? `; reden: ${overrideReason}` : ""}.` : ""),
+      ...(withoutTerms ? { new_value: { without_terms: true, override_reason: overrideReason || null } } : {}),
     });
 
     // 10. Set program_published_at if not set

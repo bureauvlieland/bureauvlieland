@@ -77,7 +77,7 @@ export const CustomerPortalSplash = ({
   onShareWithParticipants,
 }: CustomerPortalSplashProps) => {
   const items = program.items ?? [];
-  const { termsAccepted, billingComplete, allConfirmed, hasSelectedAccommodation, customerActionsCount, isPostExecution } =
+  const { termsAccepted, billingComplete, allConfirmed, hasSelectedAccommodation, customerActionsCount, isPostExecution, canSignNow, signingIncludesProposal } =
     useProgramStatus(
       { ...program, items },
       accommodationQuotes,
@@ -100,6 +100,8 @@ export const CustomerPortalSplash = ({
     isCancelled,
     hasQuotesToChoose: accommodationQuotes.some((q) => q.status === "submitted"),
     customerActionsCount,
+    canSignNow,
+    signingIncludesProposal,
   };
   const currentStep = currentPortalStep(stepInput);
   const nextStep = isMaatwerkEmpty ? null : nextPortalStep(stepInput);

@@ -2,8 +2,9 @@
 
 Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
 overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten), fase 1
-(de voordeur) en fase 2 (één formulier en de voorbeelden) zijn op 26 oktober
-gebouwd; fase 4 en 5 volgen, elk in een eigen pull request. Eén afwijking
+(de voordeur), fase 2 (één formulier en de voorbeelden) en fase 4 (akkoord
+en ondertekenen in één stap) zijn op 26 oktober gebouwd; fase 5 (meten)
+volgt in een eigen pull request. Eén afwijking
 van het plan in fase 2: de pagina's voor losse catering- en
 logiesaanvragen blijven bestaan, zie de toelichting bij fase 2. Het plan zelf is van 25 oktober, op basis van de
 productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
@@ -492,6 +493,46 @@ herbouwd op het ontwerpsysteem met voorwaarden, handtekening en bedrijf
 plus adres; `accept-quote-proposal` uitgebreid; actiekaart in de nieuwe
 volgorde; bevestigingsmail aangepast; optioneel de blokkade met overrule.
 Deno-tests voor de nieuwe aanroep, Vitest voor de actiekaart.
+
+Fase 4 is op 26 oktober gebouwd. In het portaal is het tabblad Akkoord
+vanaf het verstuurde voorstel de ene plek: de kaart "Akkoord en
+ondertekenen" (`AcceptTermsCard`, modus akkoord) met de voorwaarden, het
+vinkje, de naam als handtekening en, als ze nog ontbreken, bedrijfsnaam en
+adres (verplicht, besluit 4; contactpersoon en e-mail komen van de
+aanvrager, KvK en btw blijven optioneel bij Facturatie). Partnerbevestigingen
+blokkeren niets meer: staat er iets open, dan tekent de klant onder
+voorbehoud met de bestaande erkenning. `customerPortalStatus` kreeg
+`canSignNow` (vanaf het voorstel zolang het niet verlopen is, na akkoord
+zodra niets meer op de klant wacht), `signingIncludesProposal` en
+`proposalExpired`; de voortgangsbalk, de actiekaart (vanaf het voorstel
+"Uw voorstel staat klaar: geef akkoord en onderteken", na akkoord
+"Onderteken nog de voorwaarden" vóór het wachten op aanbieders, geen aparte
+facturatiestap meer) en de splash volgen. De voorstelkaart op het tabblad
+Programma heeft geen eigen akkoordknop meer en verwijst naar Akkoord.
+
+De drie serverstappen zijn niet samengevoegd maar in één klik achter elkaar
+gezet (`handleAcceptTerms` in `CustomerProgram`): factuurgegevens opslaan,
+handtekening (`update-customer-program`), en in de voorstelfase daarna het
+akkoord (`accept-quote-proposal`). Zo blijven de bestaande controles,
+geschiedenis en mails gelden; de akkoordmail zegt nu dat de voorwaarden al
+getekend zijn en dat de boeking onder voorbehoud van de bevestigingen staat.
+Eén noodzakelijke correctie: een handtekening zette het project altijd
+meteen op "klaar voor facturatie", wat bij tekenen op het moment van akkoord
+het portaal op "uitgevoerd" zou zetten en de dagelijkse controles zou
+uitschakelen. Dat gebeurt nu alleen nog als de eerste programmadag voorbij
+is (`_shared/signingCompletion.ts`, met Deno-tests); anders doet
+`auto-close-past-execution` het de dag na afloop, zoals bij elk project. De
+facturatietaak wordt wel aangemaakt, gesnoozed tot na het evenement.
+
+Admin (besluit 3): "Verstuur naar partners" eist zonder handtekening een
+reden van minstens vijf tekens; per onderdeel versturen vraagt dezelfde
+reden. `send-items-to-partners` legt de verzending dan vast als
+`admin_sent_to_partners_without_terms` met de reden in de geschiedenis.
+Interne aanroepen (na een klantakkoord per onderdeel) blijven ongemoeid.
+Getest: 25 Vitest-tests voor status, stappen en actiekaart (nieuw of
+aangepast), volledige suite groen, 368 Deno-tests, typecheck, lint onder
+het plafond, strict op 26, design debt 0, build. Niet gedaan: de
+pipeline-telling op "akkoord" (fase 5).
 
 **Fase 5: meten (1 dag).** Tabel per herkomst in de admin, `template_id` en
 `needs` in `attribution`, GA4-events, chatkoppeling naar `sales_inbox`,

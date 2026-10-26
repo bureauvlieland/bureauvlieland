@@ -13,6 +13,7 @@ export interface CustomerPortalProgramLike {
   billing_contact_name?: string | null;
   billing_country?: string | null;
   quote_status?: string | null;
+  quote_valid_until?: string | null;
   selected_dates?: string[] | null;
   completion_status?: string | null;
   cancelled_at?: string | null;
@@ -44,6 +45,16 @@ export interface CustomerPortalStatus {
   unconfirmedItems: ProgramRequestItem[];
   /** Klant mag onder voorbehoud ondertekenen: nog niet alles bevestigd, maar er is wél iets open. */
   canAcceptUnderReservation: boolean;
+  /** Het voorstel is verlopen (alleen in de voorstelfase). */
+  proposalExpired: boolean;
+  /**
+   * De klant kan nu tekenen op het tabblad Akkoord (plan klantreis en
+   * ondertekening, fase 4): vanaf het verstuurde voorstel, zolang het niet
+   * verlopen is, of na het akkoord zodra er niets meer op de klant wacht.
+   */
+  canSignNow: boolean;
+  /** Tekenen in de voorstelfase: akkoord op het voorstel en handtekening in één stap. */
+  signingIncludesProposal: boolean;
   customerActionsCount: number;
   proposalActionsCount: number;
   alternativeActionsCount: number;
@@ -250,6 +261,20 @@ export function getCustomerPortalStatus(args: {
     unconfirmedItems.length > 0 &&
     approvalStats.customerActionsCount === 0;
 
+  const proposalExpired =
+    isProposalPhase &&
+    !!program.quote_valid_until &&
+    new Date(program.quote_valid_until).getTime() < Date.now();
+  const isFinalPhase = program.quote_status === "definitief_bevestigd";
+  const canSignNow =
+    !termsAccepted &&
+    !isPostExecution &&
+    !program.cancelled_at &&
+    (isProposalPhase
+      ? !proposalExpired
+      : (isApprovalPhase || isFinalPhase) && approvalStats.customerActionsCount === 0);
+  const signingIncludesProposal = canSignNow && isProposalPhase;
+
   const guestDetailsIncomplete = !!guestDetails && (
     !guestDetails.guest_names ||
     (!!guestDetails.showDietary && !guestDetails.dietary_notes) ||
@@ -272,6 +297,9 @@ export function getCustomerPortalStatus(args: {
     allConfirmed,
     unconfirmedItems,
     canAcceptUnderReservation,
+    proposalExpired,
+    canSignNow,
+    signingIncludesProposal,
 
     showApprovalActions,
     showPartnerWaiting,

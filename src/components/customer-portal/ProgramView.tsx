@@ -53,6 +53,7 @@ import { CompactBillingSection } from "./CompactBillingSection";
 import { PaymentStatusCard } from "./PaymentStatusCard";
 import { PracticalView } from "./PracticalView";
 import { AcceptView } from "./AcceptView";
+import type { BillingDetails } from "@/lib/billingDetails";
 import { type AcceptedTermsEntry } from "./AcceptedTermsCard";
 
 /**
@@ -132,7 +133,7 @@ export interface ProgramViewProps {
   onSubmitChanges: () => void;
   /** Alle nog niet verstuurde wijzigingen terugdraaien. */
   onDiscardChanges: () => void;
-  onAcceptTerms: (signatureName: string, underReservation?: boolean) => Promise<boolean>;
+  onAcceptTerms: (signatureName: string, underReservation?: boolean, billing?: BillingDetails) => Promise<boolean>;
   /** Een activiteit toevoegen aan een dag. */
   onAddActivity: (blockId: string, dayIndex: number) => void;
   /** Tijdens het verblijf: de dag van vandaag, zodat de tijdlijn daar opent. */
@@ -282,6 +283,9 @@ export const ProgramView = ({
     customerApprovedCount,
     customerApprovableTotal: customerApprovableCount,
     isPostExecution,
+    canSignNow,
+    signingIncludesProposal,
+    proposalExpired,
   } = useProgramStatus(program, accommodationQuotes, statusSummary, selectedDates);
 
   const readOnly = !isPublished || isPostExecution;
@@ -323,6 +327,8 @@ export const ProgramView = ({
     termsAccepted,
     billingComplete,
     isCancelled,
+    canSignNow,
+    signingIncludesProposal,
   });
 
   // De dagen: onderdelen op volgorde van tijd, de stand per dag voor de dagbalk en het dagtotaal.
@@ -498,6 +504,8 @@ export const ProgramView = ({
               hasAccommodation={hasActiveAccommodation}
               billingComplete={billingComplete}
               termsAccepted={termsAccepted}
+              canSignNow={canSignNow}
+              proposalExpired={proposalExpired}
               onOpenBilling={onOpenBilling}
               onScrollToTerms={() => goToAnchor("accept", "terms-section")}
               onScrollToAccommodation={() => goToAnchor("accommodation", "accommodation")}
@@ -527,7 +535,7 @@ export const ProgramView = ({
               <ProposalHeroCard
                 quoteValidUntil={program.quote_valid_until}
                 hasUnapprovedItems={hasUnapprovedItems}
-                onAcceptQuoteProposal={onAcceptQuoteProposal}
+                onGoToAccept={() => goToAnchor("accept", "terms-section")}
                 bureauItemCount={bureauItemCount}
                 partnerItemCount={partnerItemCount}
               />
@@ -817,6 +825,18 @@ export const ProgramView = ({
             billingComplete={billingComplete}
             allConfirmed={allConfirmed}
             canAcceptUnderReservation={canAcceptUnderReservation}
+            canSignNow={canSignNow}
+            signingIncludesProposal={signingIncludesProposal}
+            proposalExpired={proposalExpired}
+            quoteValidUntil={program.quote_valid_until}
+            customerName={program.customer_name}
+            customerEmail={program.customer_email}
+            billingDefaults={{
+              billing_company_name: program.billing_company_name ?? "",
+              billing_address_street: program.billing_address_street ?? "",
+              billing_address_postal: program.billing_address_postal ?? "",
+              billing_address_city: program.billing_address_city ?? "",
+            }}
             accommodationQuotes={accommodationQuotes}
             invoicingMode={invoicingMode}
             acceptedTerms={program.acceptedTerms}

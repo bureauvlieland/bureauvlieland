@@ -131,7 +131,7 @@ export function buildTabHeader({
         title: "Akkoord en voorwaarden",
         subtitle: termsAccepted
           ? "U heeft akkoord gegeven. Hieronder vindt u uw ondertekening terug."
-          : "Laatste stap: bekijk de voorwaarden en geef akkoord om de boeking definitief te maken.",
+          : "Geef akkoord en onderteken de voorwaarden. Daarna leggen wij alles vast bij de aanbieders.",
         badge: termsAccepted
           ? { label: "Ondertekend", tone: "success" as const }
           : { label: "Nog te ondertekenen", tone: "warning" as const },

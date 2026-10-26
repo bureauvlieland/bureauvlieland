@@ -20,6 +20,9 @@ describe("stappen", () => {
     expect(currentPortalStep(base)).toBe("lodging");
     expect(currentPortalStep({ ...base, hasSelectedAccommodation: true })).toBe("program");
     expect(currentPortalStep({ ...base, hasSelectedAccommodation: true, programDone: true })).toBe("accept");
+    // Tekenen kan al voordat alles bevestigd is: dan is Akkoord de stap.
+    expect(currentPortalStep({ ...base, hasSelectedAccommodation: true, canSignNow: true })).toBe("accept");
+    expect(currentPortalStep({ ...base, hasSelectedAccommodation: true, canSignNow: true, termsAccepted: true, programDone: true })).toBeNull();
     expect(currentPortalStep({ ...base, hasSelectedAccommodation: true, programDone: true, termsAccepted: true })).toBeNull();
     expect(currentPortalStep({ ...base, isCancelled: true })).toBeNull();
   });
@@ -38,10 +41,18 @@ describe("volgende stap", () => {
     expect(nextPortalStep(atProgram)).toMatchObject({ buttonLabel: "Programma bekijken", tone: "info" });
   });
 
-  it("akkoord: eerst facturatiegegevens, dan ondertekenen; daarna niets meer", () => {
+  it("akkoord: ondertekenen is de stap, facturatiegegevens horen daarbij; daarna niets meer", () => {
     const atAccept = { ...base, hasSelectedAccommodation: true, programDone: true };
-    expect(nextPortalStep(atAccept)).toMatchObject({ target: "billing", buttonLabel: "Facturatiegegevens invullen" });
+    expect(nextPortalStep(atAccept)).toMatchObject({ target: "accept", buttonLabel: "Voorwaarden ondertekenen", tone: "warning" });
     expect(nextPortalStep({ ...atAccept, billingComplete: true })).toMatchObject({ target: "accept", buttonLabel: "Voorwaarden ondertekenen" });
     expect(nextPortalStep({ ...atAccept, billingComplete: true, termsAccepted: true })).toBeNull();
+  });
+
+  it("voorstelfase: akkoord en ondertekenen in één stap, ook als nog niets bevestigd is", () => {
+    const atProposal = { ...base, hasSelectedAccommodation: true, canSignNow: true, signingIncludesProposal: true, customerActionsCount: 5 };
+    expect(currentPortalStep(atProposal)).toBe("accept");
+    expect(nextPortalStep(atProposal)).toMatchObject({ title: "Geef akkoord en onderteken", buttonLabel: "Akkoord en ondertekenen", target: "accept" });
+    const afterApproval = { ...base, hasSelectedAccommodation: true, canSignNow: true };
+    expect(nextPortalStep(afterApproval)?.text).toContain("onder voorbehoud");
   });
 });
