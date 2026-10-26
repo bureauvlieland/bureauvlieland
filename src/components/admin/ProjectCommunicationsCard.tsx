@@ -49,13 +49,14 @@ import { AddCommunicationSheet } from "./AddCommunicationSheet";
 import { SendProjectEmailSheet } from "./SendProjectEmailSheet";
 import { ProjectChatSheet } from "./ProjectChatSheet";
 import { EmailLogDetailDialog } from "./EmailLogDetailDialog";
+import { EmailAttachments } from "./EmailAttachments";
 import {
   COMMUNICATION_TYPE_CONFIG,
-  EMAIL_TYPE_LABELS,
   type CommunicationType,
 } from "@/types/projectCommunication";
 import type { ProjectCommunication } from "@/types/projectCommunication";
 import { cn } from "@/lib/utils";
+import { emailTypeLabel } from "@/lib/emailTypeLabels";
 
 interface PartnerRecipient {
   name: string;
@@ -196,7 +197,7 @@ export function ProjectCommunicationsCard({
 
   const getEmailTypeLabel = (emailType?: string) => {
     if (!emailType) return null;
-    return EMAIL_TYPE_LABELS[emailType] || emailType;
+    return emailTypeLabel(emailType);
   };
 
   const displayCount = expanded ? filteredCommunications.length : 5;
@@ -362,7 +363,7 @@ export function ProjectCommunicationsCard({
               {visibleCommunications.map((comm) => {
                 const config = COMMUNICATION_TYPE_CONFIG[comm.communication_type as CommunicationType];
                 const isFromEmailLog = comm.source === "email_log";
-                const emailTypeLabel = isFromEmailLog ? getEmailTypeLabel(comm.email_type) : null;
+                const logTypeLabel = isFromEmailLog ? getEmailTypeLabel(comm.email_type) : null;
                 const canReply = !!comm.contact_email;
 
                 return (
@@ -377,7 +378,7 @@ export function ProjectCommunicationsCard({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium">
-                            {emailTypeLabel || config?.label || comm.communication_type}
+                            {logTypeLabel || config?.label || comm.communication_type}
                           </span>
                           {isFromEmailLog && (
                             <Badge variant="outline" className="text-xs bg-muted text-muted-foreground border-border">
@@ -567,65 +568,5 @@ export function ProjectCommunicationsCard({
         onReply={openReply}
       />
     </>
-  );
-}
-
-interface AttachmentMeta {
-  name: string;
-  size: number;
-  mime: string;
-  path: string;
-}
-
-function EmailAttachments({ metadata }: { metadata?: Record<string, unknown> | null }) {
-  const attachments = Array.isArray(metadata?.attachments)
-    ? (metadata!.attachments as AttachmentMeta[]).filter((a) => a && typeof a.path === "string")
-    : [];
-  if (attachments.length === 0) return null;
-
-  const handleOpen = async (path: string, name: string) => {
-    const { data, error } = await supabase.storage
-      .from("email-attachments")
-      .createSignedUrl(path, 60 * 10);
-    if (error || !data?.signedUrl) {
-      toast.error("Bijlage kon niet worden geopend");
-      return;
-    }
-    // Open in new tab; browser handles inline view / download by mime
-    const a = document.createElement("a");
-    a.href = data.signedUrl;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const formatSize = (bytes: number) => {
-    if (!bytes) return "";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {attachments.map((a, idx) => (
-        <button
-          key={`${a.path}-${idx}`}
-          type="button"
-          onClick={() => handleOpen(a.path, a.name)}
-          className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 hover:bg-muted px-2 py-1 text-xs transition-colors max-w-full"
-          title={`${a.name} — ${formatSize(a.size)}`}
-        >
-          <Paperclip className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-          <span className="truncate max-w-[200px]">{a.name}</span>
-          {a.size > 0 && (
-            <span className="text-muted-foreground flex-shrink-0">({formatSize(a.size)})</span>
-          )}
-        </button>
-      ))}
-    </div>
   );
 }

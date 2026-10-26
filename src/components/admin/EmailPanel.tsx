@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow, format, isSameDay } from "date-fns";
@@ -33,7 +33,22 @@ import {
   Keyboard,
   CalendarDays,
   RotateCcw,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import { Pill, type PillTone } from "@/components/system";
+import { EmailAttachments } from "@/components/admin/EmailAttachments";
+import { EmailLogDetailDialog } from "@/components/admin/EmailLogDetailDialog";
+import type { ProjectCommunication } from "@/types/projectCommunication";
+import { emailTypeLabel, emailStatusLabel } from "@/lib/emailTypeLabels";
+import {
+  buildTimeline,
+  bundleSummary,
+  focusItemId,
+  oldestUnansweredDate,
+  senderRole,
+  isPartnerEmailType,
+} from "@/lib/emailThreadTimeline";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 import { EmailShortcutsDialog } from "@/components/admin/EmailShortcutsDialog";
 import {
@@ -72,6 +87,12 @@ interface EmailItem {
   accommodation_archived?: string | null;
   email_type?: string | null;
   status?: string | null;
+  /** bijlagen e.d. van een inkomende mail (project_communications.metadata) */
+  metadata?: Record<string, unknown> | null;
+  /** onderdeel waar een automatische mail over gaat (program_request_items) */
+  item_label?: string | null;
+  /** klantadres van het dossier, voor de rol van een afzender */
+  customer_email?: string | null;
   /** afgeleide projectstatus van het gekoppelde dossier */
   project_status?: DerivedStatus | null;
   /** eerste programma-/aankomstdatum van het dossier (ISO) */
@@ -95,6 +116,11 @@ interface ThreadGroup {
   threadArchived: boolean;
   projectStatus: DerivedStatus | null;
   projectDate: string | null;
+  customerEmail: string | null;
+  /** adressen waar het systeem ooit een partnermail heen stuurde */
+  partnerEmails: Set<string>;
+  /** datum van het oudste onbeantwoorde inkomende bericht */
+  waitingSince: string | null;
 }
 
 const ORIGIN_LABEL: Record<Origin, string> = {
@@ -103,11 +129,43 @@ const ORIGIN_LABEL: Record<Origin, string> = {
   automatic: "Automatisch",
 };
 
-const ORIGIN_BADGE_CLASS: Record<Origin, string> = {
-  inbound: "bg-primary/10 text-primary border-primary/30",
-  manual: "bg-emerald-100 text-emerald-800 border-emerald-300",
-  automatic: "bg-slate-100 text-slate-700 border-slate-300",
+const ORIGIN_TONE: Record<Origin, PillTone> = {
+  inbound: "info",
+  manual: "success",
+  automatic: "neutral",
 };
+
+function statusTone(status: string | null | undefined): PillTone {
+  switch (status) {
+    case "opened":
+    case "clicked":
+      return "success";
+    case "failed":
+    case "bounced":
+    case "blocked":
+    case "spam":
+      return "danger";
+    case "pending":
+      return "warning";
+    default:
+      return "neutral";
+  }
+}
+
+/** Mailjet-status van een logregel: het verst gevorderde signaal wint. */
+function effectiveStatus(r: {
+  status: string;
+  bounced_at?: string | null;
+  clicked_at?: string | null;
+  opened_at?: string | null;
+  delivered_at?: string | null;
+}): string {
+  if (r.bounced_at) return "bounced";
+  if (r.clicked_at) return "clicked";
+  if (r.opened_at) return "opened";
+  if (r.delivered_at) return "delivered";
+  return r.status;
+}
 
 function stripHtml(html: string): string {
   if (!html) return "";
@@ -125,9 +183,9 @@ async function fetchEmails(): Promise<EmailItem[]> {
     .from("project_communications")
     .select(
       `id, subject, content, contact_name, contact_email, communication_date, direction, communication_type,
-       answered_at, archived_at, request_id, accommodation_id,
-       request:program_requests(reference_number, customer_name, archived_at),
-       accommodation:accommodation_requests(reference_number, customer_name, archived_at)`,
+       answered_at, archived_at, request_id, accommodation_id, metadata,
+       request:program_requests(reference_number, customer_name, customer_email, archived_at),
+       accommodation:accommodation_requests(reference_number, customer_name, customer_email, archived_at)`,
     )
     .in("communication_type", ["email", "email_in", "email_out"])
     .gte("communication_date", sinceIso)
@@ -138,7 +196,7 @@ async function fetchEmails(): Promise<EmailItem[]> {
   const logQuery = supabase
     .from("email_log")
     .select(
-      "id, email_type, subject, recipient_email, recipient_name, related_request_id, related_accommodation_id, status, created_at, sent_at",
+      "id, email_type, subject, recipient_email, recipient_name, related_request_id, related_accommodation_id, related_item_id, status, created_at, sent_at, delivered_at, opened_at, clicked_at, bounced_at",
     )
     .gte("created_at", sinceIso)
     .in("status", ["sent", "delivered", "opened", "clicked"])
@@ -169,6 +227,8 @@ async function fetchEmails(): Promise<EmailItem[]> {
     accommodation_ref: e.accommodation?.reference_number ?? null,
     accommodation_customer: e.accommodation?.customer_name ?? null,
     accommodation_archived: e.accommodation?.archived_at ?? null,
+    metadata: e.metadata ?? null,
+    customer_email: e.request?.customer_email ?? e.accommodation?.customer_email ?? null,
   }));
 
   // Resolve refs voor email_log rows
@@ -180,19 +240,32 @@ async function fetchEmails(): Promise<EmailItem[]> {
     new Set(logRows.map((r: any) => r.related_accommodation_id).filter(Boolean)),
   ) as string[];
 
-  const [progsRes, accsRes] = await Promise.all([
+  const itemIds = Array.from(
+    new Set(logRows.map((r) => r.related_item_id).filter(Boolean)),
+  ) as string[];
+
+  const [progsRes, accsRes, itemsRes] = await Promise.all([
     progIds.length
-      ? supabase.from("program_requests").select("id, reference_number, customer_name, archived_at").in("id", progIds)
+      ? supabase
+          .from("program_requests")
+          .select("id, reference_number, customer_name, customer_email, archived_at")
+          .in("id", progIds)
       : Promise.resolve({ data: [] as any[] }),
     accIds.length
       ? supabase
           .from("accommodation_requests")
-          .select("id, reference_number, customer_name, archived_at")
+          .select("id, reference_number, customer_name, customer_email, archived_at")
           .in("id", accIds)
+      : Promise.resolve({ data: [] as any[] }),
+    itemIds.length
+      ? supabase.from("program_request_items").select("id, block_name, provider_name").in("id", itemIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
   const progMap = new Map<string, any>((progsRes.data ?? []).map((p: any) => [p.id, p]));
   const accMap = new Map<string, any>((accsRes.data ?? []).map((a: any) => [a.id, a]));
+  const itemMap = new Map<string, string>(
+    (itemsRes.data ?? []).map((i) => [i.id, i.block_name || i.provider_name || ""]),
+  );
 
   // admin_project_email = handmatig vanuit project (dupliceert vaak met project_communications)
   // We tonen email_log alleen voor automatische templates om dubbel niet te tonen.
@@ -206,7 +279,7 @@ async function fetchEmails(): Promise<EmailItem[]> {
         source: "email_log" as const,
         origin: "automatic" as const,
         subject: r.subject,
-        content: `Automatisch verstuurd: ${r.email_type}\nNaar: ${r.recipient_name || r.recipient_email}`,
+        content: "",
         contact_name: r.recipient_name,
         contact_email: r.recipient_email,
         date: r.sent_at || r.created_at,
@@ -221,7 +294,9 @@ async function fetchEmails(): Promise<EmailItem[]> {
         accommodation_customer: acc?.customer_name ?? null,
         accommodation_archived: acc?.archived_at ?? null,
         email_type: r.email_type,
-        status: r.status,
+        status: effectiveStatus(r),
+        item_label: r.related_item_id ? itemMap.get(r.related_item_id) || null : null,
+        customer_email: prog?.customer_email ?? acc?.customer_email ?? null,
       };
     });
 
@@ -346,6 +421,10 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
       if (e.date > g.lastAt) g.lastAt = e.date;
       if (!g.projectStatus && e.project_status) g.projectStatus = e.project_status;
       if (!g.projectDate && e.project_date) g.projectDate = e.project_date;
+      if (!g.customerEmail && e.customer_email) g.customerEmail = e.customer_email;
+      if (e.origin === "automatic" && e.contact_email && isPartnerEmailType(e.email_type)) {
+        g.partnerEmails.add(e.contact_email.toLowerCase());
+      }
     } else {
       groups.set(key, {
         key,
@@ -364,6 +443,13 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
         threadArchived: false,
         projectStatus: e.project_status ?? null,
         projectDate: e.project_date ?? null,
+        customerEmail: e.customer_email ?? null,
+        partnerEmails: new Set(
+          e.origin === "automatic" && e.contact_email && isPartnerEmailType(e.email_type)
+            ? [e.contact_email.toLowerCase()]
+            : [],
+        ),
+        waitingSince: null,
       });
     }
   }
@@ -379,6 +465,7 @@ function buildGroups(items: EmailItem[], showArchived: boolean, originFilter: Or
       ...g,
       items: showArchived ? g.items : g.items.filter((e) => !e.archived_at),
     }))
+    .map((g) => ({ ...g, waitingSince: oldestUnansweredDate(g.items) }))
     .filter((g) => g.items.length > 0)
     .filter((g) => (originFilter === "unanswered" ? g.unread > 0 : true))
     .sort((a, b) => {
@@ -406,11 +493,15 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyContext, setReplyContext] = useState<{
+    groupKey: string;
     requestId?: string;
     accommodationId?: string;
     recipients: { label: string; email: string; name: string; type: "customer" | "partner" }[];
     initialSubject?: string;
   } | null>(null);
+  const [detailComm, setDetailComm] = useState<ProjectCommunication | null>(null);
+  const [expandedBundles, setExpandedBundles] = useState<Set<string>>(() => new Set());
+  const threadScrollRef = useRef<HTMLDivElement>(null);
 
   const { data: items = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-email-threads"],
@@ -436,6 +527,93 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
   const activeGroup = groups.find((g) => g.key === activeKey) || null;
 
   const stripPrefix = stripSourcePrefix;
+
+  // Live bijwerken: een nieuwe inkomende mail of een verzonden automatische
+  // mail verschijnt zonder vernieuwen. Kort gedempt, want één actie kan
+  // tientallen logregels tegelijk opleveren.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const bump = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => refetch(), 800);
+    };
+    const ch = supabase
+      .channel(`email-panel-${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_communications" }, bump)
+      .on("postgres_changes", { event: "*", schema: "public", table: "email_log" }, bump)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(ch);
+    };
+  }, [refetch]);
+
+  // Open een gesprek op het eerste onbeantwoorde bericht; anders op het
+  // laatste bericht van een mens; anders onderaan.
+  useEffect(() => {
+    if (!activeGroup) return;
+    const id = focusItemId(activeGroup.items);
+    const frame = requestAnimationFrame(() => {
+      const el = id ? document.getElementById(`email-msg-${id}`) : null;
+      const box = threadScrollRef.current;
+      if (el && box) {
+        box.scrollTop = Math.max(0, el.offsetTop - box.offsetTop - 12);
+      } else if (box) {
+        box.scrollTop = box.scrollHeight;
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+    // Alleen bij het wisselen van gesprek of de eerste lading, niet bij elke refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKey, isLoading]);
+
+  /** Opent de volledige inhoud van een automatisch verzonden mail. */
+  const openLogDetail = async (item: EmailItem) => {
+    if (item.source !== "email_log") return;
+    const { data, error } = await supabase
+      .from("email_log")
+      .select(
+        "id, email_type, subject, recipient_email, recipient_name, html_body, text_body, from_email, reply_to, status, sent_at, created_at, related_request_id, related_accommodation_id",
+      )
+      .eq("id", stripPrefix(item.id))
+      .maybeSingle();
+    if (error || !data) {
+      toast.error("Kon de e-mail niet laden");
+      return;
+    }
+    setDetailComm({
+      id: `log-${data.id}`,
+      email_log_id: data.id,
+      request_id: data.related_request_id,
+      accommodation_id: data.related_accommodation_id,
+      communication_type: "email_out",
+      direction: "outbound",
+      subject: data.subject,
+      content: data.text_body ?? "",
+      html_body: data.html_body,
+      text_body: data.text_body,
+      from_email: data.from_email,
+      reply_to: data.reply_to,
+      contact_name: data.recipient_name,
+      contact_email: data.recipient_email,
+      logged_by: null,
+      logged_at: data.created_at,
+      communication_date: data.sent_at ?? data.created_at,
+      metadata: { status: item.status ?? data.status },
+      created_at: data.created_at,
+      updated_at: data.created_at,
+      source: "email_log",
+      email_type: data.email_type,
+    });
+  };
+
+  const toggleBundle = (key: string) =>
+    setExpandedBundles((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   const invalidate = useCallback(() => {
     refetch();
@@ -541,6 +719,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
       : [];
     const subj = lastInbound?.subject ?? group.items[group.items.length - 1]?.subject ?? null;
     setReplyContext({
+      groupKey: group.key,
       requestId: group.kind === "program" ? group.id ?? undefined : undefined,
       accommodationId: group.kind === "accommodation" ? group.id ?? undefined : undefined,
       recipients,
@@ -712,7 +891,12 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
           ) : (
             groups.map((g) => {
               const isActive = g.key === activeKey;
-              const last = g.items[g.items.length - 1];
+              const lastHuman = [...g.items].reverse().find((e) => e.origin !== "automatic") ?? g.items[g.items.length - 1];
+              const lastInbound = [...g.items].reverse().find((e) => e.origin === "inbound") ?? null;
+              const role = lastInbound ? senderRole(lastInbound.contact_email, g.customerEmail, g.partnerEmails) : null;
+              const senderLine = lastInbound
+                ? `${lastInbound.contact_name || lastInbound.contact_email || "Onbekend"}${role ? ` (${role})` : ""}`
+                : "Alleen verzonden mail";
               return (
                 <button
                   key={g.key}
@@ -721,7 +905,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                   className={cn(
                     "w-full text-left px-3 py-2.5 border-b hover:bg-slate-50 transition-colors",
                     isActive && "bg-primary/5",
-                    g.unread > 0 && !isActive && "bg-rose-50/40",
+                    g.unread > 0 && !isActive && "bg-warning-soft/40",
                   )}
                 >
                   <div className="flex items-center gap-2 mb-0.5">
@@ -736,13 +920,13 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                       {g.label}
                     </span>
                     {g.unread > 0 && (
-                      <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">
-                        {g.unread} nieuw
-                      </Badge>
+                      <Pill tone="warning" title="Onbeantwoorde berichten">
+                        {g.unread} onbeantwoord
+                      </Pill>
                     )}
                   </div>
-                  <p className={cn("text-xs text-slate-700 truncate", g.unread > 0 && "font-medium")}>
-                    {last?.subject || "(geen onderwerp)"}
+                  <p className={cn("text-xs text-foreground truncate", g.unread > 0 && "font-medium")}>
+                    {lastHuman?.subject || "(geen onderwerp)"}
                   </p>
                   {(g.projectStatus || g.projectDate || g.threadArchived) && (
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -774,15 +958,16 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                       )}
                     </div>
                   )}
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="text-[11px] text-slate-500 truncate flex-1">
-                      {formatDistanceToNow(new Date(g.lastAt), { addSuffix: true, locale: nl })}
-                    </p>
-                    <div className="flex items-center gap-1 text-[10px] text-slate-500 flex-shrink-0">
-                      {g.inboundCount > 0 && <span title="Inkomend">↓{g.inboundCount}</span>}
-                      {g.manualCount > 0 && <span title="Handmatig" className="text-emerald-700">✋{g.manualCount}</span>}
-                      {g.automaticCount > 0 && <span title="Automatisch">⚙{g.automaticCount}</span>}
-                    </div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5 text-[11px] text-muted-foreground">
+                    <p className="truncate flex-1">{senderLine}</p>
+                    <span
+                      className={cn("flex-shrink-0", g.waitingSince && "text-warning-ink font-medium")}
+                      title={format(new Date(g.waitingSince ?? g.lastAt), "d MMM yyyy HH:mm", { locale: nl })}
+                    >
+                      {g.waitingSince
+                        ? `wacht ${formatDistanceToNow(new Date(g.waitingSince), { locale: nl })}`
+                        : formatDistanceToNow(new Date(g.lastAt), { addSuffix: true, locale: nl })}
+                    </span>
                   </div>
                 </button>
               );
@@ -803,7 +988,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
         ) : (
           <>
             <div className="px-4 py-3 bg-white border-b flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -847,6 +1032,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                   <Button
                     variant="outline"
                     size="sm"
+                    className="flex-shrink-0"
                     onClick={() => navigate(`/admin/aanvragen/${activeGroup.id}`)}
                   >
                     <ExternalLink className="h-3.5 w-3.5 mr-1" /> Project
@@ -856,6 +1042,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                   <Button
                     variant="outline"
                     size="sm"
+                    className="flex-shrink-0"
                     onClick={() => navigate(`/admin/logies/${activeGroup.id}`)}
                   >
                     <ExternalLink className="h-3.5 w-3.5 mr-1" /> Logies
@@ -910,52 +1097,97 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {activeGroup.items.map((email, idx) => {
-                const prev = idx > 0 ? activeGroup.items[idx - 1] : null;
-                const showDate =
-                  !prev || !isSameDay(new Date(email.date), new Date(prev.date));
-                const isInbound = email.origin === "inbound";
-                const isAuto = email.origin === "automatic";
-                const OriginIcon = isInbound ? Inbox : isAuto ? Bot : User;
-                const borderClass =
-                  isInbound
-                    ? "border-l-4 border-l-primary"
-                    : isAuto
-                      ? "border-l-4 border-l-slate-400 bg-slate-50/40"
-                      : "border-l-4 border-l-emerald-500 bg-emerald-50/30";
-                const bodyText = email.source === "email_log" ? email.content : stripHtml(email.content);
-                return (
-                  <div key={email.id}>
-                    {showDate && (
-                      <div className="flex items-center gap-3 my-3">
-                        <div className="flex-1 h-px bg-border" />
-                        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                          {format(new Date(email.date), "EEEE d MMMM yyyy", { locale: nl })}
+            <div ref={threadScrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+              {buildTimeline(activeGroup.items).map((entry, idx, all) => {
+                const entryDate = entry.kind === "bundle" ? entry.date : entry.item.date;
+                const prevEntry = idx > 0 ? all[idx - 1] : null;
+                const prevDate = prevEntry ? (prevEntry.kind === "bundle" ? prevEntry.date : prevEntry.item.date) : null;
+                const showDate = !prevDate || !isSameDay(new Date(entryDate), new Date(prevDate));
+                const dateRow = showDate ? (
+                  <div className="flex items-center gap-3 my-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-[11px] text-muted-foreground">
+                      {format(new Date(entryDate), "EEEE d MMMM yyyy", { locale: nl })}
+                    </span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                ) : null;
+
+                if (entry.kind === "bundle") {
+                  const open = expandedBundles.has(entry.key);
+                  const lastId = entry.items[entry.items.length - 1].id;
+                  return (
+                    <div key={entry.key} id={`email-msg-${lastId}`}>
+                      {dateRow}
+                      <button
+                        type="button"
+                        onClick={() => toggleBundle(entry.key)}
+                        className="w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted/60 text-left"
+                        aria-expanded={open}
+                      >
+                        {open ? (
+                          <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />
+                        )}
+                        <span className="tabular-nums flex-shrink-0">
+                          {format(new Date(entry.date), "HH:mm", { locale: nl })}
                         </span>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-                    )}
-                    <div className={cn("rounded-lg border p-3 bg-white shadow-sm", borderClass)}>
+                        <span className="text-foreground font-medium flex-shrink-0">
+                          {emailTypeLabel(entry.emailType)}
+                        </span>
+                        <span className="truncate">{bundleSummary(entry.items)}</span>
+                      </button>
+                      {open && (
+                        <div className="ml-4 pl-2 border-l space-y-0.5 mt-0.5">
+                          {entry.items.map((it) => (
+                            <AutomaticMailRow key={it.id} item={it} onOpen={() => openLogDetail(it)} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                if (entry.kind === "event") {
+                  return (
+                    <div key={entry.item.id} id={`email-msg-${entry.item.id}`}>
+                      {dateRow}
+                      <AutomaticMailRow item={entry.item} onOpen={() => openLogDetail(entry.item)} />
+                    </div>
+                  );
+                }
+
+                const email = entry.item;
+                const isInbound = email.origin === "inbound";
+                const OriginIcon = isInbound ? Inbox : User;
+                const role = isInbound
+                  ? senderRole(email.contact_email, activeGroup.customerEmail, activeGroup.partnerEmails)
+                  : null;
+                const unanswered = isInbound && email.source === "communication" && !email.answered_at && !email.archived_at;
+                return (
+                  <div key={email.id} id={`email-msg-${email.id}`}>
+                    {dateRow}
+                    <div
+                      className={cn(
+                        "rounded-lg border p-3 bg-card shadow-soft border-l-4",
+                        isInbound ? "border-l-primary" : "border-l-success",
+                        unanswered && "ring-1 ring-warning/40",
+                      )}
+                    >
                       <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-medium",
-                                ORIGIN_BADGE_CLASS[email.origin],
-                              )}
-                            >
-                              <OriginIcon className="h-3 w-3" />
+                            <Pill tone={ORIGIN_TONE[email.origin]}>
+                              <OriginIcon className="h-3 w-3 mr-1" />
                               {ORIGIN_LABEL[email.origin]}
-                              {email.email_type && (
-                                <span className="opacity-70">· {email.email_type}</span>
-                              )}
-                            </span>
-                            <p className="text-xs text-slate-600 truncate">
+                            </Pill>
+                            <p className="text-xs text-muted-foreground truncate">
                               {isInbound ? "van " : "naar "}
                               {email.contact_name || email.contact_email || "Onbekend"}
+                              {role ? ` (${role})` : ""}
                             </p>
+                            {unanswered && <Pill tone="warning">onbeantwoord</Pill>}
                           </div>
                           <p className="text-sm font-semibold truncate">{email.subject || "(geen onderwerp)"}</p>
                         </div>
@@ -963,11 +1195,12 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
                           {format(new Date(email.date), "d MMM HH:mm", { locale: nl })}
                         </div>
                       </div>
-                      <div className="text-sm whitespace-pre-wrap text-slate-700 max-h-64 overflow-y-auto">
-                        {bodyText}
+                      <div className="text-sm whitespace-pre-wrap text-foreground/90 max-h-96 overflow-y-auto">
+                        {stripHtml(email.content)}
                       </div>
+                      {email.source === "communication" && <EmailAttachments metadata={email.metadata} />}
                       <div className="flex items-center gap-1 mt-2">
-                        {isInbound && email.source === "communication" && !email.answered_at && (
+                        {unanswered && (
                           <Button variant="ghost" size="sm" onClick={() => markAnswered(email)}>
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Markeer als beantwoord
                           </Button>
@@ -1007,10 +1240,49 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
           accommodationId={replyContext.accommodationId}
           recipients={replyContext.recipients}
           defaultSubject={replyContext.initialSubject}
+          onEmailSent={() => {
+            // Een verstuurd antwoord sluit het gesprek: alle open inkomende
+            // berichten van dit gesprek gaan op beantwoord.
+            const g = groups.find((x) => x.key === replyContext.groupKey);
+            if (g) void setThreadAnswered(g, true);
+          }}
         />
       )}
 
+      <EmailLogDetailDialog
+        open={!!detailComm}
+        onOpenChange={(o) => {
+          if (!o) setDetailComm(null);
+        }}
+        communication={detailComm}
+      />
+
       <EmailShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
+  );
+}
+
+/** Eén regel voor een automatisch verstuurde mail: tijd, wat, aan wie, status. */
+function AutomaticMailRow({ item, onOpen }: { item: EmailItem; onOpen: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      title="Open de verstuurde mail"
+      className="w-full flex items-center gap-2 px-2 py-1 rounded-md text-xs text-muted-foreground hover:bg-muted/60 text-left"
+    >
+      <Bot className="h-3.5 w-3.5 flex-shrink-0 opacity-60" />
+      <span className="tabular-nums flex-shrink-0">{format(new Date(item.date), "HH:mm", { locale: nl })}</span>
+      <span className="text-foreground flex-shrink-0">{emailTypeLabel(item.email_type)}</span>
+      <span className="truncate">
+        naar {item.contact_name || item.contact_email || "onbekend"}
+        {item.item_label ? ` · ${item.item_label}` : ""}
+      </span>
+      {item.status && (
+        <Pill tone={statusTone(item.status)} className="ml-auto flex-shrink-0">
+          {emailStatusLabel(item.status)}
+        </Pill>
+      )}
+    </button>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { emailTypeLabel } from "@/lib/emailTypeLabels";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,40 +43,6 @@ interface LogRow {
   sent_by: string | null;
 }
 
-const EMAIL_TYPE_LABEL: Record<string, string> = {
-  program_request_partner: "Initiële aanvraag",
-  partner_briefing_t3: "Briefing T-3",
-  partner_activity_unconfirmed_t7: "Herinnering T-7",
-  reminder_quote_pending: "Herinnering offerte",
-  partner_missing_pdf_reminder: "Herinnering PDF",
-  item_added_partner: "Onderdeel toegevoegd",
-  item_changes_partner: "Wijziging onderdeel",
-  date_change_partner: "Datumwijziging",
-  status_confirmed: "Klant goedgekeurd",
-  status_alternative: "Alternatief voorgesteld",
-  counter_proposal_partner: "Tegenvoorstel",
-  counter_proposal_response: "Reactie tegenvoorstel",
-  booking_confirmed_partner: "Boeking bevestigd",
-  cancellation_partner: "Annulering",
-  partner_item_cancellation: "Annulering onderdeel",
-  quote_expired_partner: "Offerte verlopen",
-  accommodation_quote_request_partner: "Logies aanvraag",
-  accommodation_quote_notification: "Logies notificatie",
-  accommodation_quote_withdrawn: "Logies ingetrokken",
-  accommodation_selected_partner: "Logies geselecteerd",
-  accommodation_rejected_partner: "Logies afgewezen",
-  accommodation_people_change: "Aantal personen gewijzigd",
-  cancellation_accommodation_partner: "Logies annulering",
-  partner_customer_message: "Bericht van klant",
-  customer_accommodation_message: "Bericht aan klant",
-  partner_invitation: "Partner uitnodiging",
-  partner_password_reset: "Wachtwoord reset",
-  partner_invoice_reminder_t1: "Inkoopfactuur herinnering",
-  partner_invoice_reminder_t7: "Inkoopfactuur herinnering T+7",
-  partner_invoice_registered_bureau: "Inkoopfactuur geregistreerd",
-  purchase_invoice_forward: "Inkoopfactuur doorgestuurd",
-  admin_project_email: "Handmatige e-mail",
-};
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   sent: { label: "Verzonden", className: "bg-sky-100 text-sky-800 border-sky-200" },
@@ -250,7 +217,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
             <SelectContent>
               <SelectItem value="all">Alle types</SelectItem>
               {typeOptions.map((t) => (
-                <SelectItem key={t} value={t}>{EMAIL_TYPE_LABEL[t] || t}</SelectItem>
+                <SelectItem key={t} value={t}>{emailTypeLabel(t)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -276,7 +243,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{r.recipient_name || r.related_partner_id}</span>
                       <Badge variant="outline" className="text-xs">
-                        {EMAIL_TYPE_LABEL[r.email_type] || r.email_type}
+                        {emailTypeLabel(r.email_type)}
                       </Badge>
                       <Badge className={`text-xs ${badge.className}`}>{badge.label}</Badge>
                       {(r.open_count ?? 0) > 0 && (
@@ -320,7 +287,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               <Mail className="h-4 w-4" />
-              {selected ? EMAIL_TYPE_LABEL[selected.email_type] || selected.email_type : ""}
+              {selected ? emailTypeLabel(selected.email_type) : ""}
               {selected && (
                 <Badge className={`text-xs ${(STATUS_BADGE[effectiveStatus(selected)] || { className: "bg-slate-100 text-slate-700" }).className}`}>
                   {(STATUS_BADGE[effectiveStatus(selected)] || { label: effectiveStatus(selected) }).label}
@@ -442,7 +409,7 @@ export function PartnerNotificationsCard({ requestId, accommodationId }: Partner
                   <div className="rounded-md border bg-slate-50 p-2 text-xs space-y-0.5">
                     <div><span className="text-slate-500">Aan: </span>{confirmResend.recipient_name ? `${confirmResend.recipient_name} <${confirmResend.recipient_email}>` : confirmResend.recipient_email}</div>
                     <div><span className="text-slate-500">Onderwerp: </span>{confirmResend.subject}</div>
-                    <div><span className="text-slate-500">Type: </span>{EMAIL_TYPE_LABEL[confirmResend.email_type] || confirmResend.email_type}</div>
+                    <div><span className="text-slate-500">Type: </span>{emailTypeLabel(confirmResend.email_type)}</div>
                   </div>
                 )}
               </div>

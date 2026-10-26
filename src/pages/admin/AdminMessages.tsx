@@ -30,7 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Search,
   Mail,
-  RefreshCw,
   Calendar,
   CheckCircle2,
   XCircle,
@@ -40,16 +39,15 @@ import {
   Send,
   RotateCcw,
   Settings,
-  Inbox,
   MessageCircle,
   Sparkles,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
-import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
 import { ChatPanel } from "@/components/admin/ChatPanel";
 import { EmailPanel } from "@/components/admin/EmailPanel";
 import { useAdminInbox } from "@/hooks/useAdminInbox";
+import { emailTypeLabel, emailTypeCategory } from "@/lib/emailTypeLabels";
 
 
 interface EmailLog {
@@ -69,25 +67,6 @@ interface EmailLog {
   sent_at: string | null;
 }
 
-// Email type labels for display
-const emailTypeLabels: Record<string, { label: string; category: string }> = {
-  program_request_bureau: { label: "Programma aanvraag (Bureau)", category: "Programma" },
-  program_request_customer: { label: "Programma aanvraag (Klant)", category: "Programma" },
-  program_request_partner: { label: "Programma aanvraag (Partner)", category: "Programma" },
-  quote_request_bureau: { label: "Offerte aanvraag (Bureau)", category: "Offerte" },
-  quote_request_customer: { label: "Offerte aanvraag (Klant)", category: "Offerte" },
-  status_confirmed: { label: "Status: Bevestigd", category: "Status" },
-  status_unavailable: { label: "Status: Niet beschikbaar", category: "Status" },
-  status_alternative: { label: "Status: Alternatief", category: "Status" },
-  cancellation_customer: { label: "Annulering (Klant)", category: "Annulering" },
-  cancellation_partner: { label: "Annulering (Partner)", category: "Annulering" },
-  partner_invitation: { label: "Partner uitnodiging", category: "Partner" },
-  accommodation_request_customer: { label: "Logies aanvraag (Klant)", category: "Logies" },
-  accommodation_quote_request_partner: { label: "Logies offerteaanvraag (Partner)", category: "Logies" },
-  accommodation_quote_notification: { label: "Logies offerte notificatie", category: "Logies" },
-  accommodation_selected_partner: { label: "Logies gekozen (Partner)", category: "Logies" },
-  accommodation_selected_customer: { label: "Logies gekozen (Klant)", category: "Logies" },
-};
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   sent: { icon: <CheckCircle2 className="h-4 w-4" />, color: "bg-green-100 text-green-800", label: "Verzonden" },
@@ -166,7 +145,7 @@ const AdminMessages = () => {
     Math.max(0, chatUnreadConversations - presales.nonWidgetConversations) +
     Math.max(0, liveChatUnreadTotal - presales.widgetMessages);
 
-  const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: emails = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-email-logs"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -178,6 +157,7 @@ const AdminMessages = () => {
       if (error) throw error;
       return data as EmailLog[];
     },
+    refetchInterval: 60_000,
   });
 
   const filteredEmails = useMemo(() => {
@@ -195,7 +175,7 @@ const AdminMessages = () => {
       // Search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const typeLabel = emailTypeLabels[email.email_type]?.label.toLowerCase() || email.email_type.toLowerCase();
+        const typeLabel = emailTypeLabel(email.email_type).toLowerCase();
         
         return (
           email.subject.toLowerCase().includes(query) ||
@@ -270,14 +250,6 @@ const AdminMessages = () => {
                   Templates
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                onClick={() => refetch()}
-                disabled={isRefetching}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-                Vernieuwen
-              </Button>
             </div>
           </div>
 
@@ -439,7 +411,7 @@ const AdminMessages = () => {
                     <SelectItem value="all">Alle types</SelectItem>
                     {uniqueTypes.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {emailTypeLabels[type]?.label || type}
+                        {emailTypeLabel(type)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -500,9 +472,9 @@ const AdminMessages = () => {
                     </TableHeader>
                     <TableBody>
                       {filteredEmails.map((email) => {
-                        const typeInfo = emailTypeLabels[email.email_type] || {
-                          label: email.email_type,
-                          category: "Overig",
+                        const typeInfo = {
+                          label: emailTypeLabel(email.email_type),
+                          category: emailTypeCategory(email.email_type),
                         };
                         const statusInfo = statusConfig[email.status] || statusConfig.pending;
                         const relatedLink = getRelatedLink(email);

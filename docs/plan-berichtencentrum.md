@@ -1,7 +1,8 @@
 # Plan: Berichtencentrum als werkvoorraad
 
-Status: onderzoek en plan 26 oktober 2026, wacht op akkoord van Erwin op de
-vier beslissingen onderaan. Fase 0 kan zonder die beslissingen gebouwd worden.
+Status: onderzoek en plan 26 oktober 2026. Erwin heeft op 26 oktober ja
+gezegd op alle vier de beslissingen onderaan. Fase 0 is op 26 oktober gebouwd
+(zie "Gebouwd" onderaan); fase 1 tot 3 volgen.
 
 Vraag van Erwin: "Dit overzicht is ook niet erg intuïtief. Dat moet beter
 kunnen." Dit document legt eerst vast wat het scherm nu doet en wat de
@@ -102,6 +103,11 @@ scherm omlaag moet brengen.
     (`bg-rose-50`, `text-emerald-700`, `bg-white`) en eigen chips waar
     `Pill`, `EmptyState` en de statustonen bestaan. Dit telt mee in de
     design-debt-teller.
+11. **De live-abonnementen deden niets.** `useAdminInbox` en het oude
+    `InboxToAnswer` abonneerden zich op wijzigingen in
+    `project_communications`, maar die tabel zat niet in de
+    realtime-publicatie van Supabase (alleen de drie chattabellen). Er kwam
+    dus nooit een gebeurtenis, en daarom bestond de knop "Vernieuwen".
 
 Eén vermoeden uit de eerste beoordeling klopt niet: de dubbele
 "program_request_partner" naar Zuiver Traiteur is geen bug. Het zijn twee
@@ -252,3 +258,39 @@ dossier.
    ja. Het is beheer, geen gesprek.
 4. **Fase 0 nu bouwen, de rest na akkoord?** Fase 0 verandert geen
    structuur en is in een dag te zien op een preview.
+
+## Gebouwd
+
+### Fase 0 (26 oktober 2026)
+
+- `InboxToAnswer.tsx` verwijderd, samen met de import in `AdminMessages`.
+- Beantwoorden markeert het gesprek als beantwoord (`onEmailSent` in
+  `EmailPanel` roept `setThreadAnswered` aan).
+- Eén labelkaart `src/lib/emailTypeLabels.ts` met alle 63 types die ooit
+  verstuurd zijn plus de oude sleutels, met categorie en Mailjet-statuslabels.
+  Gebruikt door `EmailPanel`, `AdminMessages`, `EmailLogDetailDialog`,
+  `ProjectCommunicationsCard`, `PartnerNotificationsCard` en `AdminTodos`;
+  de vier losse kaarten zijn weg.
+- Automatische mails zijn één regel: tijd, label, ontvanger, onderdeel (via
+  `related_item_id`) en status (afgeleverd, geopend, geklikt, gebounced).
+  Klik opent `EmailLogDetailDialog` met de echte inhoud uit `email_log`.
+- Bundeling in `src/lib/emailThreadTimeline.ts` (pure functies, 19 tests):
+  opeenvolgende automatische mails van hetzelfde type binnen tien minuten
+  worden één uitklapbare regel, bijvoorbeeld "Aanvraag naar partner · 8
+  mails naar Zuiver Traiteur, Brouwerij Fortuna, De Bazuin Watertaxi en 3
+  anderen".
+- Een gesprek opent op het eerste onbeantwoorde bericht, anders op het
+  laatste bericht van een mens, anders onderaan.
+- Bijlagen van inkomende mails worden getoond; `EmailAttachments` is uit
+  het projectdossier gehaald naar een gedeeld component.
+- De lijst toont per gesprek wie het laatst schreef met de rol (klant of
+  partner, afgeleid van het klantadres van het dossier en eerdere
+  partnermails) en "wacht 2 dagen" bij een open bericht. De iconen
+  `↓ ✋ ⚙` zijn weg, "2 nieuw" heet "2 onbeantwoord".
+- Gesprekskop: `min-w-0 flex-1` zodat de knoppen in beeld blijven.
+- Migratie `20261026130000_berichtencentrum-realtime.sql` zet
+  `project_communications` en `email_log` in de realtime-publicatie;
+  `EmailPanel` abonneert zich erop (gedempt op 800 ms). De knop
+  "Vernieuwen" is weg; de tab Verzonden e-mails ververst elke minuut.
+- Kaarten en chips in `EmailPanel` op `Pill` en de statustokens in plaats
+  van losse paletkleuren.
