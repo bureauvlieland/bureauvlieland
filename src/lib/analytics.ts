@@ -277,3 +277,36 @@ export const trackWizardStep = (data: {
     page: typeof window !== 'undefined' ? window.location.pathname : null,
   });
 };
+
+/**
+ * Het aanvraagformulier (plan klantreis en ondertekening, fase 5): één keer
+ * per bezoek "form_start" bij de eerste invoer en "form_submit" bij een
+ * geslaagde verzending, met de weg waarlangs het formulier geopend werd
+ * (homepage, voorbeeldprogramma, landingspagina, vinkje, direct).
+ */
+export const trackFormStart = (data: { form: string; source: string }) => {
+  trackEvent('form_start', {
+    form: data.form,
+    form_source: data.source,
+    page: typeof window !== 'undefined' ? window.location.pathname : null,
+  });
+};
+
+export const trackFormSubmit = (data: {
+  form: string;
+  source: string;
+  eventType?: string | null;
+  needs?: string[];
+  dateUnknown?: boolean;
+  templateId?: string | null;
+}) => {
+  trackEvent('form_submit', {
+    form: data.form,
+    form_source: data.source,
+    event_type: data.eventType || 'niet_gespecificeerd',
+    needs: (data.needs ?? []).join(','),
+    date_unknown: data.dateUnknown ? 'true' : 'false',
+    template_id: data.templateId || null,
+    page: typeof window !== 'undefined' ? window.location.pathname : null,
+  });
+};

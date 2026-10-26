@@ -226,8 +226,11 @@ export const PreSalesChatWidget = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
                     maxLength={4000}
-                    placeholder="Waar kunnen we u bij helpen?"
+                    placeholder="Waar kunnen we u bij helpen? Noem alvast uw groepsgrootte, de periode en wat u nodig heeft."
                   />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Met groepsgrootte, periode en wat u nodig heeft (activiteiten, eten en drinken, overnachting) kunnen wij meteen een voorstel doen.
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-2">
