@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, FileText, MessageSquare, type LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import stapVertellen from "@/assets/stap-vertellen.webp";
+import stapSamenstellen from "@/assets/stap-samenstellen.webp";
+import stapAkkoord from "@/assets/stap-akkoord.webp";
 import { RESPONSE_TIME } from "@/content/promises";
 import { Container, Section, SectionHeader } from "@/components/system";
 import { openPreSalesChat } from "@/components/site/openPreSalesChat";
@@ -9,27 +12,35 @@ import { openPreSalesChat } from "@/components/site/openPreSalesChat";
  * De sectie direct onder de hero (plan klantreis en ondertekening, fase 1).
  * Vervangt het keuzeblok met zes ingangen: één voordeur (het formulier), in
  * drie stappen uitgelegd, met inspiratie en de chat als zijpaden en de
- * programma-bouwer als tekstlink voor wie zelf wil puzzelen.
+ * programma-bouwer als tekstlink voor wie zelf wil puzzelen. Elke stap heeft
+ * een echte foto in plaats van een icoon (ontwerpsysteem, principe 3); bij
+ * stap 2 staat Erwin zelf, want "wij" zijn mensen die je kunt zien.
  */
 interface Step {
-  icon: LucideIcon;
+  image: string;
+  alt: string;
+  caption?: string;
   title: string;
   text: string;
 }
 
 const STEPS: Step[] = [
   {
-    icon: MessageSquare,
+    image: stapVertellen,
+    alt: "Houten wegwijzer op het strand van Vlieland met activiteiten als wadlopen, suppen en powerkiten",
     title: "U vertelt wat u zoekt",
     text: "Groepsgrootte, periode en wat u nodig heeft: activiteiten, eten en drinken, overnachting, boot en fietsen. Twee minuten werk, vrijblijvend.",
   },
   {
-    icon: FileText,
+    image: stapSamenstellen,
+    alt: "Erwin Soolsma van Bureau Vlieland aan een picknicktafel op het strand",
+    caption: "Erwin, oprichter",
     title: "Wij stellen het samen",
     text: `${RESPONSE_TIME.short}, met prijzen per onderdeel. Van eilanders die alle partners kennen en weten wat bij uw groep past.`,
   },
   {
-    icon: CheckCircle2,
+    image: stapAkkoord,
+    alt: "Lange gedekte tafel in de avondzon met de vuurtoren van Vlieland op de achtergrond",
     title: "U geeft akkoord in uw portaal",
     text: "Eén akkoord, één factuur. Wij boeken alle eilandpartners en blijven uw aanspreekpunt, ook tijdens uw verblijf.",
   },
@@ -45,21 +56,30 @@ export const HowItWorks = ({ number }: { number: string }) => (
         intro="U hoeft niets zelf uit te zoeken. Vertel ons wat u zoekt, wij doen de rest."
       />
       <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {STEPS.map((step, idx) => {
-          const Icon = step.icon;
-          return (
-            <li key={step.title} className="rounded-lg border border-border bg-card p-6">
-              <div className="flex items-center justify-between">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-primary">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+        {STEPS.map((step, idx) => (
+          <li key={step.title} className="overflow-hidden rounded-lg border border-border bg-card">
+            <div className="relative aspect-[16/9] w-full overflow-hidden bg-accent-soft lg:aspect-[4/3]">
+              <img
+                src={step.image}
+                alt={step.alt}
+                width={800}
+                height={600}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+              {step.caption && (
+                <span className="absolute bottom-3 left-3 rounded-full bg-card/90 px-3 py-1 text-xs font-medium text-foreground">
+                  {step.caption}
                 </span>
-                <span className="text-eyebrow font-medium uppercase text-primary">Stap {idx + 1}</span>
-              </div>
-              <h3 className="mt-4 font-display text-display-md font-medium text-foreground">{step.title}</h3>
+              )}
+            </div>
+            <div className="p-6">
+              <span className="text-eyebrow font-medium uppercase text-primary">Stap {idx + 1}</span>
+              <h3 className="mt-2 font-display text-display-md font-medium text-foreground">{step.title}</h3>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.text}</p>
-            </li>
-          );
-        })}
+            </div>
+          </li>
+        ))}
       </ol>
 
       <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
