@@ -4,11 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ListTodo, Check, X, ExternalLink, ArrowRightLeft, Archive } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ListTodo, Check, X, ExternalLink, ArrowRightLeft, Archive, Layers, ServerCog, Trash2, HeartPulse } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { CommissionExemptDialog } from "@/components/admin/CommissionExemptDialog";
+import { isSystemTodo, looseGroupKey } from "@/lib/inboxAssemble";
+import { useInboxTodoActions } from "@/hooks/useInboxTodoActions";
 
 interface LinkableInvoice {
   id: string;
@@ -45,6 +56,8 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [exemptOpen, setExemptOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+  const { run } = useInboxTodoActions({ onResolved: () => onResolved?.() });
 
   const { data: todo, isLoading } = useQuery<TodoRow | null>({
     queryKey: ["werkbank-orphan-todo", todoId],
@@ -56,6 +69,27 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         .maybeSingle();
       if (error) throw error;
       return (data ?? null) as TodoRow | null;
+    },
+  });
+
+  // Identieke losse auto-taken (zelfde soort + titel) — de inbox vouwt die
+  // samen tot één rij; hier tonen we ze allemaal zodat je ze in één keer
+  // kunt afhandelen.
+  const { data: siblings = [] } = useQuery<TodoRow[]>({
+    queryKey: ["werkbank-orphan-todo", todoId, "group"],
+    enabled: !!todo?.auto_type,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_todos")
+        .select("id, title, description, priority, due_date, auto_type, auto_entity_id, related_partner_id, related_request_id, created_at")
+        .eq("auto_type", todo!.auto_type!)
+        .is("related_request_id", null)
+        .not("status", "in", "(done,dismissed)")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const key = looseGroupKey(todo!);
+      return ((data ?? []) as TodoRow[]).filter((t) => looseGroupKey(t) === key);
     },
   });
 
@@ -106,20 +140,6 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
     queryClient.invalidateQueries({ queryKey: ["werkbank-orphan-todo", todoId] });
   };
 
-  const setStatus = async (status: "done" | "dismissed") => {
-    const patch: Record<string, unknown> = { status };
-    if (status === "done") patch.completed_at = new Date().toISOString();
-    const { error } = await supabase.from("admin_todos").update(patch as any).eq("id", todoId);
-    if (error) {
-      toast({ title: "Kon niet bijwerken", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: status === "done" ? "Opgepakt" : "Gemarkeerd als niet relevant" });
-    refreshAll();
-    onResolved?.();
-  };
-
-
   if (isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Laden…</div>;
   }
@@ -127,10 +147,18 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
     return <div className="p-6 text-sm text-muted-foreground">Taak niet meer gevonden.</div>;
   }
 
+  const system = isSystemTodo(todo);
+  const groupIds = siblings.length > 1 ? siblings.map((s) => s.id) : [todo.id];
+  const groupCount = groupIds.length;
+  const isAuto = !!todo.auto_type;
+
   return (
     <div className="space-y-4 p-4">
       <div>
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">Losse taak</div>
+        <div className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-muted-foreground">
+          {system ? <ServerCog className="h-3.5 w-3.5" /> : null}
+          {system ? "Systeemmelding" : "Losse taak"}
+        </div>
         <h2 className="mt-1 text-xl font-semibold leading-snug">{todo.title}</h2>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="outline">Prio: {todo.priority}</Badge>
@@ -139,6 +167,22 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
           <span>Aangemaakt {new Date(todo.created_at).toLocaleDateString("nl-NL")}</span>
         </div>
       </div>
+
+      {system && (
+        <Card className="border-sky-200 bg-sky-50/60">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+            <div className="min-w-0">
+              <div className="font-medium">Dit is een melding van de dagelijkse zelftest.</div>
+              <div className="text-xs text-muted-foreground">
+                De taak wordt automatisch afgerond zodra de zelftest weer slaagt. Bekijk de details en herstelhints op Email health.
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="gap-1 bg-white" onClick={() => navigate("/admin/email-health")}>
+              <HeartPulse className="h-3.5 w-3.5" /> Bekijk zelftest
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2">
@@ -213,16 +257,67 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
             </div>
           )}
 
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => setStatus("done")}>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => void run("done", [todo.id])}>
               <Check className="h-4 w-4" /> Opgepakt
             </Button>
-            <Button size="sm" variant="ghost" className="gap-1" onClick={() => setStatus("dismissed")}>
+            <Button size="sm" variant="ghost" className="gap-1" onClick={() => void run("dismissed", [todo.id])}>
               <X className="h-4 w-4" /> Niet relevant
             </Button>
+            {isAuto && groupCount === 1 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-destructive hover:text-destructive"
+                onClick={() => setConfirmDelete([todo.id])}
+              >
+                <Trash2 className="h-4 w-4" /> Verwijderen
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {groupCount > 1 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Layers className="h-4 w-4 text-sky-600" /> {groupCount} identieke taken
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Dezelfde melding is meerdere keren aangemaakt. Je kunt ze hier in één keer afhandelen.
+            </p>
+            <ul className="divide-y rounded-md border text-xs">
+              {siblings.map((s) => (
+                <li key={s.id} className={cn("flex items-center justify-between gap-2 px-3 py-1.5", s.id === todo.id && "bg-muted/50")}>
+                  <span className="truncate">{s.title}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {new Date(s.created_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" className="gap-1" onClick={() => void run("done", groupIds)}>
+                <Check className="h-4 w-4" /> Alles opgepakt
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => void run("dismissed", groupIds)}>
+                <X className="h-4 w-4" /> Alles niet relevant
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1 text-destructive hover:text-destructive"
+                onClick={() => setConfirmDelete(groupIds)}
+              >
+                <Trash2 className="h-4 w-4" /> Alles verwijderen
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {todo.auto_entity_id && (
         <CommissionExemptDialog
@@ -235,7 +330,33 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
           }}
         />
       )}
-    </div>
 
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmDelete && confirmDelete.length > 1 ? `${confirmDelete.length} taken definitief verwijderen?` : "Taak definitief verwijderen?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Dit kan niet ongedaan gemaakt worden. Komt de aanleiding terug, dan maakt het systeem de taak opnieuw aan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                const ids = confirmDelete ?? [];
+                setConfirmDelete(null);
+                void run("delete", ids);
+              }}
+            >
+              Verwijderen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

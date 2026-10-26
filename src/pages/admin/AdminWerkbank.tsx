@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { AttributionWidget } from "@/components/admin/AttributionWidget";
 import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
+import { isLooseRowId, todoIdFromLooseRowId } from "@/lib/getInbox";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 import { OrphanTodoPanel } from "@/components/admin/werkbank/OrphanTodoPanel";
 import { FinanceTodoList } from "@/components/admin/werkbank/FinanceTodoList";
@@ -407,7 +408,18 @@ export default function AdminWerkbank() {
 
             <div className="flex-1 overflow-y-auto">
               {tab === "inbox" ? (
-                <InboxList selectedProjectId={selectedId} onSelect={handleSelect} kindFilter={kindFilter} showSnoozed={showSnoozed} />
+                <InboxList
+                  selectedProjectId={selectedId}
+                  onSelect={handleSelect}
+                  kindFilter={kindFilter}
+                  showSnoozed={showSnoozed}
+                  onTodosResolved={(ids) => {
+                    // Stond de afgehandelde losse taak open in het detailpaneel? Dan sluiten.
+                    if (selectedId && isLooseRowId(selectedId) && ids.includes(todoIdFromLooseRowId(selectedId))) {
+                      handleBack();
+                    }
+                  }}
+                />
               ) : tab === "financieel" ? (
                 <FinanceTodoList selectedProjectId={selectedId} onSelect={handleSelect} />
               ) : (
@@ -438,9 +450,9 @@ export default function AdminWerkbank() {
           {/* Rechter detail */}
           <section className={cn(
             "flex-1 flex-col overflow-y-auto bg-muted/20",
-            (selected || selectedId?.startsWith("_orphan_")) ? "flex" : "hidden lg:flex",
+            (selected || isLooseRowId(selectedId)) ? "flex" : "hidden lg:flex",
           )}>
-            {(selected || selectedId?.startsWith("_orphan_")) && (
+            {(selected || isLooseRowId(selectedId)) && (
               <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-3 py-2 backdrop-blur lg:hidden">
                 <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5">
                   <ArrowLeft className="h-4 w-4" />
@@ -448,15 +460,15 @@ export default function AdminWerkbank() {
                 </Button>
               </div>
             )}
-            {!selected && !selectedId?.startsWith("_orphan_") && (
+            {!selected && !isLooseRowId(selectedId) && (
               <div className="p-4 space-y-4">
                 <AttributionWidget />
                 <DraftsWidget />
               </div>
             )}
-            {selectedId?.startsWith("_orphan_") ? (
+            {isLooseRowId(selectedId) ? (
               <OrphanTodoPanel
-                todoId={selectedId.replace(/^_orphan_/, "")}
+                todoId={todoIdFromLooseRowId(selectedId!)}
                 onResolved={handleBack}
               />
             ) : (
