@@ -420,8 +420,9 @@ zichtbaar op de aanvraag. Tests voor de voorinvulling en de doorverwijzingen.
 
 Fase 2 is op 26 oktober gebouwd. Het formulier op `/programma-op-maat`
 (alias `/aanvraag`) heeft nu vier blokken: wat voor groep (zakelijk of
-privé, plus optioneel de soort uit tien keuzes; een soort zet het type
-mee), wat heeft u nodig (vinkjes activiteiten, eten en drinken,
+privé; de soort uitje komt alleen via de URL mee, want een keuzelijst met
+tien soorten overlapte met de twee kaarten die de soorten al als voorbeeld
+noemen, opmerking Erwin 26 oktober), wat heeft u nodig (vinkjes activiteiten, eten en drinken,
 overnachting, boot en fietsen), wanneer en met hoeveel (datums, of "ik
 weet de datum nog niet" met een periode als tekst; de aanvraag krijgt dan
 een lege datumlijst in plaats van een verzonnen datum) en uw gegevens met

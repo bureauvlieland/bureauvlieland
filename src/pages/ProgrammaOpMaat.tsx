@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Calendar as CalendarIcon, Heart, Mail, Phone, Tag, User, Users } from "lucide-react";
+import { Building2, Calendar as CalendarIcon, Heart, Mail, Phone, User, Users } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { z } from "zod";
@@ -25,6 +24,7 @@ import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
 import {
   describeRequest,
   EVENT_TYPES,
+  eventTypeLabel,
   NEEDS,
   needsFromTemplate,
   parseEventTypeParam,
@@ -58,8 +58,6 @@ const formSchema = z.object({
 
 type ProgramType = "zakelijk" | "prive";
 
-const NO_EVENT_TYPE = "__geen";
-
 /**
  * Het ene aanvraagformulier (plan klantreis en ondertekening, fase 2). Opent
  * vanuit elke "Start uw aanvraag"-knop, met voorinvulling via de URL:
@@ -87,7 +85,10 @@ const ProgrammaOpMaat = () => {
     trackFormStart({ form: "aanvraag", source: formSource.current });
   };
 
-  const [eventType, setEventType] = useState<string | null>(() => parseEventTypeParam(searchParams.get("soort")));
+  // De soort uitje komt alleen nog via de URL mee (`?soort=heisessie`, voor
+  // links vanaf een landingspagina); een keuzelijst erbij overlapte met de
+  // twee kaarten hieronder, die de soorten al als voorbeeld noemen.
+  const [eventType] = useState<string | null>(() => parseEventTypeParam(searchParams.get("soort")));
   const [programType, setProgramType] = useState<ProgramType>(
     () => EVENT_TYPES.find((t) => t.value === parseEventTypeParam(searchParams.get("soort")))?.programType ?? "zakelijk",
   );
@@ -138,13 +139,6 @@ const ProgrammaOpMaat = () => {
   const toggleNeed = (key: NeedKey, on: boolean) => {
     markFormStart();
     setNeeds((prev) => NEEDS.map((n) => n.key).filter((k) => (k === key ? on : prev.includes(k))));
-  };
-
-  const handleEventType = (value: string) => {
-    const next = value === NO_EVENT_TYPE ? null : value;
-    setEventType(next);
-    const mapped = EVENT_TYPES.find((t) => t.value === next)?.programType;
-    if (mapped) setProgramType(mapped);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -361,21 +355,11 @@ const ProgrammaOpMaat = () => {
                       icon={<Heart />}
                     />
                   </OptionGroup>
-                  <div className="mt-5">
-                    <FormField label="Soort uitje" htmlFor="maat-soort" leading={<Tag />} help="Optioneel, helpt ons meteen de juiste onderdelen te kiezen.">
-                      <Select value={eventType ?? NO_EVENT_TYPE} onValueChange={handleEventType}>
-                        <SelectTrigger id="maat-soort" className="sm:w-72">
-                          <SelectValue placeholder="Kies een soort" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={NO_EVENT_TYPE}>Nog geen idee</SelectItem>
-                          {EVENT_TYPES.map((t) => (
-                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                  </div>
+                  {eventTypeLabel(eventType) && (
+                    <p className="mt-4 text-sm text-muted-foreground">
+                      Soort uitje: <span className="font-medium text-foreground">{eventTypeLabel(eventType)}</span>
+                    </p>
+                  )}
                 </Card>
 
                 {/* Wat heeft u nodig */}
