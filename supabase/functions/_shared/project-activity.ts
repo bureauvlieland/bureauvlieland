@@ -87,3 +87,69 @@ export const REMINDER_TYPES_GUARDED_BY_COOLDOWN: ReadonlySet<string> = new Set([
   "quote_expiring_soon",
   "terms_reminder",
 ]);
+
+/**
+ * Auto-todo types die vervallen zodra een bruiloft naar een partner is
+ * doorverwezen (docs/plan-bruiloftsdoorverwijzingen.md): alles wat het bureau
+ * aan het project laat werken. Niet erbij: inbound (de klant kan op de
+ * doorverwijsmail antwoorden), de taken van de doorverwijzing zelf
+ * (wedding_referral_*) en handmatige taken. Spiegelt isTodoPausedByReferral
+ * in src/lib/projectActivity.ts; de test referralPause.test.ts bewaakt dat.
+ */
+export const REFERRAL_PAUSED_AUTO_TYPES: ReadonlySet<string> = new Set([
+  "accommodation_commission_ready",
+  "accommodation_quote_declined",
+  "bureau_item_pricing",
+  "commission_pending",
+  "commission_ready_to_invoice",
+  "customer_aftersales",
+  "customer_cancellation",
+  "customer_counter_proposal",
+  "customer_inputs_missing",
+  "customer_status_email_due",
+  "customer_status_update_due",
+  "forward_accommodation_quote",
+  "invoicing_ready",
+  "new_accommodation_request",
+  "new_program_request",
+  "new_request_received",
+  "partner_reminder",
+  "post_execution_feedback",
+  "post_execution_invoice_check",
+  "quote_expired_partner",
+  "quote_expiring_soon",
+  "quote_headcount_pending_partner",
+  "quote_pending_customer",
+  "quote_pending_partner",
+  "quote_ready_to_send",
+  "request_no_response",
+  "send_items_to_partners",
+  "terms_reminder",
+]);
+
+/**
+ * Projecten (program_requests.id) waarvan de bruiloft naar een partner is
+ * doorverwezen. Leeg bij een mislukte opvraag: dan gedraagt alles zich als
+ * voorheen, liever een overbodige taak dan een gemiste.
+ */
+export async function fetchReferredRequestIds(
+  supabase: SupabaseClient,
+  requestIds?: string[],
+): Promise<Set<string>> {
+  if (requestIds && requestIds.length === 0) return new Set();
+  let query = supabase
+    .from("wedding_referrals")
+    .select("request_id")
+    .not("request_id", "is", null);
+  if (requestIds) query = query.in("request_id", requestIds);
+  const { data, error } = await query;
+  if (error) {
+    console.error("wedding_referrals ophalen mislukt:", error.message);
+    return new Set();
+  }
+  return new Set(
+    ((data ?? []) as Array<{ request_id: string | null }>)
+      .map((r) => r.request_id)
+      .filter((id): id is string => !!id),
+  );
+}

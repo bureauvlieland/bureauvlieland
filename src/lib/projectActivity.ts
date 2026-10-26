@@ -109,6 +109,31 @@ export function clusterForAutoType(autoType: string | null | undefined): TodoClu
   return CLUSTER_MAP[autoType] ?? "other";
 }
 
+/**
+ * Is een bruiloft doorverwezen naar een partner, dan vervallen de automatische
+ * taken die het bureau aan het project laten werken (volgende stap, wachten op
+ * klant of partner, nazorg). Wat wél blijft: handmatige taken, binnengekomen
+ * berichten (de klant kan op de doorverwijsmail antwoorden) en de taken van de
+ * doorverwijzing zelf. Spiegelt REFERRAL_PAUSED_AUTO_TYPES in
+ * supabase/functions/_shared/project-activity.ts.
+ */
+export function isTodoPausedByReferral(autoType: string | null | undefined): boolean {
+  if (!autoType) return false;
+  if (autoType.startsWith("wedding_referral")) return false;
+  const cluster = clusterForAutoType(autoType);
+  return (
+    cluster === "next_action_bureau" ||
+    cluster === "awaiting_partner" ||
+    cluster === "awaiting_customer" ||
+    cluster === "post_execution"
+  );
+}
+
+/** Alle auto_types die isTodoPausedByReferral pauzeert (voor de spiegeltest). */
+export function referralPausedAutoTypes(): string[] {
+  return Object.keys(CLUSTER_MAP).filter(isTodoPausedByReferral).sort();
+}
+
 export const CLUSTER_META: Record<
   TodoCluster,
   { label: string; tone: string; order: number }

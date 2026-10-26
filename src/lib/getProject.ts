@@ -15,7 +15,7 @@ import {
   type ProjectPipelineStage,
 } from "./projectWorkflow";
 import {
-  combineCommunicationStates,
+  resolveProjectCommunicationState,
   getBureauActionHints,
   getLodgingCommunicationState,
   getProgramCommunicationState,
@@ -75,6 +75,14 @@ type LodgingRow = Pick<
   accommodation_quotes: LodgingQuoteRow[] | null;
 };
 
+export interface WerkbankReferral {
+  partnerName: string;
+  /** ISO-datum (yyyy-mm-dd) waarop is doorverwezen */
+  referredAt: string;
+  /** referred | booked | not_proceeded | expired */
+  status: string;
+}
+
 export interface ProjectSummary {
   id: string;                       // = program_request.id
   reference: string;
@@ -106,6 +114,12 @@ export interface ProjectSummary {
 
   /** Concrete actie-hints wanneer comm = "bij_bureau". Leeg array anders. */
   bureauActionHints: string[];
+
+  /**
+   * Bruiloft doorverwezen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md).
+   * Dan is comm "doorverwezen": het bureau doet niets meer aan dit dossier.
+   */
+  weddingReferral: WerkbankReferral | null;
 
   /** Snooze: zolang `snoozedUntil` > now() is, worden auto-todos & reminders gepauzeerd. */
   snoozedUntil: string | null;
@@ -174,6 +188,12 @@ export async function listProjectsForWerkbank(opts: {
   for (const l of (lodgings ?? []) as LodgingRow[]) {
     if (l.linked_program_id) lodgingByProgramId.set(l.linked_program_id, l);
   }
+
+  // Doorverwezen bruiloften: de partner regelt het, het bureau niet meer.
+  // Een mislukte opvraag laat de werklijst gewoon zonder die status.
+  const referralByProgramId = await fetchWerkbankReferrals(
+    (programs ?? []).map((p) => p.id),
+  );
 
   // Echte "laatste uitgaande mail" per request — proxy voor last_outbound_at.
   // email_log bevat alleen verzonden transactionele mails (inbound loopt via een
@@ -261,9 +281,11 @@ export async function listProjectsForWerkbank(opts: {
         })
       : null;
 
-    const comm = combineCommunicationStates(
-      [programComm, lodgingComm].filter((x): x is ProjectCommunicationState => !!x),
-    );
+    const referral = referralByProgramId.get(p.id) ?? null;
+    const comm = resolveProjectCommunicationState({
+      referred: !!referral,
+      states: [programComm, lodgingComm].filter((x): x is ProjectCommunicationState => !!x),
+    });
 
     const overallPipeline: ProjectPipelineStage = (() => {
       if (programPipeline === "geannuleerd" && (!lodgingPipeline || lodgingPipeline === "geannuleerd"))
@@ -329,6 +351,7 @@ export async function listProjectsForWerkbank(opts: {
                 : null,
             })
           : [],
+      weddingReferral: referral,
       snoozedUntil: p.snoozed_until ?? null,
       snoozedReason: p.snoozed_reason ?? null,
       snoozedAt: p.snoozed_at ?? null,
@@ -345,4 +368,37 @@ export async function listProjectsForWerkbank(opts: {
   if (includeSnoozed || archiveOnly) return filtered;
   // Standaard: verberg gesnoozede projecten uit de werklijst.
   return filtered.filter((s) => !s.isSnoozed);
+}
+
+/**
+ * Per project de meest recente doorverwijzing (bruiloft naar een partner).
+ * Zelfde bron als het projectenoverzicht (getProjectsOverview.ts).
+ */
+async function fetchWerkbankReferrals(programIds: string[]): Promise<Map<string, WerkbankReferral>> {
+  const map = new Map<string, WerkbankReferral>();
+  if (programIds.length === 0) return map;
+
+  const { data: rows, error } = await supabase
+    .from("wedding_referrals")
+    .select("request_id, partner_id, status, referred_at")
+    .in("request_id", programIds)
+    .order("referred_at", { ascending: false });
+  if (error || !rows?.length) return map;
+
+  const partnerIds = [...new Set(rows.map((r) => r.partner_id))];
+  const { data: partners } = await supabase
+    .from("partners")
+    .select("id, name")
+    .in("id", partnerIds);
+  const names = new Map((partners ?? []).map((p) => [p.id, p.name]));
+
+  for (const r of rows) {
+    if (!r.request_id || map.has(r.request_id)) continue;
+    map.set(r.request_id, {
+      partnerName: names.get(r.partner_id) ?? "partner",
+      referredAt: r.referred_at,
+      status: r.status,
+    });
+  }
+  return map;
 }

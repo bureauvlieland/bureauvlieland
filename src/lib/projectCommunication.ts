@@ -16,6 +16,7 @@ export type ProjectCommunicationState =
   | "wacht_op_partner"  // 🔵 Partner moet iets doen
   | "wacht_op_logies"   // 🟣 Logies-partner moet iets doen
   | "stilte"            // 🔴 Te lang geen reactie, opvolgen
+  | "doorverwezen"      // ↗️ Bruiloft doorverwezen naar een partner, bureau doet niets meer
   | "klaar";            // ⚪ Niets meer te doen
 
 export const COMMUNICATION_STATE_META: Record<
@@ -27,6 +28,7 @@ export const COMMUNICATION_STATE_META: Record<
   wacht_op_partner:{ label: "Wacht op partner",  emoji: "🔵", color: "bg-sky-500",      tone: "text-sky-700"      },
   wacht_op_logies: { label: "Wacht op logies",   emoji: "🟣", color: "bg-violet-500",   tone: "text-violet-700"   },
   stilte:          { label: "Stilte — opvolgen", emoji: "🔴", color: "bg-rose-500",     tone: "text-rose-700"     },
+  doorverwezen:    { label: "Doorverwezen",      emoji: "↗️", color: "bg-pink-500",     tone: "text-pink-700"     },
   klaar:           { label: "Klaar",             emoji: "⚪", color: "bg-muted",        tone: "text-muted-foreground" },
 };
 
@@ -127,12 +129,28 @@ export function combineCommunicationStates(
     "wacht_op_partner",
     "wacht_op_logies",
     "wacht_op_klant",
+    "doorverwezen",
     "klaar",
   ];
   for (const s of order) {
     if (states.includes(s)) return s;
   }
   return "klaar";
+}
+
+/**
+ * Een bruiloft die naar een partner is doorverwezen
+ * (docs/plan-bruiloftsdoorverwijzingen.md) vraagt niets meer van het bureau:
+ * de partner regelt de bruiloft, het bureau wacht hooguit op de
+ * doorverwijsvergoeding. Het dossier blijft bestaan (antwoorden van het
+ * bruidspaar komen erop binnen), maar de sporen tellen niet meer mee.
+ */
+export function resolveProjectCommunicationState(args: {
+  referred: boolean;
+  states: ProjectCommunicationState[];
+}): ProjectCommunicationState {
+  if (args.referred) return "doorverwezen";
+  return combineCommunicationStates(args.states);
 }
 
 /**
