@@ -12,7 +12,7 @@ const getRedirectDestination = (pathname: string): string | null => {
   const path = pathname.toLowerCase().replace(/\/$/, "");
 
   if (path === "/contact") return "/contact";
-  if (path === "/offerteformulier") return "/contact";
+  if (path === "/offerteformulier") return "/programma-op-maat";
 
   if (path === "/duurzame-zakenevents") return "/samenwerken";
   if (path === "/activiteiten") return "/bouwstenen";

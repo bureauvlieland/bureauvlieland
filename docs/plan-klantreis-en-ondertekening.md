@@ -1,9 +1,11 @@
 # Plan: de klantreis omdraaien en eerder tekenen
 
 Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
-overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten) en fase 1
-(de voordeur) zijn op 26 oktober gebouwd; de overige fasen volgen in de
-volgorde 2, 4, 5, elk in een eigen pull request. Het plan zelf is van 25 oktober, op basis van de
+overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten), fase 1
+(de voordeur) en fase 2 (één formulier en de voorbeelden) zijn op 26 oktober
+gebouwd; fase 4 en 5 volgen, elk in een eigen pull request. Eén afwijking
+van het plan in fase 2: de pagina's voor losse catering- en
+logiesaanvragen blijven bestaan, zie de toelichting bij fase 2. Het plan zelf is van 25 oktober, op basis van de
 productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
 richting (één voordeur, wizard naar de tweede laag, handtekening bij
 akkoord).
@@ -410,6 +412,45 @@ opruimen voor zover niets anders ze gebruikt. Voorbeeldpagina's: "Dit
 programma aanvragen" primair, wizard als tekstlink. Bevestigingsmail
 `program_request_customer` nalopen op de nieuwe velden. Admin: de vinkjes
 zichtbaar op de aanvraag. Tests voor de voorinvulling en de doorverwijzingen.
+
+Fase 2 is op 26 oktober gebouwd. Het formulier op `/programma-op-maat`
+(alias `/aanvraag`) heeft nu vier blokken: wat voor groep (zakelijk of
+privé, plus optioneel de soort uit tien keuzes; een soort zet het type
+mee), wat heeft u nodig (vinkjes activiteiten, eten en drinken,
+overnachting, boot en fietsen), wanneer en met hoeveel (datums, of "ik
+weet de datum nog niet" met een periode als tekst; de aanvraag krijgt dan
+een lege datumlijst in plaats van een verzonnen datum) en uw gegevens met
+uw wensen. Voorinvulling via de URL: `?template=<slug>` zet het
+voorbeeldprogramma per dag in de wensen en vinkt aan wat erin zit (uit de
+categorieën van de onderdelen en de duur), `?nodig=eten,overnachting` zet
+vinkjes (ook de oude namen catering en logies), `?soort=heisessie` de
+soort. De logica staat in `src/lib/requestForm.ts` met Vitest-tests. Wat er
+wordt vastgelegd: `program_description` als één regel ("Maatwerk zakelijk ·
+Heisessie / MT-dag · activiteiten, eten en drinken · periode: voorjaar 2027
+· voorbeeld: Eilanddag compleet"), dezelfde samenvatting als eerste alinea
+van de notities (die ook in de bevestigingsmail staat), en in `attribution`
+de velden `template_id`, `needs`, `event_type`, `date_unknown` en
+`period_text`. De telefoonregel eist nu minstens tien tekens, net als de
+bevestigingsmail al deed. Het offerteformulier `/offerte` is weg: route,
+`_redirects` (301), sitemap, `llms.txt`, 404-kaart en linkregels verwijzen
+naar het formulier. Op de voorbeeldpagina's is "Dit programma aanvragen"
+de primaire knop (naar het voorgevulde formulier) en de programma-bouwer de
+tweede; de pagina Logies, de homepage-cateringsectie, de voettekst, het
+menu en de linkregels sturen catering- en logiesaanvragen naar het
+formulier met het vinkje voorgeselecteerd.
+
+Afwijking van het plan: `/catering-aanvragen` en `/logies-aanvragen` zijn
+níet doorverwezen. De logiesaanvraag is de vervolgstap vanuit het
+klantportaal en de programma-bouwer (de logiesbanner, het tabblad Logies,
+de boekingsstatus) en draagt daarbij de programmagegevens mee; de
+cateringaanvraag krijgt vanaf de cateringpagina een soort mee (BBQ,
+borrel, maatwerk) met eigen velden. Die twee stromen blijven werken; alleen
+de algemene ingangen gaan via het ene formulier. Erwin maakt van een
+aanvraag met alleen het vinkje overnachting of eten in de admin wat het
+moet worden. Niet gedaan: een aparte weergave van de vinkjes in de admin
+(de regel in `program_description` staat bovenaan het project) en de
+voorinvulling van het aantal personen vanuit een voorbeeld (de doelgroep
+van een voorbeeld is tekst, geen getal).
 
 **Fase 3: tekenen zonder te wachten (1 dag).** Knop "Ondertekenverzoek
 sturen" in de admin (edge function, hergebruik van de template). Trigger van

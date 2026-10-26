@@ -63,7 +63,7 @@ const routes: RouteChooserRoute[] = [
     icon: Building2,
     title: "Vraag logies aan",
     text: "Datum, groepsgrootte en type verblijf. Wij vragen offertes op bij geschikte accommodaties en u vergelijkt.",
-    to: "/logies-aanvragen",
+    to: "/programma-op-maat?nodig=overnachting",
     label: "Vraag logies aan",
     primary: true,
   },
@@ -140,8 +140,8 @@ const LogiesVlieland = () => {
           eyebrow={EYEBROW}
           title="Groepsaccommodatie en logies op Vlieland"
           intro="Op zoek naar een verblijf voor uw team of organisatie? Bureau Vlieland zoekt en vergelijkt accommodaties voor u. Vrijblijvend, persoonlijk en met lokale kennis."
-          cta={{ label: "Vraag logies aan", to: "/logies-aanvragen" }}
-          secondary={{ label: "Liever maatwerk?", to: "/programma-op-maat" }}
+          cta={{ label: "Vraag logies aan", to: "/programma-op-maat?nodig=overnachting" }}
+          secondary={{ label: "Bekijk voorbeeldprogramma's", to: "/voorbeeldprogrammas" }}
         />
 
         <Section>

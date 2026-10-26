@@ -96,7 +96,7 @@ export const CateringHighlight = ({ number }: { number: string }) => {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link to="/catering-aanvragen">Catering aanvragen</Link>
+                <Link to="/programma-op-maat?nodig=eten">Catering aanvragen</Link>
               </Button>
             </div>
           </div>

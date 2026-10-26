@@ -1,7 +1,7 @@
 import { RESPONSE_TIME } from "@/content/promises";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Building2, Calendar as CalendarIcon, Heart, Mail, Phone, User, Users } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Calendar as CalendarIcon, Heart, Mail, Phone, Tag, User, Users } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { z } from "zod";
@@ -19,10 +20,23 @@ import { generateCustomerToken } from "@/types/programRequest";
 import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
 import { buildAttribution, getEntryPage } from "@/lib/entryPageTracker";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
+import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
+import {
+  describeRequest,
+  EVENT_TYPES,
+  NEEDS,
+  needsFromTemplate,
+  parseEventTypeParam,
+  parseNeedsParam,
+  summaryForNotes,
+  wishesFromTemplate,
+  type NeedKey,
+} from "@/lib/requestForm";
 import {
   Container,
   FormField,
   FunnelHead,
+  Notice,
   OptionCard,
   OptionGroup,
   Section,
@@ -35,20 +49,37 @@ import {
 const formSchema = z.object({
   name: z.string().trim().min(2, "Vul uw naam in (min. 2 tekens)").max(100),
   email: z.string().trim().email("Vul een geldig e-mailadres in").max(255),
-  phone: z.string().trim().min(5, "Vul een geldig telefoonnummer in").max(20).regex(/^[0-9+\s().-]+$/, "Vul een geldig telefoonnummer in"),
+  // Minimaal 10 tekens: dat eist de bevestigingsmail (send-program-request) ook.
+  phone: z.string().trim().min(10, "Vul een geldig telefoonnummer in").max(20).regex(/^[0-9+\s().-]+$/, "Vul een geldig telefoonnummer in"),
   company: z.string().trim().max(100).optional(),
   wishes: z.string().trim().max(2000).optional(),
 });
 
 type ProgramType = "zakelijk" | "prive";
 
+const NO_EVENT_TYPE = "__geen";
+
+/**
+ * Het ene aanvraagformulier (plan klantreis en ondertekening, fase 2). Opent
+ * vanuit elke "Start uw aanvraag"-knop, met voorinvulling via de URL:
+ * `?template=<slug>` (voorbeeldprogramma als startpunt), `?nodig=eten,overnachting`
+ * (vinkjes, ook via de oude paden voor catering en logies) en `?soort=heisessie`.
+ */
 const ProgrammaOpMaat = () => {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const templateSlug = searchParams.get("template");
+  const { data: template } = useTemplateWithItems(templateSlug);
 
-  const [programType, setProgramType] = useState<ProgramType>("zakelijk");
+  const [eventType, setEventType] = useState<string | null>(() => parseEventTypeParam(searchParams.get("soort")));
+  const [programType, setProgramType] = useState<ProgramType>(
+    () => EVENT_TYPES.find((t) => t.value === parseEventTypeParam(searchParams.get("soort")))?.programType ?? "zakelijk",
+  );
+  const [needs, setNeeds] = useState<NeedKey[]>(() => parseNeedsParam(searchParams.get("nodig")));
   const [numberOfPeople, setNumberOfPeople] = useState<number>(20);
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [wantsAccommodation, setWantsAccommodation] = useState<boolean>(false);
+  const [dateUnknown, setDateUnknown] = useState<boolean>(false);
+  const [periodText, setPeriodText] = useState<string>("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -61,13 +92,26 @@ const ProgrammaOpMaat = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
 
-  const isMultiDay = selectedDates.length > 1;
+  // Voorbeeldprogramma als startpunt: wensen en vinkjes voorinvullen zodra het
+  // voorbeeld geladen is, maar nooit over tekst heen die de bezoeker al typte.
+  const wishesTouched = useRef(false);
+  const prefilledTemplateId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!template || prefilledTemplateId.current === template.id) return;
+    prefilledTemplateId.current = template.id;
+    if (!wishesTouched.current) {
+      setFormData((prev) => ({ ...prev, wishes: wishesFromTemplate(template) }));
+    }
+    const fromTemplate = needsFromTemplate(template);
+    setNeeds((prev) => NEEDS.map((n) => n.key).filter((k) => prev.includes(k) || fromTemplate.includes(k)));
+  }, [template]);
 
   const handleAddDate = (date: Date): boolean => {
     if (selectedDates.length >= 7) return false;
     const ds = date.toDateString();
     if (selectedDates.some((d) => d.toDateString() === ds)) return false;
     setSelectedDates((prev) => [...prev, date].sort((a, b) => a.getTime() - b.getTime()));
+    setDateUnknown(false);
     return true;
   };
 
@@ -75,8 +119,20 @@ const ProgrammaOpMaat = () => {
     setSelectedDates((prev) => prev.filter((_, idx) => idx !== i));
   };
 
+  const toggleNeed = (key: NeedKey, on: boolean) => {
+    setNeeds((prev) => NEEDS.map((n) => n.key).filter((k) => (k === key ? on : prev.includes(k))));
+  };
+
+  const handleEventType = (value: string) => {
+    const next = value === NO_EVENT_TYPE ? null : value;
+    setEventType(next);
+    const mapped = EVENT_TYPES.find((t) => t.value === next)?.programType;
+    if (mapped) setProgramType(mapped);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    if (name === "wishes") wishesTouched.current = true;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
@@ -84,10 +140,10 @@ const ProgrammaOpMaat = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (selectedDates.length === 0) {
+    if (selectedDates.length === 0 && !dateUnknown) {
       toast({
-        title: "Datum ontbreekt",
-        description: "Kies minstens één datum waarop u wilt komen.",
+        title: "Wanneer wilt u komen?",
+        description: "Kies een datum, of vink aan dat u de datum nog niet weet.",
         variant: "destructive",
       });
       return;
@@ -111,8 +167,26 @@ const ProgrammaOpMaat = () => {
     setIsSubmitting(true);
     try {
       const token = generateCustomerToken();
-      const isoDates = selectedDates.map((d) => format(d, "yyyy-MM-dd"));
-      const formattedDates = selectedDates.map((d) => format(d, "EEEE d MMMM yyyy", { locale: nl }));
+      const dates = dateUnknown ? [] : selectedDates;
+      const isoDates = dates.map((d) => format(d, "yyyy-MM-dd"));
+      const formattedDates = dates.map((d) => format(d, "EEEE d MMMM yyyy", { locale: nl }));
+      const summaryInput = {
+        programType,
+        eventType,
+        needs,
+        periodText: dateUnknown ? periodText : null,
+        templateName: template?.name ?? null,
+      };
+      const summary = summaryForNotes(summaryInput);
+      const notes = [summary, formData.wishes?.trim()].filter(Boolean).join("\n\n") || null;
+      const attribution = {
+        ...(buildAttribution() ?? {}),
+        template_id: template?.id ?? templateSlug ?? null,
+        needs,
+        event_type: eventType,
+        date_unknown: dateUnknown,
+        period_text: dateUnknown && periodText.trim() ? periodText.trim() : null,
+      };
 
       const requestId = crypto.randomUUID();
       const { error: insertError } = await supabase
@@ -126,11 +200,11 @@ const ProgrammaOpMaat = () => {
           customer_company: formData.company || null,
           number_of_people: numberOfPeople,
           selected_dates: isoDates,
-          general_notes: formData.wishes || null,
+          general_notes: notes,
           origin: programType === "zakelijk" ? "maatwerk_zakelijk" : "maatwerk_prive",
-          program_description: `Maatwerk ${programType}${wantsAccommodation ? " — logies gewenst" : ""}`,
+          program_description: describeRequest(summaryInput),
           invoicing_mode: "bureau_central",
-          attribution: buildAttribution(),
+          attribution,
         });
 
       if (insertError) throw insertError;
@@ -143,7 +217,11 @@ const ProgrammaOpMaat = () => {
         p_new_value: {
           type: "maatwerk",
           origin: programType,
-          wants_accommodation: wantsAccommodation,
+          event_type: eventType,
+          needs,
+          wants_accommodation: needs.includes("overnachting"),
+          date_unknown: dateUnknown,
+          template_id: template?.id ?? null,
           source: "programma-op-maat-page",
         },
       });
@@ -154,11 +232,11 @@ const ProgrammaOpMaat = () => {
           email: formData.email,
           phone: formData.phone,
           company: formData.company,
-          notes: formData.wishes,
+          notes: (notes ?? "").slice(0, 2000),
           numberOfPeople,
-          selectedDate: formattedDates[0],
+          selectedDate: formattedDates[0] ?? (periodText.trim() ? `Nog niet bekend (${periodText.trim()})` : "Nog niet bekend"),
           selectedDates: formattedDates,
-          numberOfDays: selectedDates.length,
+          numberOfDays: dates.length,
           bureauFee: 0,
           blocks: [],
           customerToken: token,
@@ -170,8 +248,8 @@ const ProgrammaOpMaat = () => {
       trackProgramRequestSubmitted({
         value: 0,
         numberOfPeople,
-        numberOfDays: selectedDates.length,
-        eventType: `maatwerk_${programType}`,
+        numberOfDays: dates.length,
+        eventType: eventType ?? `maatwerk_${programType}`,
         entryPage: entryPage?.path || "direct",
         utmSource: entryPage?.utm_source,
         utmMedium: entryPage?.utm_medium,
@@ -182,12 +260,12 @@ const ProgrammaOpMaat = () => {
       setCustomerToken(token);
       setIsSuccess(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error submitting maatwerk:", err);
-      trackSubmitFailed({ formType: 'maatwerk_intake', error: err, extra: { source: 'programma_op_maat' } });
+      trackSubmitFailed({ formType: "maatwerk_intake", error: err, extra: { source: "programma_op_maat" } });
       toast({
         title: "Aanvraag niet verzonden",
-        description: err?.message || "Er ging iets mis. Probeer het opnieuw of bel ons op 0562 700 208.",
+        description: (err instanceof Error && err.message) || "Er ging iets mis. Probeer het opnieuw of bel ons op 0562 700 208.",
         variant: "destructive",
       });
     } finally {
@@ -227,9 +305,19 @@ const ProgrammaOpMaat = () => {
               />
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Type */}
+                {template && (
+                  <Notice tone="info" title={`Voorbeeld als startpunt: ${template.name}`}>
+                    De onderdelen van dit voorbeeld staan alvast bij uw wensen; pas ze gerust aan. Liever zelf puzzelen?{" "}
+                    <Link to={`/programma-samenstellen?template=${template.id}`} className="underline underline-offset-2">
+                      Open dit voorbeeld in de programma-bouwer
+                    </Link>
+                    .
+                  </Notice>
+                )}
+
+                {/* Groep */}
                 <Card className="p-5 sm:p-6">
-                  <SectionHeader as="h2" size="md" weight="medium" title="Type aanvraag" intro="Kies wat het beste past." className="mb-4" />
+                  <SectionHeader as="h2" size="md" weight="medium" title="Wat voor groep?" intro="Kies wat het beste past." className="mb-4" />
                   <OptionGroup name="Type aanvraag" columns={2}>
                     <OptionCard
                       selected={programType === "zakelijk"}
@@ -242,10 +330,60 @@ const ProgrammaOpMaat = () => {
                       selected={programType === "prive"}
                       onSelect={() => setProgramType("prive")}
                       title="Privé"
-                      description="Trouwen, jubileum, familie- of vriendenweekend"
+                      description="Jubileum, familie- of vriendenweekend"
                       icon={<Heart />}
                     />
                   </OptionGroup>
+                  <div className="mt-5">
+                    <FormField label="Soort uitje" htmlFor="maat-soort" leading={<Tag />} help="Optioneel, helpt ons meteen de juiste onderdelen te kiezen.">
+                      <Select value={eventType ?? NO_EVENT_TYPE} onValueChange={handleEventType}>
+                        <SelectTrigger id="maat-soort" className="sm:w-72">
+                          <SelectValue placeholder="Kies een soort" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_EVENT_TYPE}>Nog geen idee</SelectItem>
+                          {EVENT_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  </div>
+                </Card>
+
+                {/* Wat heeft u nodig */}
+                <Card className="p-5 sm:p-6">
+                  <SectionHeader
+                    as="h2"
+                    size="md"
+                    weight="medium"
+                    title="Wat heeft u nodig?"
+                    intro="Vink aan wat wij voor u mogen regelen. Twijfelt u? Laat het open, dan denken wij mee."
+                    className="mb-4"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {NEEDS.map((need) => {
+                      const checked = needs.includes(need.key);
+                      return (
+                        <label
+                          key={need.key}
+                          htmlFor={`maat-nodig-${need.key}`}
+                          className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${checked ? "border-primary bg-accent-soft" : "border-border"}`}
+                        >
+                          <Checkbox
+                            id={`maat-nodig-${need.key}`}
+                            checked={checked}
+                            onCheckedChange={(v) => toggleNeed(need.key, v === true)}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <span className="block text-sm font-medium text-foreground">{need.label}</span>
+                            <span className="block text-xs text-muted-foreground">{need.hint}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </Card>
 
                 {/* Groep en datums */}
@@ -255,12 +393,13 @@ const ProgrammaOpMaat = () => {
                     size="md"
                     weight="medium"
                     title="Wanneer en met hoeveel personen?"
-                    intro="Datums zijn nog vrijblijvend en aanpasbaar."
+                    intro="Datums zijn vrijblijvend en aanpasbaar. Weet u het nog niet, dan is een periode genoeg."
                     className="mb-4"
                   />
                   <div className="space-y-5">
                     <FormField label="Aantal personen" htmlFor="maat-personen" required leading={<Users />}>
                       <Input
+                        id="maat-personen"
                         type="number"
                         min={1}
                         max={500}
@@ -273,26 +412,38 @@ const ProgrammaOpMaat = () => {
                       <Label className="flex items-center gap-1">
                         <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         Datum(s)
-                        <span className="text-destructive" aria-hidden="true">
-                          *
-                        </span>
                       </Label>
                       <p className="text-xs text-muted-foreground">Selecteer één of meer aaneensluitende dagen.</p>
-                      <MultiDatePicker selectedDates={selectedDates} onAddDate={handleAddDate} onRemoveDate={handleRemoveDate} />
+                      {!dateUnknown && (
+                        <MultiDatePicker selectedDates={selectedDates} onAddDate={handleAddDate} onRemoveDate={handleRemoveDate} />
+                      )}
                     </div>
-                    {isMultiDay && (
-                      <label htmlFor="maat-logies" className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4">
-                        <Checkbox
-                          id="maat-logies"
-                          checked={wantsAccommodation}
-                          onCheckedChange={(v) => setWantsAccommodation(v === true)}
-                          className="mt-0.5"
+                    <label htmlFor="maat-datum-onbekend" className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4">
+                      <Checkbox
+                        id="maat-datum-onbekend"
+                        checked={dateUnknown}
+                        onCheckedChange={(v) => {
+                          const on = v === true;
+                          setDateUnknown(on);
+                          if (on) setSelectedDates([]);
+                        }}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium text-foreground">Ik weet de datum nog niet</span>
+                        <span className="block text-xs text-muted-foreground">Geef dan een periode op, bijvoorbeeld "voorjaar 2027" of "een vrijdag in september".</span>
+                      </span>
+                    </label>
+                    {dateUnknown && (
+                      <FormField label="Welke periode ongeveer?" htmlFor="maat-periode" leading={<CalendarIcon />}>
+                        <Input
+                          id="maat-periode"
+                          value={periodText}
+                          onChange={(e) => setPeriodText(e.target.value)}
+                          placeholder="Bijvoorbeeld: voorjaar 2027, twee dagen"
+                          maxLength={120}
                         />
-                        <span>
-                          <span className="block text-sm font-medium text-foreground">Logies meenemen</span>
-                          <span className="block text-xs text-muted-foreground">Wij zoeken passende accommodatie voor uw groep.</span>
-                        </span>
-                      </label>
+                      </FormField>
                     )}
                   </div>
                 </Card>
@@ -310,27 +461,29 @@ const ProgrammaOpMaat = () => {
                   <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField label="Naam" htmlFor="name" required leading={<User />} error={errors.name}>
-                        <Input name="name" value={formData.name} onChange={handleChange} placeholder="Uw volledige naam" autoComplete="name" maxLength={100} />
+                        <Input id="name" name="name" value={formData.name} onChange={handleChange} placeholder="Uw volledige naam" autoComplete="name" maxLength={100} />
                       </FormField>
                       <FormField label="Bedrijf of organisatie" htmlFor="company" leading={<Building2 />}>
-                        <Input name="company" value={formData.company} onChange={handleChange} placeholder="Optioneel" autoComplete="organization" maxLength={100} />
+                        <Input id="company" name="company" value={formData.company} onChange={handleChange} placeholder="Optioneel" autoComplete="organization" maxLength={100} />
                       </FormField>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <FormField label="E-mailadres" htmlFor="email" required leading={<Mail />} error={errors.email}>
-                        <Input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="uw@email.nl" autoComplete="email" maxLength={255} />
+                        <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="uw@email.nl" autoComplete="email" maxLength={255} />
                       </FormField>
                       <FormField label="Telefoonnummer" htmlFor="phone" required leading={<Phone />} error={errors.phone}>
-                        <Input name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="06 12345678" autoComplete="tel" maxLength={20} />
+                        <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="06 12345678" autoComplete="tel" maxLength={20} />
                       </FormField>
                     </div>
-                    <FormField label="Wensen en opmerkingen" htmlFor="wishes">
+                    <FormField label="Uw wensen" htmlFor="wishes">
                       <Textarea
+                        id="wishes"
                         name="wishes"
                         value={formData.wishes}
                         onChange={handleChange}
-                        placeholder="Vertel ons wat u voor ogen heeft: soort activiteiten, sfeer, bijzondere wensen, dieetwensen bij catering."
-                        rows={5}
+                        placeholder="Vertel ons wat u voor ogen heeft: soort activiteiten, sfeer, budget, bijzondere wensen, dieetwensen."
+                        rows={template ? 8 : 5}
+                        maxLength={2000}
                       />
                     </FormField>
                   </div>

@@ -50,7 +50,7 @@ Kerngegevens (te citeren):
 
 - [Programma samenstellen](/programma-samenstellen): Online configurator voor uw programma.
 - [Programma op maat](/programma-op-maat): Maatwerk-aanvraag voor complexere wensen.
-- [Offerte aanvragen](/offerte): Vraag een offerte aan.
+- [Start uw aanvraag](/programma-op-maat): Vertel ons wat u zoekt; binnen 5 werkdagen een vrijblijvend voorstel.
 - [Logies Vlieland](/logies-vlieland): Overnachten op Vlieland voor groepen.
 - [Logies aanvragen](/logies-aanvragen): Logies-aanvraag voor groepen.
 - [Activiteiten boeken](/activiteiten-boeken): Losse activiteiten boeken.
