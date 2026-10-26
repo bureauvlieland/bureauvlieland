@@ -3325,6 +3325,7 @@ const AdminRequestDetail = () => {
                   status={request.status}
                   completionStatus={request.completion_status}
                   termsAcceptedAt={request.terms_accepted_at}
+                  customerEmail={request.customer_email}
                   items={items}
                   outstandingAmount={calculateOutstandingAmount()}
                   quoteStatus={request.quote_status}
@@ -3806,6 +3807,16 @@ const AdminRequestDetail = () => {
               Controleer welke partners een notificatie ontvangen.
             </DialogDescription>
           </DialogHeader>
+          {request && !request.terms_accepted_at && (
+            <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <AlertTitle>Voorwaarden nog niet ondertekend</AlertTitle>
+              <AlertDescription>
+                De klant heeft nog niet getekend. Je kunt de partners nu al informeren,
+                maar stuur de klant dan ook een ondertekenverzoek (bij Voltooiingsstatus),
+                zodat de voorwaarden vóór de uitvoering vastliggen.
+              </AlertDescription>
+            </Alert>
+          )}
           {sendPreview && (
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               {sendPreview.partners.length > 0 && (

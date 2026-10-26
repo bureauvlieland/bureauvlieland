@@ -19,12 +19,15 @@ import { toast } from "@/hooks/use-toast";
 interface MarkReadyForInvoiceButtonProps {
   programId: string;
   size?: "sm" | "default";
+  /** Heeft de klant de voorwaarden ondertekend? Zo niet, dan waarschuwt de dialoog nadrukkelijk. */
+  termsAccepted?: boolean;
   onDone?: () => void;
 }
 
 export const MarkReadyForInvoiceButton = ({
   programId,
   size = "sm",
+  termsAccepted = true,
   onDone,
 }: MarkReadyForInvoiceButtonProps) => {
   const [open, setOpen] = useState(false);
@@ -86,6 +89,14 @@ export const MarkReadyForInvoiceButton = ({
               klant compleet zijn.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {!termsAccepted && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+              De klant heeft de algemene voorwaarden nog niet ondertekend. Zonder
+              handtekening gelden de annulerings- en betalingsvoorwaarden niet
+              aantoonbaar. Stuur bij voorkeur eerst een ondertekenverzoek en zet
+              het project daarna op facturatie.
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="reason" className="text-sm">
               Reden (optioneel, komt in de history)

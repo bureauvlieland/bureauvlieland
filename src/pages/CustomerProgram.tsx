@@ -42,7 +42,10 @@ const CustomerProgram = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { settings: appSettings } = useAppSettings();
-  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">("splash");
+  // ?view=akkoord (uit de voorwaardenmail) opent direct het tabblad Akkoord.
+  const [activeView, setActiveView] = useState<"splash" | "accommodation" | "program" | "practical" | "billing" | "accept" | "today" | "map">(
+    () => (searchParams.get("view") === "akkoord" ? "accept" : "splash"),
+  );
   
   const {
     program,

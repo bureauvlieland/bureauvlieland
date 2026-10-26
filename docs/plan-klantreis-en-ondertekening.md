@@ -1,10 +1,12 @@
 # Plan: de klantreis omdraaien en eerder tekenen
 
-Status: voorstel, 25 oktober 2026, op basis van de productiecijfers van
-dezelfde dag. Erwin is op 25 oktober akkoord gegaan met de richting (één
-voordeur, wizard naar de tweede laag, handtekening bij akkoord). Uitvoeren
-per fase, elk in een eigen pull request, na antwoord op de vragen onder
-"Besluiten gevraagd".
+Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
+overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten) is op 26
+oktober gebouwd; de overige fasen volgen in de volgorde 1, 2, 4, 5, elk in
+een eigen pull request. Het plan zelf is van 25 oktober, op basis van de
+productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
+richting (één voordeur, wizard naar de tweede laag, handtekening bij
+akkoord).
 
 Aanleiding (Erwin, 25 oktober): de homepage biedt te veel keuzes. Het meest
 laagdrempelige pad moet winnen, en dat is maatwerk met voorbeeldprogramma's
@@ -384,9 +386,36 @@ zichtbaar op de aanvraag. Tests voor de voorinvulling en de doorverwijzingen.
 sturen" in de admin (edge function, hergebruik van de template). Trigger van
 de herinneringsreeks losgekoppeld van partnerbevestiging, met Deno-tests op
 `pickTermsMail` en de nieuwe voorwaarde. Lijst "Gewonnen, niet getekend" op
-de werkbank. Waarschuwing bij partners sturen en factureren. Direct daarna
-de zes openstaande projecten een verzoek sturen, te beginnen met BV-2608-0002
-(aankomst 5 november).
+de werkbank. Waarschuwing bij partners sturen en factureren.
+
+Fase 3 is op 26 oktober gebouwd. De logica staat in
+`_shared/customerTermsReminder.ts`: `termsStageFor` bepaalt of een project
+in aanmerking komt (akkoord ontvangen, of een voorstel dat zeven dagen
+zonder akkoord staat en niet verlopen is), `buildTermsMailCopy` levert één
+tekst voor de cron en de admin-knop (na akkoord: "onderteken, onder
+voorbehoud als er nog iets open staat"; zonder akkoord: "geef akkoord en
+onderteken"; handmatig: neutrale intro), `buildTermsCallTodo` de beltaak
+vanaf drie dagen vooraf. In `check-pending-items` is de voorwaarde "alle
+onderdelen bevestigd" vervallen; snooze, "hot" en de uitsluiting van
+projecten in facturatie blijven, dus de zes al gefactureerde projecten
+krijgen niets (besluit 7). De link in de mail opent met `?view=akkoord`
+direct het tabblad Akkoord in het portaal. Nieuw: edge function
+`send-terms-request` (alleen admins; weigert geannuleerde, verwijderde en
+al getekende projecten; werkt ook bij status concept voor telefonisch
+gesloten projecten; logt als `customer_terms_request` met actor "admin →
+klant (ondertekenverzoek)"), knop `SendTermsRequestButton` bij
+Voltooiingsstatus in het projectdossier en in het overzicht van de
+werkbank, snelle weergave "Gewonnen, niet getekend" op de werkbank
+(akkoord of facturatie zonder handtekening, eerste programmadag voorop),
+waarschuwing in de dialoog "Verstuur naar partners" en in "Markeer als
+klaar voor facturatie" zolang de handtekening ontbreekt. Getest: 18
+Deno-tests (fasebepaling, reeks, teksten, beltaak, toegangscontrole van de
+functie), Vitest voor `isWonUnsigned`, typecheck, lint onder het plafond,
+strict op 26, design debt 0, build. Bij de eerstvolgende nachtelijke run
+krijgt BV-2608-0002 (RMD Trainingen, 8 personen, aankomst 5 november) het
+eerste verzoek; BV-2604-0003 staat gesnoozed tot januari en wordt
+overgeslagen. Niet gedaan: de blokkade bij "Naar partners sturen" (fase 4,
+besluit 3).
 
 **Fase 4: akkoord en ondertekenen in één stap (2 tot 3 dagen).** `AcceptView`
 herbouwd op het ontwerpsysteem met voorwaarden, handtekening en bedrijf
@@ -402,25 +431,25 @@ Samen 7 tot 9 bouwdagen. Fase 1 en 3 zijn klein en onafhankelijk; die
 zou ik als eerste doen, in deze volgorde: 3 (het geld), dan 1 (de
 voordeur), dan 2, 4, 5.
 
-## Besluiten gevraagd
+## Besluiten (Erwin, 26 oktober 2026)
 
-1. **Wizard:** tweede laag (voorstel) of helemaal dicht? Voorstel: tweede
-   laag, en in het voorjaar van 2027 opnieuw bekijken samen met het plan
-   voor grote groepen, met de cijfers van een seizoen.
-2. **Offerteformulier `/offerte`:** opheffen als doorverwijzing (voorstel)
-   of behouden? De tien soorten uitje gaan in het ene formulier.
-3. **Grens zonder handtekening:** alleen waarschuwen (fase 3), of ook
-   blokkeren bij "Naar partners sturen" met overrule (fase 4)? Voorstel:
-   waarschuwen in fase 3, blokkeren in fase 4.
+Alle voorstellen overgenomen; uitvoering begint met fase 3.
+
+1. **Wizard:** tweede laag; in het voorjaar van 2027 opnieuw bekijken samen
+   met het plan voor grote groepen, met de cijfers van een seizoen.
+2. **Offerteformulier `/offerte`:** opheffen als doorverwijzing; de tien
+   soorten uitje gaan in het ene formulier.
+3. **Grens zonder handtekening:** waarschuwen in fase 3, blokkeren bij
+   "Naar partners sturen" met overrule in fase 4.
 4. **Verplicht bij akkoord:** bedrijfsnaam en adres verplicht, KvK en btw
-   optioneel (voorstel). Of alles verplicht zoals nu bij de facturatiestap?
+   optioneel.
 5. **Direct boeken en de live agenda** van de homepage af naar de
-   activiteitenpagina's (voorstel), of op de homepage laten staan?
+   activiteitenpagina's.
 6. **Chat:** de koppeling naar een aanvraag en de drie kernvragen in de
-   begroeting nu meenemen (fase 5), of later?
-7. **De zes ongetekende projecten:** alle zes alsnog een ondertekenverzoek,
-   of alleen de lopende (BV-2608-0002) en de rest laten rusten omdat ze al
-   gefactureerd en betaald zijn?
+   begroeting gaan nu mee, in fase 5.
+7. **De zes ongetekende projecten:** laten rusten. Geen verzoek achteraf aan
+   de al gefactureerde projecten; het lopende project BV-2608-0002 krijgt
+   het eerste verzoek automatisch via de nieuwe trigger.
 
 ## Wat dit plan bewust niet doet
 

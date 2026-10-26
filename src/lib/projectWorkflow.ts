@@ -120,3 +120,21 @@ export function getItemSendCounts(
 
   return counts;
 }
+
+// ── Gewonnen, niet getekend ───────────────────────────────────────────
+
+export interface ProjectForUnsignedCheck {
+  programPipeline: ProjectPipelineStage;
+  termsAcceptedAt: string | null;
+}
+
+/**
+ * Akkoord ontvangen (of al in facturatie) zonder handtekening onder de
+ * voorwaarden. Dit zijn de projecten die het bureau uitvoert zonder getekende
+ * voorwaarden; de werkbank toont ze als aparte lijst zodat er een
+ * ondertekenverzoek uit kan (plan klantreis en ondertekening, fase 3).
+ */
+export function isWonUnsigned(project: ProjectForUnsignedCheck): boolean {
+  if (project.termsAcceptedAt) return false;
+  return project.programPipeline === "akkoord_ontvangen" || project.programPipeline === "facturatie";
+}
