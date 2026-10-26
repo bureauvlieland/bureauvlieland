@@ -14,7 +14,7 @@ export interface ChatMessage {
 
 export interface ChatConversation {
   id: string;
-  source: "customer_portal" | "partner_portal" | "whatsapp";
+  source: "customer_portal" | "partner_portal" | "whatsapp" | "presales";
   source_token: string | null;
   source_partner_id: string | null;
   visitor_name: string;

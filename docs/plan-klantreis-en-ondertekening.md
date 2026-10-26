@@ -3,8 +3,8 @@
 Status: besluiten genomen door Erwin op 26 oktober 2026 (alle voorstellen
 overgenomen, zie "Besluiten"). Fase 3 (tekenen zonder te wachten), fase 1
 (de voordeur), fase 2 (één formulier en de voorbeelden) en fase 4 (akkoord
-en ondertekenen in één stap) zijn op 26 oktober gebouwd; fase 5 (meten)
-volgt in een eigen pull request. Eén afwijking
+en ondertekenen in één stap) zijn op 26 oktober gebouwd, net als fase 5 (meten). Daarmee is het plan uitgevoerd; wat
+openstaat, staat onder "Na uitvoering". Eén afwijking
 van het plan in fase 2: de pagina's voor losse catering- en
 logiesaanvragen blijven bestaan, zie de toelichting bij fase 2. Het plan zelf is van 25 oktober, op basis van de
 productiecijfers van dezelfde dag; Erwin was die dag al akkoord met de
@@ -34,8 +34,10 @@ gedachtestreepjes, gewone interpunctie. Aanspreekvorm op de site blijft "u".
   de gemarkeerde hoofdroute in de hero, de zwevende knop, het slotblok en op
   zo'n 25 pagina's. Het label "meest gekozen" is daarmee een selffulfilling
   prophecy.
-- De chat is met 152 gesprekken in 2026 de meest gebruikte ingang, meer dan
-  alle aanvraagformulieren samen.
+- Correctie (26 oktober, fase 5): de 152 chatgesprekken van 2026 zijn
+  vooral partnerchats (118) en portaalchats van klanten (26). De websitechat
+  had 1 gesprek en WhatsApp 8. De chat is dus geen drukke ingang; de
+  koppeling naar een aanvraag is gebouwd, maar klein gehouden.
 - Van de 21 gewonnen projecten in 2026 zijn er 6 nooit getekend, samen
   € 119.000 van de € 233.000 omzet, waaronder de twee grootste projecten van
   het jaar. Van de 15 handtekeningen kwamen er 5 pas na het evenement. De
@@ -78,7 +80,9 @@ klopt niet").
 Overig:
 
 - Chat: 152 gesprekken in 2026 (`chat_conversations`), waarvan 78 in juni.
-  Kwaliteit niet beoordeeld.
+  Correctie op 26 oktober: 118 daarvan zijn partnerchats, 26 portaalchats
+  van klanten over hun programma, 8 WhatsApp en 1 via de websitechat. Als
+  ingang voor nieuwe aanvragen telt alleen die laatste groep.
 - Instappagina (`attribution.entry_path`, vastgelegd sinds juni, 20
   aanvragen): 14 keer de homepage, 4 keer `/bouwstenen`, 2 keer
   `/wadlopen-vlieland`, 3 keer `/catering`. De twaalf landingspagina's komen
@@ -537,6 +541,42 @@ pipeline-telling op "akkoord" (fase 5).
 **Fase 5: meten (1 dag).** Tabel per herkomst in de admin, `template_id` en
 `needs` in `attribution`, GA4-events, chatkoppeling naar `sales_inbox`,
 pipeline-telling op "akkoord".
+
+Fase 5 is op 26 oktober gebouwd. Attributie heeft een nieuw eerste tabblad
+"Per ingang": per herkomst aanvragen, geannuleerd, gewonnen (actief en
+uitgevoerd, gefactureerd of akkoord ontvangen), getekend, vooraf getekend,
+omzet en mediaan groepsgrootte, met een totaalregel en de periode "Dit
+kalenderjaar"; daaronder de ondertekening van gewonnen projecten (vooraf,
+achteraf, nog niet; nulmeting 10 van 21), via welke weg het formulier
+geopend werd en hoeveel websitechats en WhatsApp-gesprekken een aanvraag
+werden. De telling staat in `src/lib/requestMetrics.ts` met Vitest-tests en
+is dezelfde als de query in de bijlage. Het formulier stuurt `form_start`
+(eerste invoer) en `form_submit` naar GA4 met de weg waarlangs het geopend
+is (homepage, voorbeeldprogramma, landingspagina, vinkje, soort, direct) en
+legt die vast als `attribution.form_source`; `template_id` en `needs`
+zaten er sinds fase 2 al in. Chat (besluit 6): de websitechat vraagt in de
+begroeting om groepsgrootte, periode en wat u nodig heeft; in Berichten
+heeft een websitechat of WhatsApp-gesprek zonder project de knop "Aanvraag
+aanmaken", die het nieuwe-programmascherm opent met naam, e-mail en
+telefoon voorgevuld en het gesprek na het aanmaken aan het project koppelt
+(`chat_conversations.request_id`, `attribution.chat_conversation_id`). De
+pipeline-telling op "akkoord" is de kolom Gewonnen in dezelfde tabel; de
+werkbank heeft sinds fase 3 de lijst "Gewonnen, niet getekend". Niet
+gedaan: GA4 zelf; `form_start` en `form_submit` moeten daar net als
+`wizard_step_view` als gebeurtenis geregistreerd worden (zie Open in de
+roadmap).
+
+## Na uitvoering
+
+- In GA4 de gebeurtenissen `form_start`, `form_submit`, `wizard_step_view`
+  en `program_request_submitted` registreren (Erwin).
+- Na een seizoen de tabel "Per ingang" naast de nulmeting leggen: minder
+  ruis in de aanvragen, een hoger aandeel gewonnen, en vrijwel alles vooraf
+  getekend. Dan ook het besluit over de wizard (tweede laag of dicht) en het
+  geparkeerde plan voor grote groepen.
+- `/catering-aanvragen` en `/logies-aanvragen` blijven bestaan voor het
+  portaal en de bouwer; als de losse aanvragen daar opdrogen, kunnen de
+  pagina's weg.
 
 Samen 7 tot 9 bouwdagen. Fase 1 en 3 zijn klein en onafhankelijk; die
 zou ik als eerste doen, in deze volgorde: 3 (het geld), dan 1 (de

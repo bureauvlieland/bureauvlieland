@@ -6,6 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import {
+  countByFormSource,
+  metricsByOrigin,
+  signingSummary,
+  type RequestMetricRow,
+} from "@/lib/requestMetrics";
 
 type Row = {
   id: string;
@@ -18,12 +24,25 @@ type Row = {
   attribution: Record<string, string | null> | null;
 };
 
+/** Programma-aanvragen met de velden voor de tabel per ingang (plan klantreis en ondertekening, fase 5). */
+type MetricRow = RequestMetricRow & { created_at: string };
+
+type ChatStats = { total: number; linked: number };
+
 const PERIODS = [
   { id: "7", label: "Laatste 7 dagen" },
   { id: "30", label: "Laatste 30 dagen" },
   { id: "90", label: "Laatste 90 dagen" },
   { id: "365", label: "Laatste 12 maanden" },
+  { id: "ytd", label: "Dit kalenderjaar" },
 ];
+
+const sinceFor = (period: string): string =>
+  period === "ytd"
+    ? new Date(new Date().getFullYear(), 0, 1).toISOString()
+    : new Date(Date.now() - parseInt(period) * 86400_000).toISOString();
+
+const euro = (n: number) => `€ ${Math.round(n).toLocaleString("nl-NL")}`;
 
 function group(rows: Row[], field: string) {
   const map = new Map<string, number>();
@@ -62,15 +81,20 @@ const AdminAttribution = () => {
   const [period, setPeriod] = useState("30");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [drafts, setDrafts] = useState<any[] | null>(null);
+  const [metricRows, setMetricRows] = useState<MetricRow[] | null>(null);
+  const [chatStats, setChatStats] = useState<ChatStats | null>(null);
 
   useEffect(() => {
     (async () => {
       setRows(null);
-      const since = new Date(Date.now() - parseInt(period) * 86400_000).toISOString();
-      const [{ data: pr }, { data: ar }, { data: dr }] = await Promise.all([
+      setMetricRows(null);
+      const since = sinceFor(period);
+      const [{ data: pr }, { data: ar }, { data: dr }, { data: chats }] = await Promise.all([
         supabase
           .from("program_requests")
-          .select("id, customer_name, customer_email, reference_number, status, created_at, attribution")
+          .select(
+            "id, customer_name, customer_email, reference_number, status, created_at, attribution, origin, cancelled_at, quote_status, completed_at, invoice_spec_total_incl_vat, terms_accepted_at, number_of_people, selected_dates",
+          )
           .gte("created_at", since)
           .order("created_at", { ascending: false }),
         supabase
@@ -83,15 +107,43 @@ const AdminAttribution = () => {
           .select("id, email, source, created_at, recovered_at, expires_at, email_send_count, last_email_sent_at")
           .gte("created_at", since)
           .order("created_at", { ascending: false }),
+        // Websitechat en WhatsApp: hoeveel gesprekken werden een aanvraag?
+        supabase
+          .from("chat_conversations")
+          .select("id, request_id, source")
+          .in("source", ["presales", "whatsapp"])
+          .gte("created_at", since),
       ]);
       const combined: Row[] = [
         ...((pr ?? []) as any[]).map((r) => ({ ...r, source: "program" as const })),
         ...((ar ?? []) as any[]).map((r) => ({ ...r, source: "accommodation" as const })),
       ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
       setRows(combined);
+      setMetricRows((pr ?? []) as unknown as MetricRow[]);
       setDrafts(dr ?? []);
+      const chatList = (chats ?? []) as { id: string; request_id: string | null }[];
+      setChatStats({ total: chatList.length, linked: chatList.filter((c) => !!c.request_id).length });
     })();
   }, [period]);
+
+  const perOrigin = useMemo(() => (metricRows ? metricsByOrigin(metricRows) : []), [metricRows]);
+  const signing = useMemo(() => (metricRows ? signingSummary(metricRows) : null), [metricRows]);
+  const formSources = useMemo(() => (metricRows ? countByFormSource(metricRows) : []), [metricRows]);
+  const totals = useMemo(
+    () =>
+      perOrigin.reduce(
+        (t, m) => ({
+          requests: t.requests + m.requests,
+          cancelled: t.cancelled + m.cancelled,
+          won: t.won + m.won,
+          signed: t.signed + m.signed,
+          signedBeforeEvent: t.signedBeforeEvent + m.signedBeforeEvent,
+          revenue: t.revenue + m.revenue,
+        }),
+        { requests: 0, cancelled: 0, won: 0, signed: 0, signedBeforeEvent: 0, revenue: 0 },
+      ),
+    [perOrigin],
+  );
 
   const withAttr = useMemo(() => rows?.filter((r) => r.attribution) ?? [], [rows]);
   const total = withAttr.length;
@@ -122,12 +174,122 @@ const AdminAttribution = () => {
             </select>
           </div>
 
-          <Tabs defaultValue="attribution">
+          <Tabs defaultValue="per-ingang">
             <TabsList>
+              <TabsTrigger value="per-ingang">Per ingang ({metricRows?.length ?? 0})</TabsTrigger>
               <TabsTrigger value="attribution">Herkomst ({total})</TabsTrigger>
               <TabsTrigger value="drafts">Concepten ({drafts?.length ?? 0})</TabsTrigger>
               <TabsTrigger value="requests">Aanvragen ({rows?.length ?? 0})</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="per-ingang" className="space-y-4 mt-4">
+              {metricRows === null || signing === null ? (
+                <Skeleton className="h-64 w-full" />
+              ) : (
+                <>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Aanvragen per ingang</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Gewonnen = actief en uitgevoerd, gefactureerd of akkoord ontvangen. Getekend = handtekening onder de
+                        voorwaarden; "vooraf" = vóór of op de eerste programmadag. Omzet = projecttotaal incl. btw van actieve
+                        projecten. Dezelfde telling als de nulmeting in het plan klantreis en ondertekening.
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {perOrigin.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Geen aanvragen in deze periode.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead className="text-xs text-muted-foreground border-b">
+                              <tr>
+                                <th className="text-left py-2 px-2">Ingang</th>
+                                <th className="text-right py-2 px-2">Aanvragen</th>
+                                <th className="text-right py-2 px-2">Geannuleerd</th>
+                                <th className="text-right py-2 px-2">Gewonnen</th>
+                                <th className="text-right py-2 px-2">Getekend</th>
+                                <th className="text-right py-2 px-2">Vooraf getekend</th>
+                                <th className="text-right py-2 px-2">Omzet</th>
+                                <th className="text-right py-2 px-2">Mediaan pers.</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {perOrigin.map((m) => (
+                                <tr key={m.origin} className="border-b last:border-0 hover:bg-muted/30">
+                                  <td className="py-2 px-2">
+                                    {m.label}
+                                    <span className="ml-1 font-mono text-[11px] text-muted-foreground">{m.origin}</span>
+                                  </td>
+                                  <td className="py-2 px-2 text-right tabular-nums">{m.requests}</td>
+                                  <td className="py-2 px-2 text-right tabular-nums">
+                                    {m.cancelled}
+                                    <span className="text-muted-foreground"> · {m.requests ? Math.round((m.cancelled / m.requests) * 100) : 0}%</span>
+                                  </td>
+                                  <td className="py-2 px-2 text-right tabular-nums font-medium">
+                                    {m.won}
+                                    <span className="font-normal text-muted-foreground"> · {m.requests ? Math.round((m.won / m.requests) * 100) : 0}%</span>
+                                  </td>
+                                  <td className="py-2 px-2 text-right tabular-nums">{m.signed}</td>
+                                  <td className="py-2 px-2 text-right tabular-nums">{m.signedBeforeEvent}</td>
+                                  <td className="py-2 px-2 text-right tabular-nums">{euro(m.revenue)}</td>
+                                  <td className="py-2 px-2 text-right tabular-nums">{m.medianPeople ?? "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot className="border-t text-xs font-medium">
+                              <tr>
+                                <td className="py-2 px-2">Totaal</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{totals.requests}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{totals.cancelled}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{totals.won}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{totals.signed}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{totals.signedBeforeEvent}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{euro(totals.revenue)}</td>
+                                <td className="py-2 px-2" />
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">Ondertekening van gewonnen projecten</CardTitle></CardHeader>
+                      <CardContent className="space-y-1 text-sm">
+                        <p>Gewonnen: <span className="font-medium tabular-nums">{signing.won}</span></p>
+                        <p>Vóór de eerste dag getekend: <span className="font-medium tabular-nums">{signing.signedBeforeEvent}</span></p>
+                        <p>Pas na de eerste dag getekend: <span className="font-medium tabular-nums">{signing.signedAfterEvent}</span></p>
+                        <p>Nog niet getekend: <span className="font-medium tabular-nums">{signing.unsigned}</span></p>
+                        <p className="pt-1 text-xs text-muted-foreground">Doel uit het plan: vrijwel alles vooraf getekend. Nulmeting 25 oktober 2026: 10 van 21.</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">Via welke weg het formulier geopend is</CardTitle></CardHeader>
+                      <CardContent>
+                        {formSources.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Nog geen gegevens; wordt vastgelegd sinds fase 5 (26 oktober 2026).</p>
+                        ) : (
+                          <BarList items={formSources} total={formSources.reduce((s, [, n]) => s + n, 0)} />
+                        )}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">Websitechat en WhatsApp</CardTitle></CardHeader>
+                      <CardContent className="space-y-1 text-sm">
+                        <p>Gesprekken: <span className="font-medium tabular-nums">{chatStats?.total ?? 0}</span></p>
+                        <p>Daarvan een aanvraag geworden: <span className="font-medium tabular-nums">{chatStats?.linked ?? 0}</span></p>
+                        <p className="pt-1 text-xs text-muted-foreground">
+                          Koppelen gaat via "Aanvraag aanmaken" bij een gesprek in Berichten. Partner- en portaalchats tellen hier niet mee.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </>
+              )}
+            </TabsContent>
 
             <TabsContent value="attribution" className="space-y-4 mt-4">
               {rows === null ? (

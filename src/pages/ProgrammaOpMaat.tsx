@@ -17,7 +17,8 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { generateCustomerToken } from "@/types/programRequest";
-import { trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
+import { trackFormStart, trackFormSubmit, trackProgramRequestSubmitted, trackSubmitFailed } from "@/lib/analytics";
+import { formSourceFor } from "@/lib/requestMetrics";
 import { buildAttribution, getEntryPage } from "@/lib/entryPageTracker";
 import { MultiDatePicker } from "@/components/configurator/MultiDatePicker";
 import { useTemplateWithItems } from "@/hooks/useProgramTemplates";
@@ -70,6 +71,21 @@ const ProgrammaOpMaat = () => {
   const [searchParams] = useSearchParams();
   const templateSlug = searchParams.get("template");
   const { data: template } = useTemplateWithItems(templateSlug);
+  // Via welke weg het formulier geopend is (fase 5): voor GA4 en attribution.
+  const formSource = useRef(
+    formSourceFor({
+      templateSlug,
+      needsParam: searchParams.get("nodig"),
+      eventTypeParam: searchParams.get("soort"),
+      entryPath: getEntryPage()?.path ?? null,
+    }),
+  );
+  const formStarted = useRef(false);
+  const markFormStart = () => {
+    if (formStarted.current) return;
+    formStarted.current = true;
+    trackFormStart({ form: "aanvraag", source: formSource.current });
+  };
 
   const [eventType, setEventType] = useState<string | null>(() => parseEventTypeParam(searchParams.get("soort")));
   const [programType, setProgramType] = useState<ProgramType>(
@@ -120,6 +136,7 @@ const ProgrammaOpMaat = () => {
   };
 
   const toggleNeed = (key: NeedKey, on: boolean) => {
+    markFormStart();
     setNeeds((prev) => NEEDS.map((n) => n.key).filter((k) => (k === key ? on : prev.includes(k))));
   };
 
@@ -132,6 +149,7 @@ const ProgrammaOpMaat = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    markFormStart();
     if (name === "wishes") wishesTouched.current = true;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -186,6 +204,7 @@ const ProgrammaOpMaat = () => {
         event_type: eventType,
         date_unknown: dateUnknown,
         period_text: dateUnknown && periodText.trim() ? periodText.trim() : null,
+        form_source: formSource.current,
       };
 
       const requestId = crypto.randomUUID();
@@ -244,6 +263,14 @@ const ProgrammaOpMaat = () => {
         },
       });
 
+      trackFormSubmit({
+        form: "aanvraag",
+        source: formSource.current,
+        eventType,
+        needs,
+        dateUnknown,
+        templateId: template?.id ?? null,
+      });
       const entryPage = getEntryPage();
       trackProgramRequestSubmitted({
         value: 0,
