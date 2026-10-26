@@ -585,6 +585,12 @@ roadmap).
 - `/catering-aanvragen` en `/logies-aanvragen` blijven bestaan voor het
   portaal en de bouwer; als de losse aanvragen daar opdrogen, kunnen de
   pagina's weg.
+- Herzien op 26 oktober, dezelfde dag: de bouwstenenpagina toont alleen
+  nog een prijs bij direct boekbare bouwstenen; de rest "Prijs in ons
+  voorstel" met de meerwaarde van het bureau erbij. Het zelfbedieningsargument
+  ("zelf samenstellen en direct prijzen zien") hoort daarmee alleen bij de
+  bouwer, niet meer bij de catalogus. De partners blijven genoemd. Zie de
+  roadmap onder Gedaan.
 
 Samen 7 tot 9 bouwdagen. Fase 1 en 3 zijn klein en onafhankelijk; die
 zou ik als eerste doen, in deze volgorde: 3 (het geld), dan 1 (de

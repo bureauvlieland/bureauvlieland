@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet";
 import { Clock, Search, Ticket, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { RESPONSE_TIME } from "@/content/promises";
+import { BUREAU_PROMISE, RESPONSE_TIME } from "@/content/promises";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -18,7 +18,8 @@ import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavaila
 import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
 import { matchBundlesToBlocks, buildBookingLink, type BookableBundle } from "@/lib/directBookable";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
-import { categoryLabels, formatBlockPrice, formatPriceNote, type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
+import { publicBlockPrice } from "@/lib/publicPrice";
+import { categoryLabels, type BuildingBlock, type BuildingBlockCategory } from "@/types/buildingBlock";
 
 const URL = "https://bureauvlieland.nl/bouwstenen";
 
@@ -88,7 +89,7 @@ const BlockCard = ({ block, bundle, availability }: { block: BuildingBlock; bund
           </div>
         )
       }
-      price={{ value: formatBlockPrice(block), note: formatPriceNote(block) || undefined }}
+      price={publicBlockPrice(block, Boolean(bundle))}
       primary={
         bundle
           ? { label: "Direct reserveren", to: detail, icon: Ticket }
@@ -113,8 +114,12 @@ const faq = [
     answer: `Ja. Elke bouwsteen is los aan te vragen. Wij checken de beschikbaarheid bij de aanbieder en u ontvangt ${RESPONSE_TIME.within} een voorstel. Bouwstenen met het label "Direct boekbaar" reserveert u meteen online.`,
   },
   {
+    question: "Waarom staat bij de meeste bouwstenen geen prijs?",
+    answer: `De prijs van een onderdeel hangt af van uw groepsgrootte, de datum en de rest van het programma. Daarom staat hij in ons voorstel, per onderdeel en inclusief btw. ${BUREAU_PROMISE.sentence} Bij bouwstenen met het label "Direct boekbaar" ziet u de prijs wel, omdat u daar meteen reserveert.`,
+  },
+  {
     question: "Staan de prijzen inclusief btw?",
-    answer: "Alle getoonde bedragen zijn inclusief btw. Op de factuur staat de btw apart gespecificeerd.",
+    answer: "Ja. De bedragen bij direct boekbare bouwstenen en in ons voorstel zijn inclusief btw. Op de factuur staat de btw apart gespecificeerd.",
   },
   {
     question: "Hoe ver van tevoren moet ik boeken?",
@@ -207,7 +212,7 @@ const Bouwstenen = () => {
               eyebrow="Bouwstenen"
               number="01"
               title="Kies uit het aanbod"
-              intro="Zoek of filter op categorie. Een bouwsteen met een boekmodule reserveert u direct; de rest voegt u toe aan uw programma of vraagt u los aan."
+              intro={`Zoek of filter op categorie. Een bouwsteen met een boekmodule reserveert u direct, met de prijs erbij. De rest voegt u toe aan uw programma of vraagt u los aan: ${BUREAU_PROMISE.sentence.charAt(0).toLowerCase()}${BUREAU_PROMISE.sentence.slice(1)}`}
             />
 
             <div className="mt-8 flex flex-col gap-4">

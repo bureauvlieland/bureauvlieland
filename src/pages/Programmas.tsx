@@ -91,7 +91,7 @@ const ROUTES: RouteChooserRoute[] = [
   {
     icon: BookOpen,
     title: "Bekijk de bouwstenen",
-    text: "Alle activiteiten, catering en vervoer die wij op het eiland boeken, met prijzen per onderdeel.",
+    text: "Alle activiteiten, catering en vervoer die wij op het eiland boeken. Direct boekbaar met prijs, de rest met een prijs in ons voorstel.",
     to: "/bouwstenen",
     label: "Bekijk de bouwstenen",
   },

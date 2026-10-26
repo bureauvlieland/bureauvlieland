@@ -12,7 +12,7 @@ import { Container, FactList, MediaCard, PageHero, RouteChooser, Section, Sectio
 import { usePublishedBuildingBlocks } from "@/hooks/useBuildingBlocks";
 import { getBlockImage } from "@/lib/buildingBlockUtils";
 import { renderRichText } from "@/lib/richText";
-import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
+import { PRICE_IN_PROPOSAL } from "@/lib/publicPrice";
 import type { LandingSection } from "@/content/landings/types";
 
 import buffetImage from "@/assets/hero-vlieland.jpg";
@@ -135,7 +135,7 @@ const Catering = () => {
         checklist: [
           "Borrelplanken en pizza's om te delen",
           `Vanaf ${pizzaBorrel.min_people ?? 10} personen`,
-          [formatBlockPrice(pizzaBorrel), formatPriceNote(pizzaBorrel)].filter(Boolean).join(" "),
+          `${PRICE_IN_PROPOSAL}, inclusief btw`,
           "Optioneel Italiaans dessert",
         ],
         image: { src: getBlockImage(pizzaBorrel), alt: "Pizza en Borrel bij Café Boven op Vlieland" },

@@ -10,8 +10,13 @@ import type { FaqItem } from "@/components/FaqSection";
 import type { BuildingBlock } from "@/types/buildingBlock";
 import { formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
 import { getProviderName } from "@/lib/buildingBlockUtils";
+import { BUREAU_PROMISE } from "@/content/promises";
 
-export const buildFallbackFaq = (block: BuildingBlock): FaqItem[] => {
+/**
+ * `bookable`: de bouwsteen hangt aan de boekmodule. Alleen dan noemt de FAQ
+ * een bedrag; anders staat de prijs in het voorstel (zie `lib/publicPrice.ts`).
+ */
+export const buildFallbackFaq = (block: BuildingBlock, bookable = false): FaqItem[] => {
   const items: FaqItem[] = [];
   const name = block.name;
 
@@ -22,7 +27,7 @@ export const buildFallbackFaq = (block: BuildingBlock): FaqItem[] => {
     });
   }
 
-  if (block.price_type !== "on_request" && block.price_adult != null) {
+  if (bookable && block.price_type !== "on_request" && block.price_adult != null) {
     const note = formatPriceNote(block);
     items.push({
       question: `Wat kost ${name.toLowerCase()}?`,
@@ -31,7 +36,7 @@ export const buildFallbackFaq = (block: BuildingBlock): FaqItem[] => {
   } else {
     items.push({
       question: `Wat kost ${name.toLowerCase()}?`,
-      answer: `De prijs van ${name.toLowerCase()} stellen wij op aanvraag vast, omdat die afhangt van groepsgrootte en invulling. U ontvangt een offerte met één totaalprijs.`,
+      answer: `De prijs van ${name.toLowerCase()} staat in ons voorstel, omdat die afhangt van uw groepsgrootte, de datum en de rest van het programma. ${BUREAU_PROMISE.sentence} In het voorstel staat per onderdeel een prijs inclusief btw.`,
     });
   }
 
