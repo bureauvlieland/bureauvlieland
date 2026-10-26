@@ -40,6 +40,7 @@ const VoorbeeldprogrammaDetail = () => {
   const related = (allTemplates || []).filter((t) => t.id !== slug).slice(0, 3);
   const canonical = `${SITE}/voorbeeldprogrammas/${slug}`;
   const useUrl = `/programma-samenstellen?template=${slug}`;
+  const requestUrl = `/programma-op-maat?template=${slug}`;
   const description =
     template?.short_description ||
     template?.description?.slice(0, 155) ||
@@ -78,19 +79,19 @@ const VoorbeeldprogrammaDetail = () => {
 
   const routes: RouteChooserRoute[] = [
     {
-      icon: PenLine,
-      title: "Gebruik dit programma",
-      text: "Open het programma in de programma-bouwer en pas datum, groepsgrootte en onderdelen aan uw groep aan.",
-      to: useUrl,
-      label: "Gebruik dit programma",
+      icon: MessageSquareHeart,
+      title: "Dit programma aanvragen",
+      text: "Wij nemen dit voorbeeld als startpunt, passen het aan uw groep en datum aan en sturen een vrijblijvend voorstel.",
+      to: requestUrl,
+      label: "Dit programma aanvragen",
       primary: true,
     },
     {
-      icon: MessageSquareHeart,
-      title: "Programma op maat",
-      text: "Liever niet zelf puzzelen? Vertel ons uw wensen, dan sturen wij een persoonlijk voorstel.",
-      to: "/programma-op-maat",
-      label: "Vertel ons uw wensen",
+      icon: PenLine,
+      title: "Zelf aanpassen",
+      text: "Liever zelf puzzelen? Open het programma in de programma-bouwer en pas datum, groepsgrootte en onderdelen aan.",
+      to: useUrl,
+      label: "Open in de programma-bouwer",
     },
     {
       icon: BookOpen,

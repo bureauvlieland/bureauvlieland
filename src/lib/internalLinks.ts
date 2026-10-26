@@ -1,4 +1,3 @@
-import { RESPONSE_TIME } from "@/content/promises";
 /**
  * Centrale interne linkstructuur.
  *
@@ -45,9 +44,9 @@ const L = {
     description: "Van lunch tot shared dining op locatie",
   },
   cateringAanvragen: {
-    href: "/catering-aanvragen",
+    href: "/programma-op-maat?nodig=eten",
     label: "Catering aanvragen",
-    description: "Vraag direct een cateringvoorstel aan",
+    description: "Vertel ons wat u wilt eten en drinken, wij sturen een voorstel",
   },
   evenementen: {
     href: "/evenementen",
@@ -88,11 +87,6 @@ const L = {
     href: "/veelgestelde-vragen",
     label: "Veelgestelde vragen",
     description: "Prijzen, offertes, vervoer en groepsgroottes",
-  },
-  offerte: {
-    href: "/offerte",
-    label: "Offerte aanvragen",
-    description: RESPONSE_TIME.short,
   },
   contact: {
     href: "/contact",
@@ -208,7 +202,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/evenementen": {
     title: "Ook interessant",
-    links: [L.zakelijk, L.jubileum, L.catering, L.logies, L.voorbeeldprogrammas, L.offerte],
+    links: [L.opMaat, L.zakelijk, L.jubileum, L.catering, L.logies, L.voorbeeldprogrammas],
   },
   "/onze-werkwijze": {
     title: "Zo begint u",
@@ -224,13 +218,13 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/contact": {
     title: "Misschien zoekt u dit",
-    links: [L.faq, L.offerte, L.werkwijze, L.voorbeeldprogrammas, L.bouwstenen, L.overOns],
+    links: [L.opMaat, L.faq, L.werkwijze, L.voorbeeldprogrammas, L.bouwstenen, L.overOns],
   },
   "/veelgestelde-vragen": {
     title: "Direct verder",
     links: [L.opMaat, L.werkwijze, L.voorbeeldprogrammas, L.samenstellen, L.logies, L.contact],
   },
-  "/offerte": {
+  "/programma-op-maat": {
     title: "Eerst oriënteren?",
     links: [L.voorbeeldprogrammas, L.bouwstenen, L.werkwijze, L.faq, L.logies, L.catering],
   },
@@ -264,7 +258,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/zakelijk-evenement-vlieland": {
     title: "Ook relevant voor bedrijven",
-    links: [L.evenementen, L.heisessie, L.incentive, L.catering, L.logies, L.offerte],
+    links: [L.opMaat, L.evenementen, L.heisessie, L.incentive, L.catering, L.logies],
   },
   "/incentive-reis-vlieland": {
     title: "Ook relevant voor bedrijven",
@@ -280,7 +274,7 @@ const CLUSTERS: Record<string, Cluster> = {
   },
   "/jubileum-vlieland": {
     title: "Ook interessant",
-    links: [L.evenementen, L.groepsweekend, L.catering, L.logies, L.bouwstenen, L.offerte],
+    links: [L.opMaat, L.evenementen, L.groepsweekend, L.catering, L.logies, L.bouwstenen],
   },
   "/familieweekend-vlieland": {
     title: "Ook interessant",

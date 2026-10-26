@@ -156,11 +156,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://bureauvlieland.nl/offerte</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://bureauvlieland.nl/activiteit/italiaanse-shared-dining-oliva</loc>
     <lastmod>2026-06-18</lastmod>
     <changefreq>monthly</changefreq>

@@ -75,7 +75,7 @@ const populairItems: NavItem[] = [
   { label: "Zeehondentochten", href: "/zeehondentochten-vlieland" },
   { label: "Wadlopen", href: "/wadlopen-vlieland" },
   { label: "Direct boeken", href: "/activiteiten-boeken" },
-  { label: "Catering aanvragen", href: "/catering-aanvragen" },
+  { label: "Catering aanvragen", href: "/programma-op-maat?nodig=eten" },
 ];
 
 // "Inspiratie" — oriëntatie, geen directe aanvraag.

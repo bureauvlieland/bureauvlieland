@@ -40,7 +40,6 @@ const ActiviteitenVlieland = lazy(() => import("./pages/ActiviteitenVlieland"));
 const Partners = lazy(() => import("./pages/Partners"));
 const Programmas = lazy(() => import("./pages/Programmas"));
 const Evenementen = lazy(() => import("./pages/Evenementen"));
-const Offerte = lazy(() => import("./pages/Offerte"));
 const LandingRoute = lazy(() => import("./components/landing/LandingRoute"));
 const ExternalRedirect = ({ to }: { to: string }) => {
   if (typeof window !== "undefined") window.location.replace(to);
@@ -194,7 +193,8 @@ const App = () => {
             <Route path="/over-ons" element={<OverOns />} />
             <Route path="/evenementen" element={<Evenementen />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/offerte" element={<Offerte />} />
+            {/* Het offerteformulier is opgegaan in het ene aanvraagformulier (plan klantreis en ondertekening, fase 2). */}
+            <Route path="/offerte" element={<Navigate to="/programma-op-maat" replace />} />
             <Route path="/algemene-voorwaarden" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/partner-voorwaarden" element={<PartnerTerms />} />
@@ -212,6 +212,7 @@ const App = () => {
                 <ProgrammaOpMaat />
               </FeatureGate>
             } />
+            <Route path="/aanvraag" element={<Navigate to="/programma-op-maat" replace />} />
             <Route path="/snel-aanvragen" element={
               <FeatureGate featureKey="customer_portal_enabled">
                 <SnelAanvragen />
