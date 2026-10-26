@@ -74,7 +74,7 @@ omlaag. `bunx tsx scripts/check-design-debt.ts --list` toont elke vindplaats.
 | `PageHero` | Hero van elke marketingpagina: foto met een verloop uit `ocean-deep`, eyebrow, h1 en intro (`SectionHeader onDark`), één primaire actie en één `inverseOutline`-knop; zonder foto een rustige donkere band (Contact, Veelgestelde vragen, 404). `cta.to` mag ook een anker (`#boeken`) of `mailto:` zijn | Eigen hero's met Ken Burns, golven en gradient-overlays, gecentreerde vette koppen, twee gelijkwaardige knoppen |
 | `FactList` | De eilandfeiten als definitielijst in een kaart naast de intro (overtocht, vervoer, groepsgrootte, voorstel); met `title`, `summary` en een icoon per feit is het de kaart "In het kort" van een activiteitpagina | USP-iconen in een rij, losse feitengrids, `KeyFacts` op landingspagina's |
 | `MediaCard` | Kaart met foto, eyebrow ("3 dagen · Avontuur"), Fraunces-kop en tekst, als link; optioneel een pill op de foto (`badge`, "Nieuw"), een regel voor prijs of doelgroep (`footer`) en een eigen linktekst (`linkLabel`). Voor programma's en activiteiten uit de database en de cateringformats; zonder foto een zachte plaatshouder | Statische fototegels in code, `Card` met eigen hover, `ProgramCard` (weg) |
-| `CatalogCard` | Kaart uit een catalogus met prijs en knoppen: foto en titel linken naar de detailpagina, pills op de foto (categorie, "Direct boekbaar"), onderin de prijs, één primaire knop, optioneel een tweede (`outline`) en een kleine tekstlink. Voor de bouwstenen en direct boekbare activiteiten uit de boekmodule | De eigen bouwsteenkaart en `BookableOnlyCard` met `Badge`, `Card` en drie knopstijlen |
+| `CatalogCard` | Kaart uit een catalogus met prijs en knoppen: foto en titel linken naar de detailpagina, pills op de foto (categorie, "Direct boekbaar"), onderin de prijs (alleen bij direct boekbaar een bedrag, anders "Prijs in ons voorstel" met "Eén aanspreekpunt, één factuur", via `publicBlockPrice` in `lib/publicPrice.ts`), één primaire knop, optioneel een tweede (`outline`) en een kleine tekstlink. Voor de bouwstenen en direct boekbare activiteiten uit de boekmodule | De eigen bouwsteenkaart en `BookableOnlyCard` met `Badge`, `Card` en drie knopstijlen |
 | `LinkCard` | Kleine linkkaart zonder foto: titel, één regel tekst, pijl en optioneel pills (duur, geschiktheid) en een icoon in een accentcirkel (`icon`). Voor `RelatedLinks`, `SeeAlsoActivities`, de thema's op Activiteiten op Vlieland, de resultaten van `ActivityFilter` en de routes op de homepage | Eigen linktegels, `Card` in een `Link`, de routekaarten met foto |
 | `PersonQuote` | Eén klantcitaat in Fraunces met naam en organisatie, op een `sand`-sectie | Citatencarrousels, `Quote`-iconen, sterren bij een handmatig citaat |
 | `RouteChooser` | De donkere slotsectie "Klaar om te beginnen?" met de drie routes: zelf samenstellen (primaire actie), op maat, voorbeelden. `title` en `intro` per pagina; een pagina met een ander publiek geeft eigen `routes` mee (Samenwerken: contact, bouwstenen, voorbeelden; Catering: cateringaanvraag, maatwerk, contact; Logies: logies aanvragen, programma, op maat). Met `id` is het ook het anker voor een knop hogerop de pagina (Catering: `#aanvraag`) | De vijf CTA-banden en `FinalCTA`-varianten, "Neem contact op"-banden, het aanvraagblok met vier icoonkaarten |
@@ -167,7 +167,11 @@ komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
   foto de donkere band), een intro met `FactList` "In het kort" ernaast,
   genummerde secties, het boekblok (`#boeken`) of de tijdlijn, verwante
   kaarten, en sluit af met `RouteChooser` (programma) of `SeeAlsoActivities`
-  (bouwsteen) en één linkblok. Prijzen altijd via `formatBlockPrice`. Elke duur, prijs
+  (bouwsteen) en één linkblok. Prijzen op de catalogus via `publicBlockPrice`
+  en `publicBlockPriceLine` (`lib/publicPrice.ts`): alleen een direct boekbare
+  bouwsteen toont een bedrag, de rest "Prijs in ons voorstel" (besluit 26
+  oktober 2026); de bouwer en het klantportaal gebruiken `formatBlockPrice`
+  rechtstreeks. Elke duur, prijs
   en groepsgrootte in zo'n bestand moet letterlijk in
   `src/content/activityContent.ts` staan (`scripts/validate-activity-facts.ts`
   draait voor elke build); schrijf een getijvenster dus als "een uur vóór

@@ -9,7 +9,9 @@ import { RelatedLinks } from "@/components/RelatedLinks";
 import { LandingBreadcrumb } from "@/components/LandingBreadcrumb";
 import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { Button } from "@/components/ui/button";
-import { type BuildingBlock, categoryLabels, formatBlockPrice, formatPriceNote } from "@/types/buildingBlock";
+import { type BuildingBlock, categoryLabels } from "@/types/buildingBlock";
+import { PRICE_IN_PROPOSAL, PRICE_IN_PROPOSAL_FACT, publicBlockPriceLine } from "@/lib/publicPrice";
+import { BUREAU_PROMISE } from "@/content/promises";
 import { getBlockImage, getProviderName } from "@/lib/buildingBlockUtils";
 import { usePublicPartnerUnavailability } from "@/hooks/usePublicPartnerUnavailability";
 import { PartnerAvailabilityNote } from "@/components/shared/PartnerAvailabilityNote";
@@ -129,8 +131,8 @@ const ActiviteitDetail = () => {
   /** Redactionele FAQ als die er is, anders een feitelijke FAQ uit de databasevelden. */
   const faqItems = useMemo(() => {
     if (extra?.faq?.length) return extra.faq;
-    return block ? buildFallbackFaq(block) : [];
-  }, [extra, block]);
+    return block ? buildFallbackFaq(block, Boolean(bundle)) : [];
+  }, [extra, block, bundle]);
 
   const seo = useMemo(() => {
     if (!block) return null;
@@ -151,7 +153,8 @@ const ActiviteitDetail = () => {
       category: categoryLabels[block.category] ?? block.category,
       url,
     };
-    if (block.price_adult != null && block.price_type !== "on_request") {
+    // Alleen een direct boekbare bouwsteen toont een prijs; dan ook voor Google.
+    if (bundle && block.price_adult != null && block.price_type !== "on_request") {
       product.offers = {
         "@type": "Offer",
         price: block.price_adult,
@@ -173,7 +176,7 @@ const ActiviteitDetail = () => {
     };
 
     return { url, title, description, absoluteImage, product, breadcrumb };
-  }, [block, extra]);
+  }, [block, extra, bundle]);
 
   if (loading) {
     return (
@@ -216,7 +219,7 @@ const ActiviteitDetail = () => {
   const secondary = { label: bundle ? "Liever aanvragen?" : "Dit onderdeel los aanvragen", to: requestPath };
   const availability = block.provider_id ? unavailableByPartner.get(block.provider_id) : undefined;
 
-  const priceLine = [formatBlockPrice(block), formatPriceNote(block)].filter(Boolean).join(" ");
+  const priceLine = bundle ? publicBlockPriceLine(block, true) : PRICE_IN_PROPOSAL_FACT;
   const dbFacts: { label: string; value: string }[] = [
     ...(block.duration ? [{ label: "Duur", value: block.duration }] : []),
     ...(block.min_people && block.max_people ? [{ label: "Groepsgrootte", value: `${block.min_people} tot ${block.max_people} personen` }] : []),
@@ -300,12 +303,12 @@ const ActiviteitDetail = () => {
               intro={
                 bundle
                   ? "Kies een datum en tijd; u reserveert rechtstreeks bij de aanbieder. Liever in een compleet programma? Voeg het onderdeel dan toe."
-                  : "Voeg dit onderdeel toe aan uw programma, of vraag het los aan. Wij checken de beschikbaarheid bij de aanbieder."
+                  : `Voeg dit onderdeel toe aan uw programma, of vraag het los aan. ${BUREAU_PROMISE.sentence}`
               }
             />
             <p className="mt-6 text-center text-foreground">
-              <strong className="font-medium">{formatBlockPrice(block)}</strong>
-              {formatPriceNote(block) && <span className="text-muted-foreground"> {formatPriceNote(block)}</span>}
+              <strong className="font-medium">{bundle ? publicBlockPriceLine(block, true) : PRICE_IN_PROPOSAL}</strong>
+              {!bundle && <span className="text-muted-foreground"> per onderdeel, inclusief btw</span>}
             </p>
             {availability && <PartnerAvailabilityNote note={availability} variant="panel" className="mx-auto mt-6 max-w-md" />}
             {bundle ? (
@@ -361,7 +364,7 @@ const ActiviteitDetail = () => {
                         meta={`door ${getProviderName(r)}`}
                         title={r.name}
                         text={r.short_description ?? undefined}
-                        footer={[formatBlockPrice(r), formatPriceNote(r)].filter(Boolean).join(" ")}
+                        footer={publicBlockPriceLine(r, Boolean(findBundleForBlock(r, bundles)))}
                         to={`/activiteit/${r.slug ?? r.id}`}
                       />
                     </li>

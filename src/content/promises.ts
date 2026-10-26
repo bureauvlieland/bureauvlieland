@@ -11,3 +11,15 @@ export const RESPONSE_TIME = {
   /** Volledige zin. */
   sentence: "Binnen 5 werkdagen ontvangt u een voorstel op maat.",
 } as const;
+
+/**
+ * Wat het bureau doet met een aanvraag: de reden om via Bureau Vlieland te
+ * gaan in plaats van rechtstreeks bij de aanbieder. Staat op de catalogus
+ * naast "Prijs in ons voorstel" (besluit 26 oktober 2026).
+ */
+export const BUREAU_PROMISE = {
+  /** Kort, naast een prijs of onder een knop. */
+  short: "Eén aanspreekpunt, één factuur",
+  /** Volledige zin, in een intro of boekblok. */
+  sentence: "Wij checken de beschikbaarheid bij de aanbieders, maken uw programma kloppend en u ontvangt één voorstel en één factuur.",
+} as const;
