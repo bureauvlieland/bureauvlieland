@@ -549,6 +549,7 @@ const AdminRequestDetail = () => {
     partners: { partnerId: string; partnerName: string; items: { id: string; block_name: string }[] }[];
     bureauItemsList: { id: string; block_name: string }[];
   } | null>(null);
+  const [sendOverrideReason, setSendOverrideReason] = useState("");
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // Purchase invoices for profit summary
@@ -1310,15 +1311,24 @@ const AdminRequestDetail = () => {
 
   const handleConfirmSendToPartners = async () => {
     if (!request) return;
+    if (!request.terms_accepted_at && sendOverrideReason.trim().length < 5) {
+      toast.error("Geef een reden op om te versturen zonder ondertekende voorwaarden");
+      return;
+    }
     setIsSendingToPartners(true);
     try {
       const { data, error } = await supabase.functions.invoke("send-items-to-partners", {
-        body: { request_id: request.id, origin: window.location.origin },
+        body: {
+          request_id: request.id,
+          origin: window.location.origin,
+          ...(!request.terms_accepted_at ? { override_reason: sendOverrideReason.trim() } : {}),
+        },
       });
       if (error) throw error;
 
       setSendDialogOpen(false);
       setSendPreview(null);
+      setSendOverrideReason("");
       toast.success(data?.message || "Items naar partners verstuurd");
       fetchRequestData();
     } catch (error) {
@@ -1336,7 +1346,19 @@ const AdminRequestDetail = () => {
     // item al eerder is verzonden (dan is dit een herinnering / herversturen).
     const needsForce = phase !== "klaar_voor_partner";
     const isReminder = phase === "verstuurd";
-    if (phase === "wacht_op_klant") {
+    // Zonder getekende voorwaarden mag het wel, maar niet zonder reden (fase 4,
+    // besluit 3): de reden komt in de geschiedenis van het project.
+    let overrideReason: string | null = null;
+    if (!request.terms_accepted_at && !isReminder) {
+      const reason = window.prompt(
+        `De klant heeft de voorwaarden nog niet ondertekend. Waarom "${item.block_name}" toch naar de partner sturen? (verplicht, komt in de geschiedenis)`,
+      );
+      if (!reason || reason.trim().length < 5) {
+        if (reason !== null) toast.error("Geef een reden van minstens vijf tekens op");
+        return;
+      }
+      overrideReason = reason.trim();
+    } else if (phase === "wacht_op_klant") {
       const ok = window.confirm(
         `De klant heeft het programma nog niet formeel akkoord. Toch "${item.block_name}" naar de partner sturen?`,
       );
@@ -1355,6 +1377,7 @@ const AdminRequestDetail = () => {
           origin: window.location.origin,
           item_ids: [item.id],
           ...(needsForce ? { mode: "force" as const } : {}),
+          ...(overrideReason ? { override_reason: overrideReason } : {}),
         },
       });
       if (error) throw error;
@@ -3810,10 +3833,18 @@ const AdminRequestDetail = () => {
           {request && !request.terms_accepted_at && (
             <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
               <AlertTitle>Voorwaarden nog niet ondertekend</AlertTitle>
-              <AlertDescription>
-                De klant heeft nog niet getekend. Je kunt de partners nu al informeren,
-                maar stuur de klant dan ook een ondertekenverzoek (bij Voltooiingsstatus),
-                zodat de voorwaarden vóór de uitvoering vastliggen.
+              <AlertDescription className="space-y-2">
+                <p>
+                  De klant heeft nog niet getekend. Versturen kan alleen met een reden; die komt in de
+                  geschiedenis van het project. Stuur de klant ook een ondertekenverzoek (bij Voltooiingsstatus).
+                </p>
+                <Textarea
+                  value={sendOverrideReason}
+                  onChange={(e) => setSendOverrideReason(e.target.value)}
+                  placeholder="Reden, bijvoorbeeld: telefonisch akkoord op 26 oktober, handtekening volgt"
+                  rows={2}
+                  maxLength={500}
+                />
               </AlertDescription>
             </Alert>
           )}
@@ -3865,6 +3896,7 @@ const AdminRequestDetail = () => {
               onClick={handleConfirmSendToPartners}
               disabled={
                 isSendingToPartners ||
+                (!request?.terms_accepted_at && sendOverrideReason.trim().length < 5) ||
                 ((sendPreview?.partners.length || 0) === 0 &&
                   (sendPreview?.bureauItemsList?.length || 0) === 0)
               }

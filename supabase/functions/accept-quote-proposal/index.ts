@@ -204,8 +204,11 @@ function generateCustomerConfirmationEmail(
             <li>Bureau Vlieland verwerkt uw akkoord intern</li>
             <li>Daarna zetten wij de aanvragen uit naar de betrokken leveranciers</li>
             <li>U ontvangt per activiteit een update in uw portaal</li>
-            <li>Na alle bevestigingen vult u de factuurgegevens in</li>
-            <li>Daarna is uw boeking compleet</li>
+            ${program.terms_accepted_at
+              ? `<li>U heeft de voorwaarden al ondertekend; uw boeking staat vast onder voorbehoud van de bevestigingen</li>
+            <li>Zodra alle aanbieders bevestigd hebben, is uw boeking definitief</li>`
+              : `<li>Onderteken de voorwaarden in uw portaal; dat kan nu al, onder voorbehoud van de bevestigingen</li>
+            <li>Daarna is uw boeking compleet</li>`}
           </ul>
         </div>
         

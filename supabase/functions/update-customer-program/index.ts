@@ -16,6 +16,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
+import { markReadyForInvoiceAtSigning } from "../_shared/signingCompletion.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
 
 const corsHeaders = {
@@ -1332,11 +1333,16 @@ Deno.serve(async (req) => {
       
       console.log(`Resolved terms_reminder todo for request ${program.id}`);
 
-      // Update completion status to ready_for_invoice and create todo
-      await supabase
-        .from("program_requests")
-        .update({ completion_status: "ready_for_invoice" })
-        .eq("id", program.id);
+      // Alleen als het evenement al geweest is gaat het project nu naar
+      // "klaar voor facturatie"; bij tekenen vooraf (sinds fase 4 van het
+      // klantreisplan de regel) doet auto-close-past-execution dat de dag na
+      // afloop. Zie _shared/signingCompletion.ts.
+      if (markReadyForInvoiceAtSigning(program.selected_dates, new Date().toISOString().slice(0, 10))) {
+        await supabase
+          .from("program_requests")
+          .update({ completion_status: "ready_for_invoice" })
+          .eq("id", program.id);
+      }
 
       // Create invoicing_ready todo
       const { data: existingInvoiceTodo } = await supabase
