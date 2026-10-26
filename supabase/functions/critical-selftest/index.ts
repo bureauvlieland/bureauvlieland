@@ -22,6 +22,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import {
+  SELFTEST_TODO_ENTITY,
+  SELFTEST_TODO_TYPE,
+  buildSelftestTodo,
+  decideSelftestTodoAction,
+} from "../_shared/selftestTodo.ts";
 import { loadReconciliationInputs } from "../_shared/commissionReconciliationData.ts";
 import { getCommissionRate } from "../_shared/commissionRates.ts";
 import {
@@ -524,13 +530,23 @@ Deno.serve(async (req) => {
   };
 
   const cleanup = async () => {
-    for (const id of cleanupIds) {
+    // Vangnet: eerdere zelftest-restanten meenemen in dezelfde opruimronde.
+    const { data: leftovers } = await admin
+      .from("program_requests")
+      .select("id")
+      .eq("customer_email", SELFTEST_EMAIL);
+    const ids = [...new Set([...cleanupIds, ...(leftovers ?? []).map((r) => r.id as string)])];
+
+    for (const id of ids) {
+      // Eerst de Werkbank-taken die de insert-trigger voor deze aanvraag
+      // aanmaakte. Dit moet vóór het verwijderen van de aanvraag: de FK staat
+      // op ON DELETE SET NULL, waarna de taak als wees niet meer te herleiden is.
+      await admin.from("admin_todos").delete().eq("related_request_id", id);
+      await admin.from("admin_todos").delete().eq("auto_entity_id", id);
       await admin.from("program_request_items").delete().eq("request_id", id);
       await admin.from("program_request_history").delete().eq("request_id", id);
       await admin.from("program_requests").delete().eq("id", id);
     }
-    // Vangnet: eerdere zelftest-restanten
-    await admin.from("program_requests").delete().eq("customer_email", SELFTEST_EMAIL);
     cleanupIds.length = 0;
   };
 
@@ -625,29 +641,52 @@ Deno.serve(async (req) => {
         });
         if (send.ok) alertSent = true;
         else alertSkipped = `mail faalde: ${send.error}`;
-
-        // Werkbank-taak (1 per dag)
-        const autoEntityId = `selftest-${isoDate(0)}`;
-        const { data: existingTodo } = await admin
-          .from("admin_todos")
-          .select("id")
-          .eq("auto_type", "critical_selftest_failure")
-          .eq("auto_entity_id", autoEntityId)
-          .neq("status", "done")
-          .maybeSingle();
-        if (!existingTodo) {
-          await admin.from("admin_todos").insert({
-            title: `Kritieke zelftest faalt: ${failed.map((f) => f.label).join(", ")}`,
-            description: failed
-              .map((f) => `• ${f.label}: ${f.detail}\n  Fix: ${f.fixHint ?? "—"}`)
-              .join("\n"),
-            priority: "high",
-            status: "todo",
-            auto_type: "critical_selftest_failure",
-            auto_entity_id: autoEntityId,
-          });
-        }
       }
+    }
+
+    // ---------------------------------------------------------- werkbank-taak
+    // Eén taak met vaste sleutel, los van de 12-uurs mail-dedupe: bij een
+    // aanhoudende fout wordt de open taak bijgewerkt (geen stapel per dag),
+    // bij herstel wordt hij automatisch afgerond.
+    let todoAction: string = "none";
+    if (failed.length > 0) {
+      const draft = buildSelftestTodo(failed);
+      const { data: existingTodo } = await admin
+        .from("admin_todos")
+        .select("id, title, status")
+        .eq("auto_type", SELFTEST_TODO_TYPE)
+        .eq("auto_entity_id", SELFTEST_TODO_ENTITY)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const action = decideSelftestTodoAction(existingTodo ?? null, draft);
+      todoAction = action.kind;
+      if (action.kind === "update") {
+        await admin
+          .from("admin_todos")
+          .update({ title: draft.title, description: draft.description, priority: "high" })
+          .eq("id", action.id);
+      } else if (action.kind === "insert") {
+        await admin.from("admin_todos").insert({
+          ...draft,
+          priority: "high",
+          status: "todo",
+          auto_type: SELFTEST_TODO_TYPE,
+          auto_entity_id: SELFTEST_TODO_ENTITY,
+        });
+      }
+    } else {
+      const { data: closedTodos } = await admin
+        .from("admin_todos")
+        .update({
+          status: "done",
+          completed_at: new Date().toISOString(),
+          completion_reason: "Zelftest slaagt weer",
+        })
+        .eq("auto_type", SELFTEST_TODO_TYPE)
+        .in("status", ["todo", "in_progress"])
+        .select("id");
+      if (closedTodos?.length) todoAction = "closed";
     }
 
     if (runId) {
@@ -664,7 +703,7 @@ Deno.serve(async (req) => {
         .eq("id", runId);
     }
 
-    return json({ ok: true, runId, status, checks, autofixes, alertSent, alertSkipped });
+    return json({ ok: true, runId, status, checks, autofixes, alertSent, alertSkipped, todoAction });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[critical-selftest] failed:", msg);

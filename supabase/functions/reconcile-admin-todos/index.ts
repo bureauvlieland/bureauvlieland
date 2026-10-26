@@ -5,6 +5,11 @@ import {
   fetchLastContactByProject,
   REMINDER_TYPES_GUARDED_BY_COOLDOWN,
 } from "../_shared/project-activity.ts";
+import {
+  REQUEST_BOUND_AUTO_TYPES,
+  isUuid,
+  requestIdForTodo,
+} from "../_shared/todoRequestLink.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,9 +59,6 @@ Deno.serve(async (req) => {
     const purchaseInvoiceIds = new Set<string>();
     const batchIds = new Set<string>();
 
-    const isUuid = (s: string | null | undefined) =>
-      !!s && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-
     for (const t of list) {
       if (t.related_request_id && isUuid(t.related_request_id)) {
         requestIds.add(t.related_request_id);
@@ -79,19 +81,7 @@ Deno.serve(async (req) => {
         type === "quote_expired_partner"
       ) {
         if (isUuid(eid)) quoteIds.add(eid);
-      } else if (
-        type === "request_no_response" ||
-        type === "quote_pending_customer" ||
-        type === "new_request_received" ||
-        type === "new_program_request" ||
-        type === "new_accommodation_request" ||
-        type === "all_partners_responded" ||
-        type === "customer_inputs_missing" ||
-        type === "customer_date_change_partner_notify" ||
-        type === "customer_cancellation" ||
-        type === "send_items_to_partners" ||
-        type === "invoicing_ready"
-      ) {
+      } else if (REQUEST_BOUND_AUTO_TYPES.has(type)) {
         if (isUuid(eid)) requestIds.add(eid);
       } else if (
         type === "post_execution_invoice_check" ||
@@ -306,11 +296,15 @@ Deno.serve(async (req) => {
     for (const t of list) {
       const type = t.auto_type ?? "";
       const eid = t.auto_entity_id;
-      const req =
-        t.related_request_id ? requestMap.get(t.related_request_id) : null;
+      // related_request_id staat op ON DELETE SET NULL: na het verwijderen van
+      // een project (bijv. de ZELFTEST-aanvraag) blijft alleen auto_entity_id
+      // over. requestIdForTodo valt daar voor project-gebonden types op terug,
+      // zodat zo'n wees hier als "project_deleted" wordt gesloten.
+      const reqId = requestIdForTodo(t);
+      const req = reqId ? requestMap.get(reqId) : null;
 
       // Universal: project deleted or cancelled → close
-      if (t.related_request_id && isUuid(t.related_request_id) && !req) {
+      if (reqId && !req) {
         markClosed(t.id, "project_deleted");
         continue;
       }
