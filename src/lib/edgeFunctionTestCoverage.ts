@@ -36,6 +36,7 @@ export interface EdgeFunctionCoverage {
  * end-to-end afdekt.
  */
 const TESTED: Record<string, "deno" | "e2e"> = {
+  "send-terms-request": "deno",
   "auto-close-past-execution": "deno",
   "cancel-program-request": "deno",
   "flag-missing-partner-invoices": "deno",
@@ -115,6 +116,7 @@ const REGISTRY: Row[] = [
   { name: "send-review-reminder", category: "customer_email", critical: false },
   { name: "send-customer-accommodation-message", category: "customer_email", critical: true },
   { name: "send-arrival-reminder", category: "customer_email", critical: true },
+  { name: "send-terms-request", category: "customer_email", critical: true },
   { name: "send-guest-details-reminder", category: "customer_email", critical: true },
   { name: "send-ticket-email", category: "customer_email", critical: true },
   { name: "resend-customer-link", category: "customer_email", critical: false },

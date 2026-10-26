@@ -8,7 +8,7 @@ import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
 import { isPartnerInvoicingReleased } from "../_shared/partnerInvoicing.ts";
-import { allItemsConfirmedForTerms, pickTermsMail, TERMS_MAIL_TYPES, type TermsItemLike } from "../_shared/customerTermsReminder.ts";
+import { allItemsConfirmedForTerms, buildTermsCallTodo, buildTermsMailCopy, pickTermsMail, termsStageFor, TERMS_MAIL_TYPES, type TermsItemLike } from "../_shared/customerTermsReminder.ts";
 import { isBureauItem, type BureauItemLike } from "../_shared/bureau-item.ts";
 import { isAftersalesDue, type AftersalesItemLike, type AftersalesProgramLike } from "../_shared/aftersalesEligibility.ts";
 
@@ -1683,23 +1683,25 @@ Deno.serve(async (req) => {
 
     // =============================================
     // CHECK 13: Klant heeft de voorwaarden nog niet getekend
-    // Alles is bevestigd maar terms_accepted_at ontbreekt → automatische mail
-    // aan de klant (eerste verzoek, T-14, T-7, T-3). Vanaf T-3 een taak met
-    // hoge prioriteit om de klant te bellen.
+    // Akkoord gegeven maar terms_accepted_at ontbreekt, of een voorstel dat al
+    // zeven dagen zonder akkoord staat → automatische mail aan de klant (eerste
+    // verzoek, T-14, T-7, T-3). Vanaf T-3 een taak met hoge prioriteit om de
+    // klant te bellen. Partnerbevestigingen zijn geen voorwaarde meer (de klant
+    // tekent dan onder voorbehoud); zie _shared/customerTermsReminder.ts.
     // =============================================
     {
       const { data: unsignedPrograms, error: unsignedError } = await supabase
         .from("program_requests")
         .select(`
           id, customer_name, customer_company, customer_email, customer_token,
-          reference_number, selected_dates, quote_status, completion_status,
+          reference_number, selected_dates, quote_status, quote_sent_at, quote_valid_until, completion_status,
           billing_company_name, billing_address_street, billing_address_postal, billing_address_city,
           items:program_request_items(id, status, block_type, block_category, provider_id, day_index, item_quote_status)
         `)
         .eq("status", "active")
         .is("cancelled_at", null)
         .is("terms_accepted_at", null)
-        .in("quote_status", ["akkoord_ontvangen", "definitief_bevestigd"])
+        .in("quote_status", ["offerte_verstuurd", "akkoord_ontvangen", "definitief_bevestigd"])
         .not("completion_status", "in", "(ready_for_invoice,partially_invoiced,fully_invoiced,completed)");
 
       if (unsignedError) {
@@ -1723,8 +1725,10 @@ Deno.serve(async (req) => {
 
         for (const prog of unsignedPrograms || []) {
           if (isSnoozed(prog.id)) { totalSkipped++; continue; }
+          const termsStage = termsStageFor(prog, now);
+          if (!termsStage) continue;
           const items = (prog.items as Array<TermsItemLike & BureauItemLike>) || [];
-          if (!allItemsConfirmedForTerms(items, isBureauItem)) continue;
+          const allConfirmed = allItemsConfirmedForTerms(items, isBureauItem);
 
           const dates = Array.isArray(prog.selected_dates)
             ? (prog.selected_dates as unknown[]).map((d) => String(d).slice(0, 10)).sort()
@@ -1737,12 +1741,17 @@ Deno.serve(async (req) => {
           if (daysUntil < 0) continue;
 
           const customerLabel = prog.customer_company || prog.customer_name;
+          const portalUrl = `${portalBase}/mijn-programma/${prog.customer_token}?view=akkoord`;
 
           // Vanaf T-3: bellen. Hergebruik de terms_reminder-taak (sluit vanzelf
           // bij ondertekening of vrijgave door het bureau).
           if (daysUntil <= 3) {
-            const callTitle = `Bel ${customerLabel}: voorwaarden nog niet getekend (event over ${daysUntil} dag(en))`;
-            const callDescription = `Alle onderdelen zijn bevestigd, maar de klant heeft de algemene voorwaarden nog niet ondertekend. Zonder handtekening kunnen partners pas factureren nadat het project is vrijgegeven. Bel de klant en vraag te tekenen via ${portalBase}/mijn-programma/${prog.customer_token}.`;
+            const { title: callTitle, description: callDescription } = buildTermsCallTodo({
+              stage: termsStage,
+              customerLabel,
+              daysUntil,
+              portalUrl,
+            });
             const { data: openReminder } = await supabase
               .from("admin_todos")
               .select("id, priority")
@@ -1783,35 +1792,24 @@ Deno.serve(async (req) => {
             !prog.billing_address_street ||
             !prog.billing_address_postal ||
             !prog.billing_address_city;
-          const portalUrl = `${portalBase}/mijn-programma/${prog.customer_token}`;
-          const referenceNumber = prog.reference_number || "";
-          const isFirst = mailType === "customer_terms_request";
-          const subject = isFirst
-            ? `Uw programma is bevestigd: onderteken de voorwaarden${referenceNumber ? ` (${referenceNumber})` : ""}`
-            : `Herinnering: onderteken de voorwaarden voor uw programma${referenceNumber ? ` (${referenceNumber})` : ""}`;
-          const intro = isFirst
-            ? "Goed nieuws: alle onderdelen van uw programma op Vlieland zijn bevestigd."
-            : `Over ${daysUntil === 0 ? "enkele uren" : `${daysUntil} dag(en)`} begint uw programma op Vlieland. We missen nog uw handtekening onder de algemene voorwaarden.`;
+          const copy = buildTermsMailCopy({
+            stage: termsStage,
+            mailType,
+            customerName: prog.customer_name || customerLabel,
+            referenceNumber: prog.reference_number || "",
+            daysUntil,
+            portalUrl,
+            billingMissing,
+            allConfirmed,
+          });
 
           await sendReminderEmail({
             templateId: mailType,
             recipientEmail: prog.customer_email,
             recipientName: prog.customer_name || customerLabel,
-            subject,
-            variables: {
-              customer_name: prog.customer_name || customerLabel,
-              reference_number: referenceNumber,
-              first_date: firstDate,
-              days_until: String(daysUntil),
-              portal_url: portalUrl,
-              billing_missing: billingMissing ? "true" : "",
-            },
-            fallbackHtml: `<p>Beste ${prog.customer_name || customerLabel},</p>
-<p>${intro}</p>
-<p>Wilt u het programma afronden door de algemene voorwaarden te ondertekenen${billingMissing ? " en uw factuurgegevens in te vullen" : ""}? Dat kost een minuut en is nodig zodat wij en onze partners alles correct kunnen afhandelen en factureren.</p>
-<p><a href="${portalUrl}" style="display:inline-block;padding:10px 18px;background:#1a365d;color:#ffffff;text-decoration:none;border-radius:6px;">Bekijk en onderteken uw programma</a></p>
-<p>Heeft u vragen of klopt er iets niet? Beantwoord gewoon deze mail.</p>
-<p>Met vriendelijke groet,<br/>Bureau Vlieland</p>`,
+            subject: copy.subject,
+            variables: { ...copy.variables, first_date: firstDate },
+            fallbackHtml: copy.html,
             logExtra: {
               email_type: mailType,
               related_request_id: prog.id,
