@@ -375,7 +375,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
               description: preview,
               action: {
                 label: "Bekijken",
-                onClick: () => navigate("/admin/berichten?tab=chat"),
+                onClick: () => navigate("/admin/berichten"),
               },
             });
           }

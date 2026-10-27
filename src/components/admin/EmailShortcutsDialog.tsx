@@ -6,10 +6,11 @@ const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: "Enter", label: "Gesprek openen" },
   { keys: "Esc", label: "Terug naar de lijst" },
   { keys: "r", label: "Beantwoorden" },
+  { keys: "m", label: "Gesprek afgehandeld (e-mail)" },
+  { keys: "u", label: "Gesprek weer open zetten (e-mail)" },
   { keys: "e", label: "Gesprek archiveren / terughalen" },
-  { keys: "m", label: "Markeer als beantwoord" },
-  { keys: "u", label: "Markeer als onbeantwoord" },
-  { keys: "a", label: "Archief tonen aan/uit" },
+  { keys: "1 / 2 / 3", label: "Te beantwoorden / Alle gesprekken / Archief" },
+  { keys: "a", label: "Archief aan/uit" },
   { keys: "?", label: "Dit overzicht" },
 ];
 

@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SentEmailLog } from "@/components/admin/messages/SentEmailLog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +65,14 @@ const templateCategories: Record<string, string> = {
 
 const AdminEmailTemplates = () => {
   const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("tab") === "verzendlog" ? "verzendlog" : "templates";
+  const setTab = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === "verzendlog") next.set("tab", "verzendlog");
+    else next.delete("tab");
+    setParams(next, { replace: true });
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -144,20 +155,34 @@ const AdminEmailTemplates = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Email Templates</h1>
+              <h1 className="text-2xl font-bold text-slate-900">E-mail: templates en verzendlog</h1>
               <p className="text-slate-500 mt-1">
-                Beheer de inhoud van alle transactionele emails
+                De inhoud van alle automatische e-mails, en wat er verstuurd is
               </p>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => refetch()}
-              disabled={isRefetching}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-              Vernieuwen
-            </Button>
+            {tab === "templates" && (
+              <Button
+                variant="outline"
+                onClick={() => refetch()}
+                disabled={isRefetching}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+                Vernieuwen
+              </Button>
+            )}
           </div>
+
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="verzendlog">Verzendlog</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {tab === "verzendlog" ? (
+            <SentEmailLog />
+          ) : (
+          <>
 
           {/* Search */}
           <Card>
@@ -266,6 +291,8 @@ const AdminEmailTemplates = () => {
                   </div>
                 ))}
             </div>
+          )}
+          </>
           )}
         </div>
       </AdminLayout>

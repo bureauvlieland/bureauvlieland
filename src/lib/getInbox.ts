@@ -67,7 +67,7 @@ export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promis
       count: e.count,
       since: e.oldestAt,
       label: `E-mail van ${e.contactName || "onbekende afzender"}`,
-      href: `/admin/berichten?tab=inbox&inbox=${e.firstUnansweredId}`,
+      href: `/admin/berichten?inbox=${e.firstUnansweredId}`,
     });
   }
   for (const c of openConversations.chats) {
@@ -78,7 +78,7 @@ export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promis
       count: c.unreadCount,
       since: c.lastMessageAt,
       label: `Chat van ${c.visitorName || "onbekend"}`,
-      href: `/admin/berichten?tab=chat&conversation=${c.conversationId}`,
+      href: `/admin/berichten?gesprek=chat:${c.conversationId}`,
     });
   }
 

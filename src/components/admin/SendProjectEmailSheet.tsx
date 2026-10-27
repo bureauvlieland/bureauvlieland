@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ResponsiveSheetContent } from "@/components/system/ResponsiveSheetContent";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -324,7 +324,7 @@ export function SendProjectEmailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-xl overflow-y-auto">
+      <ResponsiveSheetContent className="sm:max-w-xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
@@ -622,7 +622,7 @@ export function SendProjectEmailSheet({
             </Button>
           </div>
         </form>
-      </SheetContent>
+      </ResponsiveSheetContent>
     </Sheet>
   );
 }

@@ -2,7 +2,7 @@
 
 Status: onderzoek en plan 26 oktober 2026. Erwin heeft op 26 oktober ja
 gezegd op alle vier de beslissingen onderaan. Fase 0 is op 26 oktober gebouwd,
-fase 1 op 27 oktober (zie "Gebouwd" onderaan); fase 2 en 3 volgen.
+fase 1 en 2 op 27 oktober (zie "Gebouwd" onderaan); fase 3 volgt.
 
 Vraag van Erwin: "Dit overzicht is ook niet erg intuïtief. Dat moet beter
 kunnen." Dit document legt eerst vast wat het scherm nu doet en wat de
@@ -319,3 +319,39 @@ dossier.
   `reconcile-admin-todos` kent het type niet meer. Migratie
   `20261027120000_berichtencentrum-todo-afschaffen.sql` sluit de drie nog
   openstaande exemplaren.
+
+### Fase 2 (27 oktober 2026)
+
+- `AdminMessages.tsx` is een dunne pagina: kop, drie weergaven (Te
+  beantwoorden, Alle gesprekken, Archief) als tabbladen met teller, het
+  kanaal als filterchips (E-mail, Chat klant, Chat partner, WhatsApp,
+  Website), links de lijst, rechts het gesprek. De URL draagt weergave,
+  kanaal en gesprek (`?weergave=&kanaal=&gesprek=`); oude links met
+  `inbox=` en `conversation=` en de oude route `/admin/chat` blijven werken.
+- Eén lijst voor e-mail en chat: `src/lib/conversationList.ts` (zuiver, 15
+  tests) maakt van e-mailgesprekken en chatgesprekken dezelfde rij: wie en
+  met welke rol, dossier, onderwerp of adres, wachttijd rechts, status als
+  `Pill`, ongelezen vet. "Te beantwoorden" sorteert op wachttijd, de andere
+  weergaven op laatste activiteit. Pre-sales is geen tabblad meer: chats
+  zonder dossier staan gewoon in de lijst onder hun kanaal.
+- `EmailPanel.tsx` (1270 regels) en `ChatPanel.tsx` (607 regels) zijn
+  gesplitst: data en acties in `useEmailThreads` en `useAdminChat`
+  (met archiefvlag en wachttijd per gesprek), de weergaven in
+  `EmailThreadView` en `ChatConversationView`, de lijst in
+  `ConversationList`, de opbouw van e-mailgesprekken in
+  `src/lib/emailThreads.ts`.
+- Gesprekskop in de stijl van `PortalHead`: dossierreferentie als eyebrow,
+  de naam als kop, statuspill, feiten (aantal berichten, datum) en de knop
+  naar het dossier; de overige acties in één `···`-menu. Onderaan één
+  primaire knop "Beantwoorden" met "Afgehandeld" en "Archiveer" ernaast.
+  De composer komt op een telefoon van onderen (`ResponsiveSheetContent`,
+  ook voor het projectdossier).
+- Chatweergave op dezelfde leest, met de chat-aan/uit-schakelaar in de
+  paginakop en "Aanvraag aanmaken" en "Opslaan bij project" in het menu.
+- Verzonden e-mails is "Verzendlog" op `/admin/berichten/templates`
+  (tabblad naast de templates, `SentEmailLog`); de oude URL
+  `?tab=verzonden` stuurt door. Templates en verzendlog staan in het
+  `···`-menu van het Berichtencentrum.
+- Sneltoetsen: j/k, Enter, Esc, r, m, u, e, 1/2/3 voor de weergaven, a, ?.
+- Kleuren en chips op de tokens en `Pill`; de losse paletkleuren uit
+  `EmailPanel` en `ChatPanel` zijn weg.

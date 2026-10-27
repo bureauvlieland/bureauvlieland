@@ -5,8 +5,11 @@ import type { ChatConversation, ChatMessage } from "./useChat";
 
 export type ChatStatusFilter = "waiting" | "active" | "closed";
 
+/** Een gesprek met de archiefvlag: eigen archived_at óf een gearchiveerd dossier. */
+export type AdminChatConversation = ChatConversation & { archived: boolean; archived_at?: string | null };
+
 export function useAdminChat() {
-  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [conversations, setConversations] = useState<AdminChatConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -14,15 +17,15 @@ export function useAdminChat() {
   const [statusFilter, setStatusFilter] = useState<ChatStatusFilter>("waiting");
 
   // Load conversations (alleen die met minimaal 1 bericht — voorkomt lege chats
-  // die ontstaan zodra een klant/partner het chatvenster opent zonder te typen)
-  const [showArchived, setShowArchived] = useState(false);
-
+  // die ontstaan zodra een klant/partner het chatvenster opent zonder te typen).
+  // Gearchiveerde gesprekken komen mee met archived = true; de lijst in het
+  // Berichtencentrum kiest zelf of ze getoond worden (weergave "Archief").
   const loadConversations = useCallback(async () => {
     const { data } = await supabase
       .from("chat_conversations")
       .select("*, chat_messages!inner(id)")
       .order("last_message_at", { ascending: false })
-      .limit(50);
+      .limit(100);
     if (!data) return;
 
     const seen = new Set<string>();
@@ -59,18 +62,17 @@ export function useAdminChat() {
       (accs ?? []).forEach((a: any) => archivedAccommodations.add(a.id));
     }
 
-    const filtered = unique.filter((c) => {
-      if (!showArchived) {
-        if ((c as any).archived_at) return false;
-        if (c.request_id && archivedPrograms.has(c.request_id)) return false;
-        const accId = (c as any).accommodation_request_id as string | null | undefined;
-        if (accId && archivedAccommodations.has(accId)) return false;
-      }
-      return true;
+    const flagged: AdminChatConversation[] = unique.map((c) => {
+      const accId = c.accommodation_request_id;
+      const archived =
+        !!c.archived_at ||
+        (!!c.request_id && archivedPrograms.has(c.request_id)) ||
+        (!!accId && archivedAccommodations.has(accId));
+      return { ...c, archived };
     });
 
-    setConversations(filtered);
-  }, [showArchived]);
+    setConversations(flagged);
+  }, []);
 
 
 
@@ -167,23 +169,28 @@ export function useAdminChat() {
   // Unread count – count distinct conversations with unread visitor/customer/partner messages
   const [unreadConversationIds, setUnreadConversationIds] = useState<Set<string>>(new Set());
   const [unreadByConversation, setUnreadByConversation] = useState<Map<string, number>>(new Map());
+  /** oudste ongelezen bericht per gesprek: daarop is "wacht 2 dagen" gebaseerd */
+  const [unreadSinceByConversation, setUnreadSinceByConversation] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const fetchUnread = async () => {
       const { data } = await supabase
         .from("chat_messages")
-        .select("conversation_id")
+        .select("conversation_id, created_at")
         .neq("sender_type", "admin")
         .is("read_at", null);
       const visibleIds = new Set(conversations.map((c) => c.id));
       const counts = new Map<string, number>();
-      (data || []).forEach((r: { conversation_id: string }) => {
-        // Tel alleen mee als de conversatie nog actief is (gearchiveerde
-        // projecten zijn al uit `conversations` gefilterd).
+      const since = new Map<string, string>();
+      (data || []).forEach((r: { conversation_id: string; created_at: string }) => {
+        // Tel alleen mee als de conversatie in de lijst staat.
         if (visibleIds.size > 0 && !visibleIds.has(r.conversation_id)) return;
         counts.set(r.conversation_id, (counts.get(r.conversation_id) ?? 0) + 1);
+        const cur = since.get(r.conversation_id);
+        if (!cur || r.created_at < cur) since.set(r.conversation_id, r.created_at);
       });
       setUnreadByConversation(counts);
+      setUnreadSinceByConversation(since);
       const ids = new Set(counts.keys());
       setUnreadConversationIds(ids);
       setUnreadCount(ids.size);
@@ -344,11 +351,10 @@ export function useAdminChat() {
     unreadCount,
     unreadConversationIds,
     unreadByConversation,
+    unreadSinceByConversation,
     isOnline,
     statusFilter,
     setStatusFilter,
-    showArchived,
-    setShowArchived,
     updatePresence,
     sendMessage,
     closeConversation,

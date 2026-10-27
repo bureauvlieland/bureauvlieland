@@ -29,6 +29,20 @@ export const DERIVED_STATUS_TONE: Record<DerivedStatus, string> = {
   geannuleerd: "bg-red-100 text-red-800",
 };
 
+/** Toon van de `Pill` per status (ontwerpsysteem): zelfde betekenis als de klassen hierboven. */
+export const DERIVED_STATUS_PILL_TONE: Record<
+  DerivedStatus,
+  "neutral" | "info" | "success" | "warning" | "danger" | "purple" | "brand"
+> = {
+  concept: "neutral",
+  offerte_verstuurd: "info",
+  akkoord_ontvangen: "warning",
+  av_getekend: "success",
+  facturatie: "purple",
+  afgerond: "success",
+  geannuleerd: "danger",
+};
+
 export interface DerivedStatusInput {
   program_status: string | null;
   accommodation_status: string | null;
