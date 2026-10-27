@@ -1,606 +1,290 @@
-import { useState, useMemo } from "react";
-import { usePresalesUnread } from "@/hooks/usePresalesUnread";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { Link, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { Mail } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/system";
+import { useEmailThreads } from "@/hooks/useEmailThreads";
+import { useAdminChat } from "@/hooks/useAdminChat";
+import { useConversationProjects } from "@/hooks/useConversationProjects";
+import { MessagesWorkspace } from "@/components/admin/messages/MessagesWorkspace";
+import { EmailThreadView } from "@/components/admin/messages/EmailThreadView";
+import { ChatConversationView } from "@/components/admin/messages/ChatConversationView";
+import { EmailShortcutsDialog } from "@/components/admin/EmailShortcutsDialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Search,
-  Mail,
-  RefreshCw,
-  Calendar,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  ExternalLink,
-  User,
-  Send,
-  RotateCcw,
-  Settings,
-  Inbox,
-  MessageCircle,
-  Sparkles,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
-import { InboxToAnswer } from "@/components/admin/InboxToAnswer";
-import { ChatPanel } from "@/components/admin/ChatPanel";
-import { EmailPanel } from "@/components/admin/EmailPanel";
-import { useAdminInbox } from "@/hooks/useAdminInbox";
+  CHANNELS,
+  chatToItem,
+  countByView,
+  emailGroupToItem,
+  filterConversations,
+  parseConversationParam,
+  viewFor,
+  type ChannelFilter,
+  type ConversationView,
+} from "@/lib/conversationList";
 
-
-interface EmailLog {
-  id: string;
-  email_type: string;
-  subject: string;
-  recipient_email: string;
-  recipient_name: string | null;
-  related_request_id: string | null;
-  related_accommodation_id: string | null;
-  related_partner_id: string | null;
-  related_item_id: string | null;
-  status: string;
-  error_message: string | null;
-  sent_by: string | null;
-  created_at: string;
-  sent_at: string | null;
+function parseView(v: string | null): ConversationView {
+  return v === "all" || v === "archive" ? v : "open";
+}
+function parseChannel(v: string | null): ChannelFilter {
+  return (CHANNELS as string[]).includes(v ?? "") ? (v as ChannelFilter) : "all";
 }
 
-// Email type labels for display
-const emailTypeLabels: Record<string, { label: string; category: string }> = {
-  program_request_bureau: { label: "Programma aanvraag (Bureau)", category: "Programma" },
-  program_request_customer: { label: "Programma aanvraag (Klant)", category: "Programma" },
-  program_request_partner: { label: "Programma aanvraag (Partner)", category: "Programma" },
-  quote_request_bureau: { label: "Offerte aanvraag (Bureau)", category: "Offerte" },
-  quote_request_customer: { label: "Offerte aanvraag (Klant)", category: "Offerte" },
-  status_confirmed: { label: "Status: Bevestigd", category: "Status" },
-  status_unavailable: { label: "Status: Niet beschikbaar", category: "Status" },
-  status_alternative: { label: "Status: Alternatief", category: "Status" },
-  cancellation_customer: { label: "Annulering (Klant)", category: "Annulering" },
-  cancellation_partner: { label: "Annulering (Partner)", category: "Annulering" },
-  partner_invitation: { label: "Partner uitnodiging", category: "Partner" },
-  accommodation_request_customer: { label: "Logies aanvraag (Klant)", category: "Logies" },
-  accommodation_quote_request_partner: { label: "Logies offerteaanvraag (Partner)", category: "Logies" },
-  accommodation_quote_notification: { label: "Logies offerte notificatie", category: "Logies" },
-  accommodation_selected_partner: { label: "Logies gekozen (Partner)", category: "Logies" },
-  accommodation_selected_customer: { label: "Logies gekozen (Klant)", category: "Logies" },
-};
-
-const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
-  sent: { icon: <CheckCircle2 className="h-4 w-4" />, color: "bg-green-100 text-green-800", label: "Verzonden" },
-  failed: { icon: <XCircle className="h-4 w-4" />, color: "bg-red-100 text-red-800", label: "Mislukt" },
-  pending: { icon: <Clock className="h-4 w-4" />, color: "bg-amber-100 text-amber-800", label: "In wachtrij" },
-};
-
+/**
+ * Berichtencentrum (fase 2): één lijst voor e-mail en chat met drie
+ * weergaven (Te beantwoorden, Alle gesprekken, Archief) en het kanaal als
+ * filter. Rechts het gesprek: e-mail als tijdlijn met composer, chat als
+ * bubbels. De URL draagt weergave, kanaal en het open gesprek
+ * (`?weergave=&kanaal=&gesprek=`); oude links met `inbox=` en
+ * `conversation=` blijven werken.
+ */
 const AdminMessages = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const activeTab =
-    tabParam === "verzonden"
-      ? "verzonden"
-      : tabParam === "chat"
-        ? "chat"
-        : tabParam === "presales"
-          ? "presales"
-          : "inbox";
-  const highlightedInboxId = searchParams.get("inbox");
-  const inboxFilter = searchParams.get("filter");
-  const initialConversationId = searchParams.get("conversation");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [resendDialogOpen, setResendDialogOpen] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
+  const [params, setParams] = useSearchParams();
+  const view = parseView(params.get("weergave"));
+  const channel = parseChannel(params.get("kanaal"));
+  const selectedId = parseConversationParam(params.get("gesprek"));
+  const legacyTab = params.get("tab");
+  const legacyInbox = params.get("inbox");
+  const legacyConversation = params.get("conversation");
 
-  const { data: inboxData } = useAdminInbox();
-  const { data: unansweredEmailCount = 0 } = useQuery({
-    queryKey: ["inbox-unanswered-count"],
-    queryFn: async () => {
-      // Match EmailPanel visibility: negeer gearchiveerde e-mails én e-mails
-      // gekoppeld aan een gearchiveerd project/logies-aanvraag. Zonder deze
-      // filters wees de tab-badge naar berichten die in de lijst verborgen zijn
-      // (staan pas in beeld met "Toon archief" aan).
-      const { data, error } = await supabase
-        .from("project_communications")
-        .select("id, request_id, accommodation_id")
-        .eq("direction", "inbound")
-        // Zelfde filters als EmailPanel: alleen e-mailtypes (geen telefoon/notities)
-        // en het 90-dagenvenster, anders blijft er een badge staan voor items
-        // die nooit in de lijst verschijnen.
-        .in("communication_type", ["email", "email_in", "email_out"])
-        .gte("communication_date", new Date(Date.now() - 90 * 86400000).toISOString())
-        .is("answered_at", null)
-        .is("archived_at", null);
-      if (error) throw error;
-      const rows = data ?? [];
-      const reqIds = Array.from(new Set(rows.map((r) => r.request_id).filter(Boolean))) as string[];
-      const accIds = Array.from(new Set(rows.map((r) => r.accommodation_id).filter(Boolean))) as string[];
+  const update = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null || v === "") next.delete(k);
+      else next.set(k, v);
+    }
+    setParams(next, { replace: true });
+  };
+  const select = (id: string | null) => update({ gesprek: id, inbox: null, conversation: null, tab: null });
+  const setView = (v: ConversationView) => update({ weergave: v === "open" ? null : v });
+  const setChannel = (c: ChannelFilter) => update({ kanaal: c === "all" ? null : c });
 
-      const [reqRes, accRes] = await Promise.all([
-        reqIds.length
-          ? supabase.from("program_requests").select("id").in("id", reqIds).not("archived_at", "is", null)
-          : Promise.resolve({ data: [] as { id: string }[], error: null }),
-        accIds.length
-          ? supabase.from("accommodation_requests").select("id").in("id", accIds).not("archived_at", "is", null)
-          : Promise.resolve({ data: [] as { id: string }[], error: null }),
-      ]);
-      const archivedReq = new Set((reqRes.data ?? []).map((r: any) => r.id));
-      const archivedAcc = new Set((accRes.data ?? []).map((r: any) => r.id));
-      return rows.filter((r) => {
-        if (r.request_id && archivedReq.has(r.request_id)) return false;
-        if (r.accommodation_id && archivedAcc.has(r.accommodation_id)) return false;
-        return true;
-      }).length;
-    },
-    refetchInterval: 60_000,
-  });
-  const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
-  const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
-  const presales = usePresalesUnread();
-  const presalesUnread = presales.messages;
-  // Trek per bucket af in dezelfde eenheid: chat = per gesprek, live chat = per bericht.
-  const chatTotalUnread =
-    Math.max(0, chatUnreadConversations - presales.nonWidgetConversations) +
-    Math.max(0, liveChatUnreadTotal - presales.widgetMessages);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const chatComposerRef = useRef<HTMLTextAreaElement>(null);
+  /** Een gesprek uit een link openen we in de weergave waar het thuishoort. */
+  const alignViewFor = useRef<string | null>(selectedId ?? (legacyInbox || legacyConversation ? "pending" : null));
 
-  const { data: emails = [], isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ["admin-email-logs"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("email_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500);
-
-      if (error) throw error;
-      return data as EmailLog[];
+  const email = useEmailThreads({
+    onThreadGone: (key) => {
+      if (selectedId === `email:${key}`) select(null);
     },
   });
+  const chat = useAdminChat();
+  const projectRefs = useConversationProjects(chat.conversations);
 
-  const filteredEmails = useMemo(() => {
-    return emails.filter((email) => {
-      // Type filter
-      if (typeFilter !== "all" && email.email_type !== typeFilter) {
-        return false;
+  // Oude links: ?inbox=<bericht-id> en ?conversation=<gesprek-id>.
+  useEffect(() => {
+    if (legacyConversation) {
+      alignViewFor.current = `chat:${legacyConversation}`;
+      select(`chat:${legacyConversation}`);
+      return;
+    }
+    if (legacyInbox && email.groups.length) {
+      const g = email.groups.find((grp) => grp.items.some((it) => it.id === `c:${legacyInbox}` || it.id === legacyInbox));
+      if (g) {
+        alignViewFor.current = `email:${g.key}`;
+        select(`email:${g.key}`);
       }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legacyInbox, legacyConversation, email.groups]);
 
-      // Status filter
-      if (statusFilter !== "all" && email.status !== statusFilter) {
-        return false;
+  // Het actieve chatgesprek volgt de selectie; de hook laadt de berichten en
+  // zet ze op gelezen.
+  useEffect(() => {
+    chat.setActiveConversationId(selectedId?.startsWith("chat:") ? selectedId.slice(5) : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const items = useMemo(
+    () => [
+      ...email.groups.map(emailGroupToItem),
+      ...chat.conversations.map((c) =>
+        chatToItem({
+          conversation: c,
+          unread: chat.unreadByConversation.get(c.id) ?? 0,
+          unreadSince: chat.unreadSinceByConversation.get(c.id) ?? null,
+          projectRef: projectRefs[c.id],
+        }),
+      ),
+    ],
+    [email.groups, chat.conversations, chat.unreadByConversation, chat.unreadSinceByConversation, projectRefs],
+  );
+  const filtered = useMemo(() => filterConversations(items, view, channel), [items, view, channel]);
+  const counts = useMemo(() => countByView(items, channel), [items, channel]);
+
+  // Weergave uitlijnen op een gesprek dat via een link geopend is.
+  useEffect(() => {
+    if (!selectedId || alignViewFor.current !== selectedId) return;
+    const it = items.find((i) => i.id === selectedId);
+    if (!it) return;
+    alignViewFor.current = null;
+    const target = viewFor(it);
+    if (target !== view) setView(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, items]);
+
+  const selectedGroup = selectedId?.startsWith("email:")
+    ? email.groups.find((g) => `email:${g.key}` === selectedId) ?? null
+    : null;
+  const selectedChat = selectedId?.startsWith("chat:")
+    ? chat.conversations.find((c) => c.id === selectedId.slice(5)) ?? null
+    : null;
+
+  // ---- Sneltoetsen ----
+  useEffect(() => {
+    const handler = (ev: KeyboardEvent) => {
+      if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+      const el = ev.target as HTMLElement | null;
+      if (el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))) return;
+      if (replyOpen || shortcutsOpen) {
+        if (ev.key === "?") setShortcutsOpen(true);
+        return;
       }
-
-      // Search query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const typeLabel = emailTypeLabels[email.email_type]?.label.toLowerCase() || email.email_type.toLowerCase();
-        
-        return (
-          email.subject.toLowerCase().includes(query) ||
-          email.recipient_email.toLowerCase().includes(query) ||
-          (email.recipient_name?.toLowerCase().includes(query) ?? false) ||
-          typeLabel.includes(query)
-        );
+      const idx = filtered.findIndex((i) => i.id === selectedId);
+      const move = (delta: number) => {
+        if (!filtered.length) return;
+        const next = idx < 0 ? 0 : Math.min(filtered.length - 1, Math.max(0, idx + delta));
+        select(filtered[next].id);
+      };
+      switch (ev.key) {
+        case "j":
+        case "ArrowDown":
+          ev.preventDefault();
+          move(1);
+          break;
+        case "k":
+        case "ArrowUp":
+          ev.preventDefault();
+          move(-1);
+          break;
+        case "Enter":
+          if (idx < 0 && filtered.length) select(filtered[0].id);
+          break;
+        case "Escape":
+          select(null);
+          break;
+        case "r":
+          if (selectedGroup) {
+            ev.preventDefault();
+            setReplyOpen(true);
+          } else if (selectedChat) {
+            ev.preventDefault();
+            chatComposerRef.current?.focus();
+          }
+          break;
+        case "e":
+          if (selectedGroup) {
+            ev.preventDefault();
+            void email.archiveThread(selectedGroup, !selectedGroup.threadArchived);
+          } else if (selectedChat) {
+            ev.preventDefault();
+            void chat.archiveConversation(selectedChat.id, !selectedChat.archived_at);
+          }
+          break;
+        case "m":
+          if (selectedGroup) {
+            ev.preventDefault();
+            void email.setThreadAnswered(selectedGroup, true);
+          }
+          break;
+        case "u":
+          if (selectedGroup) {
+            ev.preventDefault();
+            void email.setThreadAnswered(selectedGroup, false);
+          }
+          break;
+        case "1":
+          setView("open");
+          break;
+        case "2":
+          setView("all");
+          break;
+        case "3":
+          setView("archive");
+          break;
+        case "a":
+          ev.preventDefault();
+          setView(view === "archive" ? "open" : "archive");
+          break;
+        case "?":
+          setShortcutsOpen(true);
+          break;
+        default:
+          break;
       }
-
-      return true;
-    });
-  }, [emails, typeFilter, statusFilter, searchQuery]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    return {
-      total: emails.length,
-      sent: emails.filter(e => e.status === "sent").length,
-      failed: emails.filter(e => e.status === "failed").length,
-      today: emails.filter(e => new Date(e.created_at) >= today).length,
-      thisWeek: emails.filter(e => new Date(e.created_at) >= weekAgo).length,
     };
-  }, [emails]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, selectedId, selectedGroup, selectedChat, replyOpen, shortcutsOpen, view]);
 
-  const uniqueTypes = useMemo(() => {
-    const types = new Set(emails.map((e) => e.email_type));
-    return Array.from(types).sort();
-  }, [emails]);
+  if (legacyTab === "verzonden") {
+    return <Navigate to="/admin/berichten/templates?tab=verzendlog" replace />;
+  }
 
-  const getRelatedLink = (email: EmailLog): { href: string; label: string } | null => {
-    if (email.related_request_id) {
-      return { href: `/admin/aanvragen/${email.related_request_id}`, label: "Aanvraag" };
-    }
-    if (email.related_accommodation_id) {
-      return { href: `/admin/logies/${email.related_accommodation_id}`, label: "Logies" };
-    }
-    if (email.related_partner_id) {
-      return { href: `/admin/partners/${email.related_partner_id}`, label: "Partner" };
-    }
-    return null;
-  };
-
-  const handleResendEmail = (email: EmailLog) => {
-    setSelectedEmail(email);
-    setResendDialogOpen(true);
-  };
+  const isLoading = email.isLoading && chat.conversations.length === 0;
 
   return (
     <>
       <Helmet>
-        <title>Berichtencentrum | Admin | Bureau Vlieland</title>
+        <title>Berichten | Admin | Bureau Vlieland</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <AdminLayout>
-        <div className="p-6 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Berichtencentrum</h1>
-              <p className="text-slate-500 mt-1">
-                Alle inkomende en uitgaande communicatie op één plek: e-mail, klant- en partner­chat en website live-chat
-              </p>
+        <MessagesWorkspace
+          view={view}
+          channel={channel}
+          counts={counts}
+          items={filtered}
+          selectedId={selectedId}
+          isLoading={isLoading}
+          chatOnline={chat.isOnline}
+          onSelect={select}
+          onViewChange={setView}
+          onChannelChange={setChannel}
+          onChatOnlineChange={(v) => chat.updatePresence(v)}
+          onShowShortcuts={() => setShortcutsOpen(true)}
+        >
+          {selectedGroup ? (
+            <EmailThreadView
+              group={selectedGroup}
+              showArchivedItems={view === "archive"}
+              onBack={() => select(null)}
+              onSetAnswered={email.setAnswered}
+              onSetThreadAnswered={email.setThreadAnswered}
+              onArchiveItem={email.archiveItem}
+              onArchiveThread={email.archiveThread}
+              onArchiveDossier={email.archiveDossier}
+              replyOpen={replyOpen}
+              onReplyOpenChange={setReplyOpen}
+              onShowShortcuts={() => setShortcutsOpen(true)}
+            />
+          ) : selectedChat ? (
+            <ChatConversationView
+              conversation={selectedChat}
+              messages={chat.messages}
+              projectRef={projectRefs[selectedChat.id]}
+              onBack={() => select(null)}
+              sendMessage={chat.sendMessage}
+              closeConversation={chat.closeConversation}
+              archiveConversation={chat.archiveConversation}
+              saveChatToProject={chat.saveChatToProject}
+              composerRef={chatComposerRef}
+              onShowShortcuts={() => setShortcutsOpen(true)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <EmptyState
+                icon={<Mail />}
+                title={selectedId ? "Gesprek wordt geladen…" : "Kies een gesprek"}
+                description={selectedId ? undefined : "Met j en k loop je door de lijst, Enter opent het gesprek, r beantwoordt het."}
+              />
             </div>
-            <div className="flex gap-2">
-              <Link to="/admin/berichten/templates">
-                <Button variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Templates
-                </Button>
-              </Link>
-              <Button
-                variant="outline"
-                onClick={() => refetch()}
-                disabled={isRefetching}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-                Vernieuwen
-              </Button>
-            </div>
-          </div>
-
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => {
-              const next = new URLSearchParams(searchParams);
-              next.set("tab", v);
-              if (v !== "inbox") next.delete("inbox");
-              setSearchParams(next, { replace: true });
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="inbox" className="gap-2">
-                <Mail className="h-4 w-4" />
-                E-mail
-                {unansweredEmailCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
-                  >
-                    {unansweredEmailCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-
-              <TabsTrigger value="chat" className="gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Chat & live-chat
-                {chatTotalUnread > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
-                  >
-                    {chatTotalUnread}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="presales" className="gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500" />
-                Pre-sales
-                {presalesUnread > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="h-5 min-w-5 px-1.5 text-[11px] bg-red-600 text-white hover:bg-red-700"
-                  >
-                    {presalesUnread}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="verzonden" className="gap-2">
-                <Send className="h-4 w-4" />
-                Verzonden e-mails
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="inbox" className="mt-4">
-              <EmailPanel initialOpenId={highlightedInboxId} initialFilter={inboxFilter} />
-            </TabsContent>
-
-
-            <TabsContent value="chat" className="mt-4">
-              <ChatPanel initialConversationId={initialConversationId} />
-            </TabsContent>
-
-
-            <TabsContent value="presales" className="mt-4">
-              <ChatPanel mode="presales" />
-            </TabsContent>
-
-            <TabsContent value="verzonden" className="mt-4 space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                    <p className="text-xs text-slate-500">Totaal</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.sent}</p>
-                    <p className="text-xs text-slate-500">Verzonden</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.failed}</p>
-                    <p className="text-xs text-slate-500">Mislukt</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <Send className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.today}</p>
-                    <p className="text-xs text-slate-500">Vandaag</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.thisWeek}</p>
-                    <p className="text-xs text-slate-500">Deze week</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Zoeken op onderwerp, ontvanger..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full md:w-56">
-                    <SelectValue placeholder="Email type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle types</SelectItem>
-                    {uniqueTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {emailTypeLabels[type]?.label || type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Alle statussen</SelectItem>
-                    <SelectItem value="sent">Verzonden</SelectItem>
-                    <SelectItem value="failed">Mislukt</SelectItem>
-                    <SelectItem value="pending">In wachtrij</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Results summary */}
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Mail className="h-4 w-4" />
-            <span>
-              {filteredEmails.length} {filteredEmails.length === 1 ? "email" : "emails"} gevonden
-            </span>
-          </div>
-
-          {/* Email table */}
-          <Card>
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="p-6 space-y-4">
-                  {[...Array(10)].map((_, i) => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : filteredEmails.length === 0 ? (
-                <div className="p-12 text-center text-slate-500">
-                  <Mail className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                  <p>Geen emails gevonden</p>
-                  <p className="text-sm mt-1">
-                    Emails worden gelogd zodra ze worden verstuurd via de edge functions.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-40">Datum/Tijd</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Ontvanger</TableHead>
-                        <TableHead className="max-w-xs">Onderwerp</TableHead>
-                        <TableHead>Link</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="w-20">Acties</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEmails.map((email) => {
-                        const typeInfo = emailTypeLabels[email.email_type] || {
-                          label: email.email_type,
-                          category: "Overig",
-                        };
-                        const statusInfo = statusConfig[email.status] || statusConfig.pending;
-                        const relatedLink = getRelatedLink(email);
-
-                        return (
-                          <TableRow key={email.id}>
-                            <TableCell className="whitespace-nowrap">
-                              <div className="flex items-center gap-2 text-sm">
-                                <Calendar className="h-4 w-4 text-slate-400" />
-                                <div>
-                                  <div className="font-medium">
-                                    {format(new Date(email.created_at), "EEE d MMM yyyy", { locale: nl })}
-                                  </div>
-                                  <div className="text-slate-500">
-                                    {format(new Date(email.created_at), "HH:mm")}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <Badge variant="outline" className="text-xs">
-                                  {typeInfo.category}
-                                </Badge>
-                                <p className="text-sm mt-1">{typeInfo.label}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-slate-400" />
-                                <div>
-                                  {email.recipient_name && (
-                                    <div className="font-medium text-sm">{email.recipient_name}</div>
-                                  )}
-                                  <div className="text-sm text-slate-500">{email.recipient_email}</div>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-xs">
-                              <p className="text-sm truncate" title={email.subject}>
-                                {email.subject}
-                              </p>
-                            </TableCell>
-                            <TableCell>
-                              {relatedLink ? (
-                                <Link
-                                  to={relatedLink.href}
-                                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  {relatedLink.label}
-                                </Link>
-                              ) : (
-                                <span className="text-slate-400">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={statusInfo.color} variant="secondary">
-                                <span className="flex items-center gap-1">
-                                  {statusInfo.icon}
-                                  {statusInfo.label}
-                                </span>
-                              </Badge>
-                              {email.error_message && (
-                                <p className="text-xs text-red-600 mt-1 max-w-32 truncate" title={email.error_message}>
-                                  {email.error_message}
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleResendEmail(email)}
-                                title="Opnieuw versturen"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        <ResendEmailDialog
-          open={resendDialogOpen}
-          onOpenChange={setResendDialogOpen}
-          email={selectedEmail}
-          onSuccess={() => refetch()}
-        />
+          )}
+        </MessagesWorkspace>
+        <EmailShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </AdminLayout>
     </>
   );

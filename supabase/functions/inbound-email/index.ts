@@ -788,21 +788,9 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
-    // Create admin todo for follow-up
-    const todoTitle = `Nieuw antwoord van ${contactName || contactEmail} op ${referenceNumber}`;
-    const todoDescription = subject
-      ? `Onderwerp: "${subject}"\n\nBekijk het bericht in het projectdossier.`
-      : "Bekijk het bericht in het projectdossier.";
-
-    await supabase.from("admin_todos").insert({
-      title: todoTitle.substring(0, 200),
-      description: todoDescription,
-      priority: "normal",
-      status: "todo",
-      related_request_id: requestId || null,
-      auto_type: "inbound_email",
-      auto_entity_id: referenceNumber,
-    });
+    // Geen aparte todo meer: het bericht staat met answered_at = null in
+    // project_communications en dat is de enige bron voor "te beantwoorden"
+    // (Berichtencentrum, bel, zijbalk en Werkbank lezen openConversations.ts).
 
     // Notify customer ONLY when this inbound reply belongs to an existing
     // customer ↔ partner thread. Default admin-only inbound mail (partner → bureau)

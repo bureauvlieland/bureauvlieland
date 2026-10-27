@@ -8,6 +8,8 @@
  * Bronnen:
  *   - admin_todos (open of in_progress, niet gesnoozed in de toekomst)
  *   - projecten met communicatiestatus = "bij_bureau" of "stilte"
+ *   - gesprekken die op antwoord wachten (onbeantwoorde e-mail, ongelezen
+ *     chat) uit openConversations.ts, dezelfde bron als de bel en de zijbalk
  *
  * Demping op recent contact:
  *   - Per dossier wordt het laatste contact-moment bepaald (email_log via
@@ -21,7 +23,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { listProjectsForWerkbank } from "./getProject";
-import { assembleInbox, type InboxItem, type RawInboxTodo } from "./inboxAssemble";
+import { assembleInbox, type InboxItem, type OpenConversationSignal, type RawInboxTodo } from "./inboxAssemble";
+import { fetchOpenConversations } from "./openConversations";
 import type { CooldownLevel, TodoCluster } from "./projectActivity";
 
 export type {
@@ -29,6 +32,7 @@ export type {
   InboxItemKind,
   InboxReason,
   InboxTodo,
+  OpenConversationSignal,
 } from "./inboxAssemble";
 export {
   isLooseRowId,
@@ -40,7 +44,7 @@ export {
 export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promise<InboxItem[]> {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [{ data: todos, error: todoErr }, projects] = await Promise.all([
+  const [{ data: todos, error: todoErr }, projects, openConversations] = await Promise.all([
     supabase
       .from("admin_todos")
       .select("id, title, priority, due_date, auto_type, related_request_id, snoozed_until, created_at")
@@ -50,8 +54,33 @@ export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promis
       .order("due_date", { ascending: true, nullsFirst: false })
       .limit(300),
     listProjectsForWerkbank({ includeSnoozed: opts.includeSnoozed }),
+    fetchOpenConversations(),
   ]);
   if (todoErr) throw todoErr;
+
+  const openSignals: OpenConversationSignal[] = [];
+  for (const e of openConversations.emails) {
+    if (!e.projectId) continue;
+    openSignals.push({
+      projectId: e.projectId,
+      kind: "email",
+      count: e.count,
+      since: e.oldestAt,
+      label: `E-mail van ${e.contactName || "onbekende afzender"}`,
+      href: `/admin/berichten?inbox=${e.firstUnansweredId}`,
+    });
+  }
+  for (const c of openConversations.chats) {
+    if (!c.projectId) continue;
+    openSignals.push({
+      projectId: c.projectId,
+      kind: "chat",
+      count: c.unreadCount,
+      since: c.lastMessageAt,
+      label: `Chat van ${c.visitorName || "onbekend"}`,
+      href: `/admin/berichten?gesprek=chat:${c.conversationId}`,
+    });
+  }
 
   // Laatste contact-moment per project: max(project_communications.created_at,
   // program_request_items.updated_at). email_log is al gebruikt voor
@@ -90,6 +119,7 @@ export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promis
     projects,
     lastContactByProject,
     today,
+    openConversations: openSignals,
   });
 }
 

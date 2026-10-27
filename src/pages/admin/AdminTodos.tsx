@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { emailTypeLabel, emailTypeCategory } from "@/lib/emailTypeLabels";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -281,24 +282,6 @@ const autoTypeActionConfig: Record<string, {
 };
 
 // ─── Email Log Config ─────────────────────────────────────────
-const emailTypeLabels: Record<string, { label: string; category: string }> = {
-  program_request_bureau: { label: "Programma aanvraag (Bureau)", category: "Programma" },
-  program_request_customer: { label: "Programma aanvraag (Klant)", category: "Programma" },
-  program_request_partner: { label: "Programma aanvraag (Partner)", category: "Programma" },
-  quote_request_bureau: { label: "Offerte aanvraag (Bureau)", category: "Offerte" },
-  quote_request_customer: { label: "Offerte aanvraag (Klant)", category: "Offerte" },
-  status_confirmed: { label: "Status: Bevestigd", category: "Status" },
-  status_unavailable: { label: "Status: Niet beschikbaar", category: "Status" },
-  status_alternative: { label: "Status: Alternatief", category: "Status" },
-  cancellation_customer: { label: "Annulering (Klant)", category: "Annulering" },
-  cancellation_partner: { label: "Annulering (Partner)", category: "Annulering" },
-  partner_invitation: { label: "Partner uitnodiging", category: "Partner" },
-  accommodation_request_customer: { label: "Logies aanvraag (Klant)", category: "Logies" },
-  accommodation_quote_request_partner: { label: "Logies offerteaanvraag (Partner)", category: "Logies" },
-  accommodation_quote_notification: { label: "Logies offerte notificatie", category: "Logies" },
-  accommodation_selected_partner: { label: "Logies gekozen (Partner)", category: "Logies" },
-  accommodation_selected_customer: { label: "Logies gekozen (Klant)", category: "Logies" },
-};
 
 const emailStatusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
   sent: { icon: <CheckCircle2 className="h-4 w-4" />, color: "bg-green-100 text-green-800", label: "Verzonden" },
@@ -1939,7 +1922,7 @@ const EmailLogTab = () => {
       if (emailStatusFilter !== "all" && email.status !== emailStatusFilter) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        const typeLabel = emailTypeLabels[email.email_type]?.label.toLowerCase() || email.email_type.toLowerCase();
+        const typeLabel = emailTypeLabel(email.email_type).toLowerCase();
         return (
           email.subject.toLowerCase().includes(query) ||
           email.recipient_email.toLowerCase().includes(query) ||
@@ -1996,7 +1979,7 @@ const EmailLogTab = () => {
                 <SelectTrigger className="w-full md:w-56"><SelectValue placeholder="Email type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle types</SelectItem>
-                  {uniqueTypes.map((type) => (<SelectItem key={type} value={type}>{emailTypeLabels[type]?.label || type}</SelectItem>))}
+                  {uniqueTypes.map((type) => (<SelectItem key={type} value={type}>{emailTypeLabel(type)}</SelectItem>))}
                 </SelectContent>
               </Select>
               <Select value={emailStatusFilter} onValueChange={setEmailStatusFilter}>
@@ -2037,7 +2020,7 @@ const EmailLogTab = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredEmails.map((email) => {
-                      const typeInfo = emailTypeLabels[email.email_type] || { label: email.email_type, category: "Overig" };
+                      const typeInfo = { label: emailTypeLabel(email.email_type), category: emailTypeCategory(email.email_type) };
                       const statusInfo = emailStatusConfig[email.status] || emailStatusConfig.pending;
                       const relatedLink = getRelatedLink(email);
                       return (

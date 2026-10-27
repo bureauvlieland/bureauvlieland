@@ -1,16 +1,15 @@
 import { Navigate, useSearchParams } from "react-router-dom";
 
 /**
- * Legacy /admin/chat route. The chat workspace now lives inside the unified
- * message center at /admin/berichten?tab=chat. Preserve any deep-link params
- * (such as a specific conversation) when redirecting.
+ * Oude route /admin/chat. De chat zit in het Berichtencentrum op
+ * /admin/berichten; een specifiek gesprek gaat mee als ?gesprek=chat:<id>.
  */
 const AdminChat = () => {
   const [params] = useSearchParams();
   const conversation = params.get("conversation");
   const target = conversation
-    ? `/admin/berichten?tab=chat&conversation=${encodeURIComponent(conversation)}`
-    : "/admin/berichten?tab=chat";
+    ? `/admin/berichten?gesprek=chat:${encodeURIComponent(conversation)}`
+    : "/admin/berichten";
   return <Navigate to={target} replace />;
 };
 

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Send, Reply, RefreshCw, Mail } from "lucide-react";
 import { useResendEmail } from "@/hooks/useResendEmail";
 import type { ProjectCommunication } from "@/types/projectCommunication";
-import { EMAIL_TYPE_LABELS } from "@/types/projectCommunication";
+import { emailTypeLabel, emailStatusLabel } from "@/lib/emailTypeLabels";
 
 interface Props {
   open: boolean;
@@ -56,9 +56,7 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
     }
   };
 
-  const emailTypeLabel = communication?.email_type
-    ? EMAIL_TYPE_LABELS[communication.email_type] || communication.email_type
-    : null;
+  const typeLabel = communication?.email_type ? emailTypeLabel(communication.email_type) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,7 +67,7 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
             <span className="truncate">{communication?.subject || "(Geen onderwerp)"}</span>
           </DialogTitle>
           <DialogDescription className="flex flex-wrap gap-2 items-center text-xs">
-            {emailTypeLabel && <Badge variant="outline">{emailTypeLabel}</Badge>}
+            {typeLabel && <Badge variant="outline">{typeLabel}</Badge>}
             {communication?.metadata?.status ? (
               <Badge
                 variant="outline"
@@ -79,7 +77,7 @@ export function EmailLogDetailDialog({ open, onOpenChange, communication, onRepl
                     : "bg-rose-50 text-rose-700 border-rose-200"
                 }
               >
-                {String(communication.metadata.status)}
+                {emailStatusLabel(String(communication.metadata.status))}
               </Badge>
             ) : null}
             {communication?.communication_date && (

@@ -61,6 +61,7 @@ export const PreSalesChatWidget = () => {
   const hideOnPortal =
     location.pathname.startsWith("/partner") ||
     location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/ontwerp/berichtencentrum") ||
     location.pathname.startsWith("/programma/") ||
     location.pathname.startsWith("/mijn-programma/") ||
     location.pathname.startsWith("/mijn-logies/") ||

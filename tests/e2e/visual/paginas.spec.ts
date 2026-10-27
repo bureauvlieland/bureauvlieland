@@ -51,6 +51,10 @@ const PAGES: { name: string; path: string; wachtOp?: string; maxHoogte?: number 
   { name: "partnerportaal-logies", path: "/ontwerp/partnerportaal?scherm=logies", wachtOp: "Uw offerte" },
   { name: "partnerportaal-logiesaanvragen", path: "/ontwerp/partnerportaal?scherm=logiesaanvragen", wachtOp: "Scherp in Veiligheid" },
   { name: "partnerportaal-facturatie", path: "/ontwerp/partnerportaal?scherm=facturatie", wachtOp: "In het kort" },
+  // Het Berichtencentrum met verzonnen gesprekken (src/content/demoBerichtencentrum.ts).
+  { name: "berichtencentrum-lijst", path: "/ontwerp/berichtencentrum?scherm=lijst", wachtOp: "Jasmijn de Boer" },
+  { name: "berichtencentrum-email", path: "/ontwerp/berichtencentrum?scherm=email", wachtOp: "Alternatief voorgesteld aan klant" },
+  { name: "berichtencentrum-chat", path: "/ontwerp/berichtencentrum?scherm=chat", wachtOp: "windkracht 6" },
 ];
 
 const VASTE_TIJD = new Date("2026-09-21T12:00:00+02:00");
