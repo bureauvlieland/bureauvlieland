@@ -22,6 +22,7 @@ import type { ProjectCommunicationState } from "./projectCommunication";
 import {
   clusterForAutoType,
   getProjectActivityState,
+  isTodoPausedByReferral,
   shouldShowDuringCooldown,
   type ProjectActivity,
   type TodoCluster,
@@ -172,6 +173,14 @@ export function assembleInbox(input: AssembleInboxInput): InboxItem[] {
     // Verberg todo's die hangen aan een project dat niet meer in de actieve werklijst staat
     // (geannuleerd of verwijderd). Echte losse taken (geen related_request_id) blijven zichtbaar.
     if (relatedId && !projectById.has(relatedId)) continue;
+    // Doorverwezen bruiloft: de automatische projecttaken vervallen (reconcile
+    // sluit ze; tot die tijd tonen we ze ook niet). Handmatige taken, inbound
+    // en de taken van de doorverwijzing zelf blijven staan.
+    if (
+      relatedId &&
+      projectById.get(relatedId)?.comm === "doorverwezen" &&
+      isTodoPausedByReferral(t.auto_type)
+    ) continue;
 
     let item: InboxItem;
     if (relatedId) {

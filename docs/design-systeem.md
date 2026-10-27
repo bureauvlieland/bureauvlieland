@@ -100,7 +100,10 @@ cursieve accenten, maar eyebrow en sectienummer komen uit `SectionHeader`
 agenda en de klantquotes staan op `MediaCard`, `Pill` en de zandsectie. De
 live agenda heeft bewust geen nummer: die is soms leeg. De Google-score
 komt overal uit `useGoogleReviewsCache` en de sterren uit `RatingStars`
-(zonsondergang, niet geel).
+(zonsondergang, niet geel). De drie stappen onder de hero (`HowItWorks`)
+staan sinds 27 oktober met nummer en titel op één doorlopende lijn en de
+uitleg in een kaart eronder, zonder foto; de eerste cirkel is gevuld, want
+daar begint de bezoeker.
 
 ## Regels voor interactie
 
