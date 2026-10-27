@@ -148,3 +148,73 @@ describe("assembleInbox: dossiers", () => {
     expect(items).toHaveLength(0);
   });
 });
+
+describe("assembleInbox: gesprekken die op antwoord wachten", () => {
+  const signal = (projectId: string, kind: "email" | "chat" = "email", since = "2026-10-24T09:00:00Z") => ({
+    projectId,
+    kind,
+    count: 1,
+    since,
+    label: kind === "email" ? "E-mail van Richard" : "Chat van Anna",
+    href: "/admin/berichten",
+  });
+
+  it("zet een dossier met een onbeantwoorde e-mail in de inbox met reden 'te_beantwoorden'", () => {
+    const p = project("p1");
+    const items = assembleInbox({
+      todos: [],
+      projects: [p],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+      openConversations: [signal("p1")],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].reasons).toEqual(["te_beantwoorden"]);
+    expect(items[0].open).toHaveLength(1);
+    expect(items[0].score).toBeGreaterThan(0);
+  });
+
+  it("wordt niet gedempt door recent contact: het contact ís het open bericht", () => {
+    const p = project("p1");
+    const contact = new Map([["p1", "2026-10-26T09:00:00Z"]]);
+    const items = assembleInbox({
+      todos: [],
+      projects: [p],
+      lastContactByProject: contact,
+      today: TODAY,
+      now: NOW,
+      openConversations: [signal("p1")],
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].activity.cooldown).toBe("hot");
+  });
+
+  it("telt meerdere gesprekken op één dossier als één reden, gesorteerd op wachttijd", () => {
+    const p = project("p1");
+    const one = assembleInbox({ todos: [], projects: [p], lastContactByProject: new Map(), today: TODAY, now: NOW, openConversations: [signal("p1")] });
+    const two = assembleInbox({
+      todos: [],
+      projects: [p],
+      lastContactByProject: new Map(),
+      today: TODAY,
+      now: NOW,
+      openConversations: [signal("p1", "chat", "2026-10-25T09:00:00Z"), signal("p1", "email", "2026-10-20T09:00:00Z")],
+    });
+    expect(two[0].score).toBe(one[0].score);
+    expect(two[0].open.map((o) => o.kind)).toEqual(["email", "chat"]);
+  });
+
+  it("weegt zwaarder dan een gewone taak en lichter dan stilte", () => {
+    const withOpen = assembleInbox({ todos: [], projects: [project("a")], lastContactByProject: new Map(), today: TODAY, now: NOW, openConversations: [signal("a")] });
+    const withTodo = assembleInbox({ todos: [todo("t", { related_request_id: "b" })], projects: [project("b")], lastContactByProject: new Map(), today: TODAY, now: NOW });
+    const silent = assembleInbox({ todos: [], projects: [project("c", { comm: "stilte" })], lastContactByProject: new Map(), today: TODAY, now: NOW });
+    expect(withOpen[0].score).toBeGreaterThan(withTodo[0].score);
+    expect(withOpen[0].score).toBeLessThan(silent[0].score);
+  });
+
+  it("negeert gesprekken van dossiers buiten de werklijst", () => {
+    const items = assembleInbox({ todos: [], projects: [], lastContactByProject: new Map(), today: TODAY, now: NOW, openConversations: [signal("weg")] });
+    expect(items).toHaveLength(0);
+  });
+});

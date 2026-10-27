@@ -617,7 +617,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
 
   const invalidate = useCallback(() => {
     refetch();
-    queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+    queryClient.invalidateQueries({ queryKey: ["open-conversations"] });
   }, [refetch, queryClient]);
 
   const setAnswered = async (item: EmailItem, answered: boolean) => {
@@ -1233,7 +1233,7 @@ export function EmailPanel({ initialOpenId, initialFilter, heightClassName = "h-
             setReplyOpen(o);
             if (!o) {
               refetch();
-              queryClient.invalidateQueries({ queryKey: ["admin-inbox"] });
+              queryClient.invalidateQueries({ queryKey: ["open-conversations"] });
             }
           }}
           requestId={replyContext.requestId}

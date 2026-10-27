@@ -7,7 +7,14 @@
  *                 auto_type én titel) worden samengevouwen tot één rij, zodat
  *                 zes keer "Kritieke zelftest faalt" niet zes regels kost.
  *
- * Demping op recent contact (zie getInbox.ts) blijft hier ongewijzigd.
+ * Sinds Berichtencentrum fase 1 komt "te beantwoorden" hier ook binnen:
+ * een dossier met een onbeantwoorde e-mail of een ongelezen chat krijgt de
+ * reden "te_beantwoorden" en een link naar het Berichtencentrum. Dat is
+ * dezelfde bron als de bel en de zijbalk (src/lib/openConversations.ts);
+ * er wordt geen aparte todo meer voor aangemaakt.
+ *
+ * Demping op recent contact (zie getInbox.ts) blijft hier ongewijzigd en
+ * geldt niet voor "te beantwoorden": wie net schreef, wacht op antwoord.
  */
 
 import type { ProjectSummary } from "./getProject";
@@ -20,7 +27,7 @@ import {
   type TodoCluster,
 } from "./projectActivity";
 
-export type InboxReason = "todo" | "bij_bureau" | "stilte";
+export type InboxReason = "todo" | "bij_bureau" | "stilte" | "te_beantwoorden";
 
 export type InboxItemKind = "project" | "loose";
 
@@ -36,6 +43,20 @@ export interface InboxTodo {
   suppressed: boolean;
 }
 
+/** Een gesprek dat op antwoord wacht, aan een dossier gehangen. */
+export interface OpenConversationSignal {
+  projectId: string;
+  kind: "email" | "chat";
+  /** aantal open berichten in dit gesprek */
+  count: number;
+  /** sinds wanneer er gewacht wordt (ISO) */
+  since: string;
+  /** "E-mail van Richard Dijkstra" */
+  label: string;
+  /** link naar het gesprek in het Berichtencentrum */
+  href: string;
+}
+
 export interface InboxItem {
   /**
    * Rij-sleutel. Voor dossiers het project-id; voor losse taken
@@ -48,6 +69,8 @@ export interface InboxItem {
   todos: InboxTodo[];                        // zichtbare todos (bij "loose": alle taken in de groep)
   suppressedCount: number;                   // hoeveel todos onderdrukt door cooldown
   reasons: InboxReason[];
+  /** gesprekken die op antwoord wachten (e-mail en chat) */
+  open: OpenConversationSignal[];
   comm: ProjectCommunicationState | null;
   activity: ProjectActivity;
   /** sorteer-score, hoog = belangrijker */
@@ -98,7 +121,11 @@ export interface AssembleInboxInput {
   lastContactByProject: Map<string, string>;
   today: string;
   now?: Date;
+  openConversations?: OpenConversationSignal[];
 }
+
+/** Een wachtend gesprek weegt zwaarder dan een hoge-prioriteittaak, lichter dan stilte. */
+const OPEN_CONVERSATION_SCORE = 28;
 
 const PRIO_SCORE: Record<InboxTodo["priority"], number> = {
   urgent: 40,
@@ -108,7 +135,7 @@ const PRIO_SCORE: Record<InboxTodo["priority"], number> = {
 };
 
 export function assembleInbox(input: AssembleInboxInput): InboxItem[] {
-  const { todos, projects, lastContactByProject, today } = input;
+  const { todos, projects, lastContactByProject, today, openConversations = [] } = input;
   const now = input.now ?? new Date();
 
   const projectById = new Map(projects.map((p) => [p.id, p]));
@@ -130,6 +157,7 @@ export function assembleInbox(input: AssembleInboxInput): InboxItem[] {
       todos: [],
       suppressedCount: 0,
       reasons: [],
+      open: [],
       comm: project?.comm ?? null,
       activity,
       score: 0,
@@ -187,6 +215,21 @@ export function assembleInbox(input: AssembleInboxInput): InboxItem[] {
     if (item.kind === "loose" && item.todos.length > 1) continue;
     item.score += PRIO_SCORE[priority] ?? PRIO_SCORE.normal;
     if (t.due_date && t.due_date <= today) item.score += 15;
+  }
+
+  // Gesprekken die op antwoord wachten. Niet gedempt door cooldown: het
+  // recente contact ís het bericht waar nog niet op gereageerd is.
+  for (const sig of openConversations) {
+    if (!projectById.has(sig.projectId)) continue;
+    const item = ensure(sig.projectId, "project");
+    item.open.push(sig);
+    if (!item.reasons.includes("te_beantwoorden")) {
+      item.reasons.push("te_beantwoorden");
+      item.score += OPEN_CONVERSATION_SCORE;
+    }
+  }
+  for (const item of items.values()) {
+    item.open.sort((a, b) => a.since.localeCompare(b.since));
   }
 
   // Communicatiestatus-driven items

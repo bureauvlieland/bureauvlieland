@@ -55,7 +55,7 @@ import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { useWerkbankInboxCount } from "@/hooks/useWerkbankInboxCount";
 import { InboxBell } from "@/components/admin/InboxBell";
-import { useAdminInbox } from "@/hooks/useAdminInbox";
+import { useOpenConversations } from "@/hooks/useOpenConversations";
 
 
 interface AdminLayoutProps {
@@ -123,8 +123,8 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
   const { data: openTicketsCount = 0 } = useOpenTicketsCount();
   const { data: bankPendingCount = 0 } = useBankPendingCount();
-  const { data: inboxData } = useAdminInbox();
-  const messagesBadge = inboxData?.totalUnread ?? 0;
+  const { data: openConversations } = useOpenConversations();
+  const messagesBadge = openConversations.counts.total;
 
 
   const menuSections: MenuSection[] = [

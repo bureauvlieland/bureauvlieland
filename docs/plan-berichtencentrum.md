@@ -1,8 +1,8 @@
 # Plan: Berichtencentrum als werkvoorraad
 
 Status: onderzoek en plan 26 oktober 2026. Erwin heeft op 26 oktober ja
-gezegd op alle vier de beslissingen onderaan. Fase 0 is op 26 oktober gebouwd
-(zie "Gebouwd" onderaan); fase 1 tot 3 volgen.
+gezegd op alle vier de beslissingen onderaan. Fase 0 is op 26 oktober gebouwd,
+fase 1 op 27 oktober (zie "Gebouwd" onderaan); fase 2 en 3 volgen.
 
 Vraag van Erwin: "Dit overzicht is ook niet erg intuïtief. Dat moet beter
 kunnen." Dit document legt eerst vast wat het scherm nu doet en wat de
@@ -294,3 +294,28 @@ dossier.
   "Vernieuwen" is weg; de tab Verzonden e-mails ververst elke minuut.
 - Kaarten en chips in `EmailPanel` op `Pill` en de statustokens in plaats
   van losse paletkleuren.
+
+### Fase 1 (27 oktober 2026)
+
+- Eén bron: `src/lib/openConversations.ts` haalt op wat open staat, per
+  gesprek geteld: e-mailgesprekken met een inkomend bericht zonder
+  `answered_at` (niet gearchiveerd, dossier niet gearchiveerd, 90 dagen) en
+  chatgesprekken met een ongelezen bericht van een ander dan de admin (niet
+  gesloten of gearchiveerd, dossier niet gearchiveerd). De groepering is
+  zuiver en getest (11 tests); de query-invarianten uit de oude badge-test
+  bewaken nu dit bestand (`openConversationsQuery.test.ts`).
+- Eén hook `useOpenConversations` voedt de bel, de badge in de zijbalk en
+  de drie tabbladen van het Berichtencentrum (E-mail, Chat, Pre-sales).
+  `useAdminInbox` en `usePresalesUnread` zijn weg, en daarmee het
+  "gezien"-watermerk in `localStorage`: open is open tot er geantwoord of
+  gelezen is. De bel heet "Te beantwoorden".
+- De Werkbank leest dezelfde bron: een dossier met een wachtend gesprek
+  krijgt de reden "Te beantwoorden", een regel per gesprek ("E-mail van
+  Richard Dijkstra · wacht 2 dagen") met een link naar het gesprek in het
+  Berichtencentrum, en een score tussen een hoge-prioriteittaak en stilte.
+  De cooldown op recent contact geldt hier niet. Opbouw in
+  `inboxAssemble.ts`, vijf tests erbij.
+- `inbound-email` maakt de todo "Nieuw antwoord van …" niet meer aan;
+  `reconcile-admin-todos` kent het type niet meer. Migratie
+  `20261027120000_berichtencentrum-todo-afschaffen.sql` sluit de drie nog
+  openstaande exemplaren.

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { isSystemTodo, loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
 import type { ProjectKind } from "@/lib/getProject";
@@ -27,6 +28,8 @@ import {
   Hourglass,
   Hotel,
   Loader2,
+  Mail,
+  MessageCircle,
   Moon,
   ServerCog,
   Timer,
@@ -36,10 +39,21 @@ import {
 import { cn } from "@/lib/utils";
 
 const REASON_META: Record<InboxReason, { label: string; icon: typeof AlertTriangle; tone: string }> = {
-  todo:        { label: "Open taken",        icon: ListTodo,        tone: "text-amber-600" },
-  bij_bureau:  { label: "Aan zet",           icon: AlertTriangle,    tone: "text-blue-600" },
-  stilte:      { label: "Stilte — opvolgen", icon: Hourglass,        tone: "text-rose-600" },
+  todo:            { label: "Open taken",        icon: ListTodo,        tone: "text-amber-600" },
+  bij_bureau:      { label: "Aan zet",           icon: AlertTriangle,    tone: "text-blue-600" },
+  stilte:          { label: "Stilte — opvolgen", icon: Hourglass,        tone: "text-rose-600" },
+  te_beantwoorden: { label: "Te beantwoorden",   icon: Mail,             tone: "text-warning-ink" },
 };
+
+function formatWaiting(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const hours = (Date.now() - t) / 3_600_000;
+  if (hours < 1) return "net binnen";
+  if (hours < 24) return `wacht ${Math.floor(hours)} uur`;
+  const days = Math.floor(hours / 24);
+  return `wacht ${days} ${days === 1 ? "dag" : "dagen"}`;
+}
 
 /** Boven dit aantal vragen we bevestiging voor een bulk-actie. */
 const CONFIRM_THRESHOLD = 5;
@@ -384,13 +398,16 @@ function ProjectRow({
   const nextAction = pickNextAction(item);
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
-        "w-full rounded-md border bg-background px-3 py-2.5 text-left transition-colors hover:bg-muted/50",
+        "w-full rounded-md border bg-background transition-colors",
         selected && "border-primary bg-muted/40",
         cooldown !== "cold" && !selected && "opacity-90",
       )}
+    >
+    <button
+      onClick={onClick}
+      className="w-full px-3 py-2.5 text-left transition-colors hover:bg-muted/50 rounded-md"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -434,6 +451,28 @@ function ProjectRow({
 
       <ClusterChips item={item} />
     </button>
+      {item.open.length > 0 && (
+        <ul className="border-t px-3 py-1.5 space-y-1">
+          {item.open.map((sig) => (
+            <li key={`${sig.kind}-${sig.href}`} className="flex items-center gap-1.5 text-xs">
+              {sig.kind === "email" ? (
+                <Mail className="h-3 w-3 shrink-0 text-warning-ink" />
+              ) : (
+                <MessageCircle className="h-3 w-3 shrink-0 text-warning-ink" />
+              )}
+              <Link
+                to={sig.href}
+                className="min-w-0 flex-1 truncate font-medium text-foreground hover:underline"
+                title={`${sig.label} · ${sig.count} onbeantwoord`}
+              >
+                {sig.label}
+              </Link>
+              <span className="shrink-0 text-warning-ink">{formatWaiting(sig.since)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

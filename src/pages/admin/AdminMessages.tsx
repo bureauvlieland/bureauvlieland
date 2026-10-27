@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { usePresalesUnread } from "@/hooks/usePresalesUnread";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { format } from "date-fns";
@@ -46,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResendEmailDialog } from "@/components/admin/ResendEmailDialog";
 import { ChatPanel } from "@/components/admin/ChatPanel";
 import { EmailPanel } from "@/components/admin/EmailPanel";
-import { useAdminInbox } from "@/hooks/useAdminInbox";
+import { useOpenConversations } from "@/hooks/useOpenConversations";
 import { emailTypeLabel, emailTypeCategory } from "@/lib/emailTypeLabels";
 
 
@@ -94,56 +93,12 @@ const AdminMessages = () => {
   const [resendDialogOpen, setResendDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
 
-  const { data: inboxData } = useAdminInbox();
-  const { data: unansweredEmailCount = 0 } = useQuery({
-    queryKey: ["inbox-unanswered-count"],
-    queryFn: async () => {
-      // Match EmailPanel visibility: negeer gearchiveerde e-mails én e-mails
-      // gekoppeld aan een gearchiveerd project/logies-aanvraag. Zonder deze
-      // filters wees de tab-badge naar berichten die in de lijst verborgen zijn
-      // (staan pas in beeld met "Toon archief" aan).
-      const { data, error } = await supabase
-        .from("project_communications")
-        .select("id, request_id, accommodation_id")
-        .eq("direction", "inbound")
-        // Zelfde filters als EmailPanel: alleen e-mailtypes (geen telefoon/notities)
-        // en het 90-dagenvenster, anders blijft er een badge staan voor items
-        // die nooit in de lijst verschijnen.
-        .in("communication_type", ["email", "email_in", "email_out"])
-        .gte("communication_date", new Date(Date.now() - 90 * 86400000).toISOString())
-        .is("answered_at", null)
-        .is("archived_at", null);
-      if (error) throw error;
-      const rows = data ?? [];
-      const reqIds = Array.from(new Set(rows.map((r) => r.request_id).filter(Boolean))) as string[];
-      const accIds = Array.from(new Set(rows.map((r) => r.accommodation_id).filter(Boolean))) as string[];
-
-      const [reqRes, accRes] = await Promise.all([
-        reqIds.length
-          ? supabase.from("program_requests").select("id").in("id", reqIds).not("archived_at", "is", null)
-          : Promise.resolve({ data: [] as { id: string }[], error: null }),
-        accIds.length
-          ? supabase.from("accommodation_requests").select("id").in("id", accIds).not("archived_at", "is", null)
-          : Promise.resolve({ data: [] as { id: string }[], error: null }),
-      ]);
-      const archivedReq = new Set((reqRes.data ?? []).map((r: any) => r.id));
-      const archivedAcc = new Set((accRes.data ?? []).map((r: any) => r.id));
-      return rows.filter((r) => {
-        if (r.request_id && archivedReq.has(r.request_id)) return false;
-        if (r.accommodation_id && archivedAcc.has(r.accommodation_id)) return false;
-        return true;
-      }).length;
-    },
-    refetchInterval: 60_000,
-  });
-  const chatUnreadConversations = inboxData?.chatUnreadConversations ?? 0;
-  const liveChatUnreadTotal = inboxData?.liveChatUnreadTotal ?? 0;
-  const presales = usePresalesUnread();
-  const presalesUnread = presales.messages;
-  // Trek per bucket af in dezelfde eenheid: chat = per gesprek, live chat = per bericht.
-  const chatTotalUnread =
-    Math.max(0, chatUnreadConversations - presales.nonWidgetConversations) +
-    Math.max(0, liveChatUnreadTotal - presales.widgetMessages);
+  // Eén bron voor alle tellers: gesprekken die op een antwoord wachten,
+  // per gesprek geteld (zie src/lib/openConversations.ts).
+  const { data: openConversations } = useOpenConversations();
+  const unansweredEmailCount = openConversations.counts.email;
+  const chatTotalUnread = openConversations.counts.chat;
+  const presalesUnread = openConversations.counts.presales;
 
   const { data: emails = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-email-logs"],
