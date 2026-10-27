@@ -4,135 +4,130 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles } from "lucide-react";
 import { RatingStars } from "@/components/RatingStars";
 import { useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
+import { RESPONSE_TIME } from "@/content/promises";
 
-import heroImage from "@/assets/sunset-dinner.jpg";
+import heroImage from "@/assets/hero-vlieland.jpg";
+
+/**
+ * De hero van de homepage: foto en tekst naast elkaar in plaats van tekst
+ * over een donker gemaakte foto. Op een telefoon staat de foto bovenaan,
+ * zonder verloop, en de tekst daaronder op een licht zandvlak; vanaf `lg`
+ * staat de tekst links en vult de foto de rechterhelft. De intro zegt wat
+ * het bureau is (eilandbureau voor groepen), niet wat het niet is.
+ */
+const STATS = [
+  { num: "8-150", label: "personen per groep" },
+  { num: "200+", label: "groepen sinds 2017" },
+  { num: "1", label: "aanspreekpunt" },
+  { num: "1", label: "factuur" },
+];
 
 export const HeroEditorial = () => {
   const { data: google } = useGoogleReviewsCache();
   const rating = google?.rating && google.review_count > 0 ? google.rating : 4.9;
   return (
-    <section className="relative min-h-screen bg-ocean-deep overflow-hidden">
-      {/* Full-bleed background image */}
-      <div className="absolute inset-0">
-        <img
-          src={heroImage}
-          alt="Lange tafel voor een groep bij zonsondergang op Vlieland, met de vuurtoren op de achtergrond"
-          className="w-full h-full object-cover object-[50%_80%]"
-          width={1920}
-          height={1277}
-          fetchPriority="high"
-          loading="eager"
-          decoding="async"
-        />
-        {/* Top vignette for nav and headline legibility (the sky in this photo is light) */}
-        <div className="absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-ocean-deep/70 via-ocean-deep/30 to-transparent pointer-events-none" />
-        {/* Bottom warm gradient for text legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-ocean-deep/90 via-ocean-deep/55 to-transparent pointer-events-none" />
-        {/* Subtle left wash for headline contrast */}
-        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep/50 via-ocean-deep/10 to-transparent pointer-events-none" />
-      </div>
+    <section className="relative bg-sand/40 overflow-hidden">
+      <div className="lg:grid lg:grid-cols-12 lg:min-h-[calc(100vh-4rem)]">
+        {/* Foto: bovenaan op een telefoon, rechts vanaf lg. Geen donkere lagen. */}
+        <div className="relative h-[42vh] min-h-[280px] max-h-[460px] lg:h-auto lg:max-h-none lg:col-span-6 lg:col-start-7 lg:row-start-1">
+          <img
+            src={heroImage}
+            alt="Groep schept op aan een buffet in de avondzon op Vlieland, met de vuurtoren op de achtergrond"
+            className="absolute inset-0 h-full w-full object-cover object-[55%_45%]"
+            width={1920}
+            height={1281}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
 
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-28 pb-16 lg:pt-32 lg:pb-20 min-h-screen flex flex-col">
-        {/* Top meta line */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 text-sand mb-8 lg:mb-10"
-        >
-          <div className="h-px w-12 bg-sunset" />
-          <MapPin className="h-4 w-4 text-sunset" />
-          <span className="text-eyebrow font-medium uppercase">
-            est. 2017 · 53°17′N · Vlieland
-          </span>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="font-display font-light text-primary-foreground leading-[0.92] tracking-tight max-w-5xl"
-        >
-          <span className="block text-[clamp(3rem,6.5vw,6.5rem)]">Het eiland</span>
-          <span className="block text-[clamp(3rem,6.5vw,6.5rem)] italic text-sunset font-normal">
-            voor uw groep.
-          </span>
-          <span className="mt-5 block max-w-2xl text-[clamp(1.25rem,1.8vw,1.75rem)] leading-snug tracking-normal text-sand">
-            Van 8 tot 150 personen, van boot tot borrel.
-          </span>
-        </motion.h1>
-
-        {/* Lower content row */}
-        <div className="grid grid-cols-12 gap-6 mt-10 lg:mt-12">
+        {/* Tekst: op een licht vlak, donkere letters. */}
+        <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1 flex flex-col px-4 sm:px-6 lg:px-12 xl:px-20 pt-10 pb-12 lg:py-16">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="col-span-12 lg:col-span-6 lg:col-start-1"
+            transition={{ duration: 0.6 }}
+            className="flex items-center gap-3 text-primary mb-6 lg:mb-8"
           >
-            <p className="text-lg lg:text-xl text-sand/95 leading-relaxed font-light">
-              Bureau Vlieland is <em className="text-primary-foreground not-italic font-normal">niet van een hotel</em>.
-              Wij kiezen per groep de overnachting die past, regelen eten, programma en de boot, en sturen u <em className="text-primary-foreground not-italic font-normal">één factuur</em>.
-              Eilanders die alle partners kennen, met één aanspreekpunt, ook tijdens uw verblijf.
-            </p>
+            <div className="h-px w-10 bg-sunset" />
+            <MapPin className="h-4 w-4 text-sunset" aria-hidden="true" />
+            <span className="text-eyebrow font-medium uppercase">Groepen op Vlieland</span>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+          <motion.h1
+            initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-            className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="font-display font-light text-primary leading-[0.95] tracking-tight"
           >
-            <Button asChild size="xl">
+            <span className="block text-[clamp(2.75rem,5.5vw,5.5rem)]">Het eiland</span>
+            <span className="block text-[clamp(2.75rem,5.5vw,5.5rem)] italic text-sunset font-normal">
+              voor uw groep.
+            </span>
+            <span className="mt-5 block max-w-xl text-[clamp(1.2rem,1.6vw,1.6rem)] leading-snug tracking-normal text-foreground/80">
+              Van 8 tot 150 personen, van boot tot borrel.
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="mt-8 max-w-xl text-lg lg:text-xl text-foreground/80 leading-relaxed font-light"
+          >
+            Bureau Vlieland is <strong className="font-normal text-primary">het eilandbureau voor groepen</strong>.
+            Wij wonen hier, kennen de koks, gidsen en hoteliers, en regelen per groep de overnachting, het eten,
+            het programma en de boot. U krijgt{" "}
+            <strong className="font-normal text-primary">één aanspreekpunt en één factuur</strong>, ook tijdens uw verblijf.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mt-8 flex flex-col gap-4"
+          >
+            <Button asChild size="xl" className="w-full sm:w-auto sm:self-start">
               <Link to="/programma-op-maat">
                 <Sparkles aria-hidden="true" />
                 Start uw aanvraag
                 <ArrowRight aria-hidden="true" />
               </Link>
             </Button>
-            <p className="text-sm text-sand/80 lg:text-right">Vrijblijvend, binnen 5 werkdagen een voorstel.</p>
-            <div className="flex items-center gap-2 text-sm text-sand/90 lg:justify-end">
+            <p className="text-sm text-muted-foreground">Vrijblijvend, {RESPONSE_TIME.within} een voorstel.</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RatingStars value={rating} small />
-              <span className="font-medium text-primary-foreground">{rating.toFixed(1).replace(".", ",")}</span>
-              <span className="text-sand/70">·</span>
+              <span className="font-medium text-foreground">{rating.toFixed(1).replace(".", ",")}</span>
+              <span>·</span>
               <span>200+ groepen sinds 2017</span>
             </div>
-            <p className="text-sm text-sand/80 lg:text-right">
+            <p className="text-sm text-muted-foreground">
               Liever eerst inspiratie?{" "}
               <Link
                 to="/voorbeeldprogrammas"
-                className="text-sand underline underline-offset-4 decoration-sand/40 hover:text-primary-foreground hover:decoration-sand transition-colors"
+                className="text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary transition-colors"
               >
                 Bekijk voorbeeldprogramma's
               </Link>
             </p>
           </motion.div>
-        </div>
 
-        {/* Stats strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="mt-auto pt-12 lg:pt-16 border-t border-sand/20 grid grid-cols-2 md:grid-cols-4 gap-8"
-        >
-          {[
-            { num: "8-150", label: "personen per groep" },
-            { num: "200+", label: "programma's sinds 2017" },
-            { num: "0", label: "eigen bedden te vullen" },
-            { num: "1", label: "factuur, alles geregeld" },
-          ].map((s, i) => (
-            <div key={i} className="text-sand">
-              <div className="font-display text-4xl lg:text-5xl text-primary-foreground font-light">
-                {s.num}
+          {/* Feiten */}
+          <motion.dl
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.9 }}
+            className="mt-12 lg:mt-auto lg:pt-14 pt-10 border-t border-primary/15 grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8"
+          >
+            {STATS.map((s) => (
+              <div key={s.label}>
+                <dd className="font-display text-3xl lg:text-4xl text-primary font-light">{s.num}</dd>
+                <dt className="mt-1.5 text-eyebrow font-medium uppercase text-muted-foreground">{s.label}</dt>
               </div>
-              <div className="mt-2 text-eyebrow font-medium uppercase text-sand/80">
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </motion.div>
+            ))}
+          </motion.dl>
+        </div>
       </div>
     </section>
   );
