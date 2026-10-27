@@ -1,9 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import stapVertellen from "@/assets/stap-vertellen.webp";
-import stapSamenstellen from "@/assets/stap-samenstellen.webp";
-import stapAkkoord from "@/assets/stap-akkoord.webp";
 import { RESPONSE_TIME } from "@/content/promises";
 import { Container, Section, SectionHeader } from "@/components/system";
 import { openPreSalesChat } from "@/components/site/openPreSalesChat";
@@ -17,34 +14,25 @@ import { cn } from "@/lib/utils";
  *
  * Elke stap staat met nummer en titel op één doorlopende lijn, de kaart met
  * de uitleg eronder; zo leest de rij als één route van links naar rechts.
- * De eerste cirkel is gevuld: daar begint de bezoeker. De foto blijft, maar
- * klein in de kaart (ontwerpsysteem, principe 3: mensen in plaats van
- * iconen); bij stap 2 staat Erwin zelf, want "wij" zijn mensen die je kunt
- * zien.
+ * De eerste cirkel is gevuld: daar begint de bezoeker. Zonder foto's: klein
+ * naast de tekst voegden ze niets toe (besluit 27 oktober 2026); Erwin staat
+ * verderop in het verhaal (sectie 06) groot in beeld.
  */
 interface Step {
-  image: string;
-  alt: string;
   title: string;
   text: string;
 }
 
 const STEPS: Step[] = [
   {
-    image: stapVertellen,
-    alt: "Houten wegwijzer op het strand van Vlieland met activiteiten als wadlopen, suppen en powerkiten",
     title: "U vertelt wat u zoekt",
     text: "Groepsgrootte, periode en wat u nodig heeft: activiteiten, eten en drinken, overnachting, boot en fietsen. Twee minuten werk, vrijblijvend.",
   },
   {
-    image: stapSamenstellen,
-    alt: "Erwin Soolsma van Bureau Vlieland aan een picknicktafel op het strand",
     title: "Wij stellen het samen",
     text: `${RESPONSE_TIME.short}, met prijzen per onderdeel. Van eilanders die alle partners kennen. Is iets nog niet duidelijk, dan vragen we even door.`,
   },
   {
-    image: stapAkkoord,
-    alt: "Grote groep juicht in de duinen van Vlieland",
     title: "U geeft akkoord in uw portaal",
     text: "Eén akkoord, één factuur. Wij boeken alle eilandpartners en blijven uw aanspreekpunt, ook tijdens uw verblijf.",
   },
@@ -80,15 +68,7 @@ export const HowItWorks = ({ number }: { number: string }) => (
               </h3>
               <span aria-hidden="true" className="mt-4 h-px min-w-6 flex-1 bg-border" />
             </div>
-            <div className="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
-              <img
-                src={step.image}
-                alt={step.alt}
-                width={800}
-                height={600}
-                loading="lazy"
-                className="aspect-[4/3] w-24 shrink-0 rounded-sm bg-accent-soft object-cover sm:w-28"
-              />
+            <div className="rounded-lg border border-border bg-card p-5">
               <p className="text-sm leading-relaxed text-muted-foreground">{step.text}</p>
             </div>
           </li>
