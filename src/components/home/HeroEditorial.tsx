@@ -6,7 +6,8 @@ import { RatingStars } from "@/components/RatingStars";
 import { useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
 import { RESPONSE_TIME } from "@/content/promises";
 
-import heroImage from "@/assets/hero-vlieland.jpg";
+import heroImage from "@/assets/hero-vliehors.jpg";
+import heroImageSmall from "@/assets/hero-vliehors-1280.jpg";
 
 /**
  * De hero van de homepage: foto en tekst naast elkaar in plaats van tekst
@@ -14,6 +15,10 @@ import heroImage from "@/assets/hero-vlieland.jpg";
  * zonder verloop, en de tekst daaronder op een licht zandvlak; vanaf `lg`
  * staat de tekst links en vult de foto de rechterhelft. De intro zegt wat
  * het bureau is (eilandbureau voor groepen), niet wat het niet is.
+ *
+ * De foto is het drenkelingenhuisje op de Vliehors in de zomer, uit het
+ * origineel van 8688 px in de bouwstenen-opslag: 2560 px voor grote en
+ * scherpe schermen, 1280 px voor telefoons.
  */
 const STATS = [
   { num: "8-150", label: "personen per groep" },
@@ -32,10 +37,12 @@ export const HeroEditorial = () => {
         <div className="relative h-[42vh] min-h-[280px] max-h-[460px] lg:h-auto lg:max-h-none lg:col-span-6 lg:col-start-7 lg:row-start-1">
           <img
             src={heroImage}
-            alt="Groep schept op aan een buffet in de avondzon op Vlieland, met de vuurtoren op de achtergrond"
-            className="absolute inset-0 h-full w-full object-cover object-[55%_45%]"
-            width={1920}
-            height={1281}
+            srcSet={`${heroImageSmall} 1280w, ${heroImage} 2560w`}
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            alt="Het drenkelingenhuisje op de Vliehors op een zomerse dag: wit zand, blauwe lucht en gekleurde boeien aan de palen"
+            className="absolute inset-0 h-full w-full object-cover object-[50%_60%] lg:object-[66%_55%]"
+            width={2560}
+            height={1707}
             fetchPriority="high"
             loading="eager"
             decoding="async"

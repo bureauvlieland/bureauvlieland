@@ -19,6 +19,7 @@ import eventOutdoor from "./event-outdoor.jpg";
 import foodPlatters from "./food-platters.jpg";
 import heroEvent from "./hero-event.jpg";
 import heroVlieland from "./hero-vlieland.jpg";
+import heroVliehors from "./hero-vliehors.jpg";
 import karlaProfile from "./karla-profile.jpg";
 import kiteFlying from "./kite-flying.jpg";
 import lighthouseVlieland from "./lighthouse-vlieland.jpg";
@@ -103,6 +104,7 @@ export const assetFiles: AssetFile[] = [
   { name: "food-platters.jpg", url: foodPlatters, category: getCategory("food-platters") },
   { name: "hero-event.jpg", url: heroEvent, category: getCategory("hero-event") },
   { name: "hero-vlieland.jpg", url: heroVlieland, category: getCategory("hero-vlieland") },
+  { name: "hero-vliehors.jpg", url: heroVliehors, category: getCategory("hero-vliehors") },
   { name: "karla-profile.jpg", url: karlaProfile, category: getCategory("karla-profile") },
   { name: "kite-flying.jpg", url: kiteFlying, category: getCategory("kite-flying") },
   { name: "lighthouse-vlieland.jpg", url: lighthouseVlieland, category: getCategory("lighthouse-vlieland") },
