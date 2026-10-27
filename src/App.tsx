@@ -67,6 +67,7 @@ const Sitemap = lazy(() => import("./pages/Sitemap"));
 const Ontwerp = lazy(() => import("./pages/Ontwerp"));
 const OntwerpKlantportaal = lazy(() => import("./pages/OntwerpKlantportaal"));
 const OntwerpPartnerportaal = lazy(() => import("./pages/OntwerpPartnerportaal"));
+const OntwerpBerichtencentrum = lazy(() => import("./pages/OntwerpBerichtencentrum"));
 const ConceptRecover = lazy(() => import("./pages/ConceptRecover"));
 
 // Lazy-loaded partner pages
@@ -330,6 +331,7 @@ const App = () => {
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp" element={<Ontwerp />} />}
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp/klantportaal" element={<OntwerpKlantportaal />} />}
             {import.meta.env.MODE !== "production" && <Route path="/ontwerp/partnerportaal" element={<OntwerpPartnerportaal />} />}
+            {import.meta.env.MODE !== "production" && <Route path="/ontwerp/berichtencentrum" element={<OntwerpBerichtencentrum />} />}
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

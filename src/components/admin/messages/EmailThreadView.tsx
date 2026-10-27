@@ -187,7 +187,7 @@ export function EmailThreadView({
   const archived = group.threadArchived || group.projectArchived;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
+    <div className="flex-1 min-h-0 flex flex-col min-w-0 bg-muted/30">
       <div className="px-4 py-3 bg-card border-b">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -195,9 +195,9 @@ export function EmailThreadView({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
-              <p className="text-eyebrow font-medium uppercase text-primary flex items-center gap-1.5">
-                {group.kind === "accommodation" ? <BedDouble className="h-3.5 w-3.5" /> : group.kind === "program" ? <FileText className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
-                {reference ?? (group.kind === "contact" ? "Zonder dossier" : "Dossier")}
+              <p className="text-eyebrow font-medium uppercase text-primary flex items-center gap-1.5 min-w-0">
+                {group.kind === "accommodation" ? <BedDouble className="h-3.5 w-3.5 flex-shrink-0" /> : group.kind === "program" ? <FileText className="h-3.5 w-3.5 flex-shrink-0" /> : <Mail className="h-3.5 w-3.5 flex-shrink-0" />}
+                <span className="truncate">{reference ?? (group.kind === "contact" ? "Zonder dossier" : "Dossier")}</span>
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h2 className="min-w-0 truncate font-display text-lg font-medium text-foreground">{customer}</h2>
@@ -223,8 +223,8 @@ export function EmailThreadView({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {dossierHref && (
-              <Button variant="outline" size="sm" onClick={() => navigate(dossierHref)}>
-                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Dossier
+              <Button variant="outline" size="sm" onClick={() => navigate(dossierHref)} aria-label="Naar het dossier">
+                <ExternalLink className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Dossier</span>
               </Button>
             )}
             <DropdownMenu>

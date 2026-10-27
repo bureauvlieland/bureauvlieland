@@ -1,30 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
-import { Keyboard, Mail, MoreVertical, Send, Settings } from "lucide-react";
+import { Navigate, useSearchParams } from "react-router-dom";
+import { Mail } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/system";
-import { cn } from "@/lib/utils";
 import { useEmailThreads } from "@/hooks/useEmailThreads";
 import { useAdminChat } from "@/hooks/useAdminChat";
 import { useConversationProjects } from "@/hooks/useConversationProjects";
-import { ConversationList } from "@/components/admin/messages/ConversationList";
+import { MessagesWorkspace } from "@/components/admin/messages/MessagesWorkspace";
 import { EmailThreadView } from "@/components/admin/messages/EmailThreadView";
 import { ChatConversationView } from "@/components/admin/messages/ChatConversationView";
 import { EmailShortcutsDialog } from "@/components/admin/EmailShortcutsDialog";
 import {
-  CHANNEL_LABEL,
-  VIEW_LABEL,
+  CHANNELS,
   chatToItem,
   countByView,
   emailGroupToItem,
@@ -34,9 +22,6 @@ import {
   type ChannelFilter,
   type ConversationView,
 } from "@/lib/conversationList";
-
-const VIEWS: ConversationView[] = ["open", "all", "archive"];
-const CHANNELS: ChannelFilter[] = ["all", "email", "customer_portal", "partner_portal", "whatsapp", "website"];
 
 function parseView(v: string | null): ConversationView {
   return v === "all" || v === "archive" ? v : "open";
@@ -248,131 +233,57 @@ const AdminMessages = () => {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <AdminLayout>
-        <div className="p-4 sm:p-6 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Berichten</h1>
-              <p className="text-muted-foreground mt-1">E-mail en chat met klanten en partners, op één plek.</p>
+        <MessagesWorkspace
+          view={view}
+          channel={channel}
+          counts={counts}
+          items={filtered}
+          selectedId={selectedId}
+          isLoading={isLoading}
+          chatOnline={chat.isOnline}
+          onSelect={select}
+          onViewChange={setView}
+          onChannelChange={setChannel}
+          onChatOnlineChange={(v) => chat.updatePresence(v)}
+          onShowShortcuts={() => setShortcutsOpen(true)}
+        >
+          {selectedGroup ? (
+            <EmailThreadView
+              group={selectedGroup}
+              showArchivedItems={view === "archive"}
+              onBack={() => select(null)}
+              onSetAnswered={email.setAnswered}
+              onSetThreadAnswered={email.setThreadAnswered}
+              onArchiveItem={email.archiveItem}
+              onArchiveThread={email.archiveThread}
+              onArchiveDossier={email.archiveDossier}
+              replyOpen={replyOpen}
+              onReplyOpenChange={setReplyOpen}
+              onShowShortcuts={() => setShortcutsOpen(true)}
+            />
+          ) : selectedChat ? (
+            <ChatConversationView
+              conversation={selectedChat}
+              messages={chat.messages}
+              projectRef={projectRefs[selectedChat.id]}
+              onBack={() => select(null)}
+              sendMessage={chat.sendMessage}
+              closeConversation={chat.closeConversation}
+              archiveConversation={chat.archiveConversation}
+              saveChatToProject={chat.saveChatToProject}
+              composerRef={chatComposerRef}
+              onShowShortcuts={() => setShortcutsOpen(true)}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <EmptyState
+                icon={<Mail />}
+                title={selectedId ? "Gesprek wordt geladen…" : "Kies een gesprek"}
+                description={selectedId ? undefined : "Met j en k loop je door de lijst, Enter opent het gesprek, r beantwoordt het."}
+              />
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <label className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{chat.isOnline ? "Chat online" : "Chat offline"}</span>
-                <Switch checked={chat.isOnline} onCheckedChange={(v) => chat.updatePresence(v)} aria-label="Chat online" />
-              </label>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label="Meer">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/berichten/templates">
-                      <Settings className="h-4 w-4 mr-2" /> E-mailtemplates
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/berichten/templates?tab=verzendlog">
-                      <Send className="h-4 w-4 mr-2" /> Verzendlog
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShortcutsOpen(true)}>
-                    <Keyboard className="h-4 w-4 mr-2" /> Sneltoetsen
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs value={view} onValueChange={(v) => setView(parseView(v))}>
-              <TabsList>
-                {VIEWS.map((v) => (
-                  <TabsTrigger key={v} value={v} className="gap-2">
-                    {VIEW_LABEL[v]}
-                    {v !== "archive" && counts[v] > 0 && (
-                      <span
-                        className={cn(
-                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold",
-                          v === "open" ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {counts[v]}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <div className="flex flex-wrap gap-1" role="group" aria-label="Kanaal">
-              {CHANNELS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setChannel(c)}
-                  aria-pressed={channel === c}
-                  className={cn(
-                    "px-2.5 py-1 rounded-sm text-xs border transition-colors",
-                    channel === c
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted",
-                  )}
-                >
-                  {CHANNEL_LABEL[c]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="h-[calc(100vh-240px)] min-h-[420px] flex border rounded-lg overflow-hidden bg-card">
-            <div className={cn("w-full lg:w-96 border-r flex-col overflow-y-auto", selectedId ? "hidden lg:flex" : "flex")}>
-              <ConversationList items={filtered} view={view} selectedId={selectedId} isLoading={isLoading} onSelect={select} />
-            </div>
-            <div className={cn("flex-1 min-w-0 flex-col", selectedId ? "flex" : "hidden lg:flex")}>
-              {selectedGroup ? (
-                <EmailThreadView
-                  group={selectedGroup}
-                  showArchivedItems={view === "archive"}
-                  onBack={() => select(null)}
-                  onSetAnswered={email.setAnswered}
-                  onSetThreadAnswered={email.setThreadAnswered}
-                  onArchiveItem={email.archiveItem}
-                  onArchiveThread={email.archiveThread}
-                  onArchiveDossier={email.archiveDossier}
-                  replyOpen={replyOpen}
-                  onReplyOpenChange={setReplyOpen}
-                  onShowShortcuts={() => setShortcutsOpen(true)}
-                />
-              ) : selectedChat ? (
-                <ChatConversationView
-                  conversation={selectedChat}
-                  messages={chat.messages}
-                  projectRef={projectRefs[selectedChat.id]}
-                  onBack={() => select(null)}
-                  sendMessage={chat.sendMessage}
-                  closeConversation={chat.closeConversation}
-                  archiveConversation={chat.archiveConversation}
-                  saveChatToProject={chat.saveChatToProject}
-                  composerRef={chatComposerRef}
-                  onShowShortcuts={() => setShortcutsOpen(true)}
-                />
-              ) : (
-                <div className="flex-1 flex items-center justify-center p-6">
-                  <EmptyState
-                    icon={<Mail />}
-                    title={selectedId ? "Gesprek wordt geladen…" : "Kies een gesprek"}
-                    description={
-                      selectedId
-                        ? undefined
-                        : "Met j en k loop je door de lijst, Enter opent het gesprek, r beantwoordt het."
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          )}
+        </MessagesWorkspace>
         <EmailShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </AdminLayout>
     </>

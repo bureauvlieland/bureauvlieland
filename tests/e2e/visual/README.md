@@ -1,8 +1,8 @@
 # Visuele regressie (fase 5, borging)
 
 Eén pagina per paginasoort van de publieke site, zes schermen van het
-klantportaal en zes van het partnerportaal, op desktop (1440) en telefoon
-(390), vergeleken met de
+klantportaal, zes van het partnerportaal en drie van het Berichtencentrum,
+op desktop (1440) en telefoon (390), vergeleken met de
 referentie in `__snapshots__/`. Draait in
 CI (job "Visuele regressie") tegen de preview-build. Wijkt een pagina meer
 dan 1% van de pixels af, faalt de job en staan de verschillen in het
@@ -78,6 +78,14 @@ te beoordelen en maak nieuwe referenties via de workflow hierboven.
   (`building_blocks`, `app_settings`, en de chatstatus op de logiespagina);
   die staan in de fixtures `partnerportaal-*.har`. De acties zijn
   uitgeschakeld.
+
+- Het Berichtencentrum wordt opgenomen op `/ontwerp/berichtencentrum`
+  (alleen buiten productie): twee verzonnen e-mailgesprekken en twee chats
+  uit `src/content/demoBerichtencentrum.ts`, gekozen met `?scherm=lijst`
+  (niets geopend), `email` (het e-mailgesprek met systeemmail, een
+  partnerantwoord en een onbeantwoord klantbericht met bijlage) of `chat`
+  (de klantchat). De pagina haalt niets op; de fixtures zijn leeg en de
+  acties doen niets.
 
 ## Vaste data
 

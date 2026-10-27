@@ -150,7 +150,7 @@ export function ChatConversationView({
   const closed = conv.status === "closed";
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-muted/30">
+    <div className="flex-1 min-h-0 flex flex-col min-w-0 bg-muted/30">
       <div className="px-4 py-3 bg-card border-b">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2 min-w-0 flex-1">
@@ -158,9 +158,9 @@ export function ChatConversationView({
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-0">
-              <p className="text-eyebrow font-medium uppercase text-primary flex items-center gap-1.5">
-                {projectRef?.accommodation && !projectRef.program ? <BedDouble className="h-3.5 w-3.5" /> : dossierLabel ? <FileText className="h-3.5 w-3.5" /> : <MessageCircle className="h-3.5 w-3.5" />}
-                {dossierLabel ?? "Zonder dossier"} · {CHANNEL_LABEL[channel]}
+              <p className="text-eyebrow font-medium uppercase text-primary flex items-center gap-1.5 min-w-0">
+                {projectRef?.accommodation && !projectRef.program ? <BedDouble className="h-3.5 w-3.5 flex-shrink-0" /> : dossierLabel ? <FileText className="h-3.5 w-3.5 flex-shrink-0" /> : <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />}
+                <span className="truncate">{dossierLabel ?? "Zonder dossier"} · {CHANNEL_LABEL[channel]}</span>
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h2 className="min-w-0 truncate font-display text-lg font-medium text-foreground">
@@ -180,13 +180,13 @@ export function ChatConversationView({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {dossierHref && (
-              <Button variant="outline" size="sm" onClick={() => navigate(dossierHref)}>
-                <ExternalLink className="h-3.5 w-3.5 mr-1" /> Dossier
+              <Button variant="outline" size="sm" onClick={() => navigate(dossierHref)} aria-label="Naar het dossier">
+                <ExternalLink className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Dossier</span>
               </Button>
             )}
             {conv.source_partner_id && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/partners/${conv.source_partner_id}`)}>
-                <Building2 className="h-3.5 w-3.5 mr-1" /> Partner
+              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/partners/${conv.source_partner_id}`)} aria-label="Naar de partner">
+                <Building2 className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Partner</span>
               </Button>
             )}
             <DropdownMenu>

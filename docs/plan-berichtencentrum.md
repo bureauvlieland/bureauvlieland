@@ -2,7 +2,8 @@
 
 Status: onderzoek en plan 26 oktober 2026. Erwin heeft op 26 oktober ja
 gezegd op alle vier de beslissingen onderaan. Fase 0 is op 26 oktober gebouwd,
-fase 1 en 2 op 27 oktober (zie "Gebouwd" onderaan); fase 3 volgt.
+fase 1, 2 en 3 op 27 oktober (zie "Gebouwd" onderaan). Het plan is daarmee
+uitgevoerd; de meting staat in `docs/meting-berichtencentrum.md`.
 
 Vraag van Erwin: "Dit overzicht is ook niet erg intuïtief. Dat moet beter
 kunnen." Dit document legt eerst vast wat het scherm nu doet en wat de
@@ -355,3 +356,25 @@ dossier.
 - Sneltoetsen: j/k, Enter, Esc, r, m, u, e, 1/2/3 voor de weergaven, a, ?.
 - Kleuren en chips op de tokens en `Pill`; de losse paletkleuren uit
   `EmailPanel` en `ChatPanel` zijn weg.
+
+### Fase 3 (27 oktober 2026)
+
+- `docs/meting-berichtencentrum.md`: de twee queries (reactietijd per maand
+  met mediaan, P90 en "binnen 24 uur"; wat er nu open staat en hoe lang)
+  met de nulmeting van 27 oktober en het doel: mediaan onder 24 uur, P90
+  onder 72 uur, nooit een gesprek langer dan 3 dagen open. Eind november
+  opnieuw meten.
+- Visuele regressietest van lijst, e-mailgesprek en chat op desktop en
+  telefoon, naar het patroon van de portalen: de schil van het
+  Berichtencentrum is `MessagesWorkspace` (zonder data), de
+  referentiepagina `/ontwerp/berichtencentrum` (alleen buiten productie)
+  vult hem met verzonnen gesprekken uit `src/content/demoBerichtencentrum.ts`,
+  en `tests/e2e/visual/paginas.spec.ts` neemt drie schermen op.
+- Wat de eerste schermafbeeldingen aan het licht brachten en meteen
+  verholpen is: de composerbalk viel buiten de kaart (de flex-kolom miste
+  `min-h-0`), en op een telefoon drukte de knop "Dossier" de naam weg; die
+  is daar nu alleen een icoon en de dossierreferentie breekt niet meer af
+  over drie regels. De knop "Vraag stellen" van de site staat niet op de
+  referentiepagina.
+- Sneltoets `m` blijft "afgehandeld" voor e-mail; een chat is afgehandeld
+  zodra hij geopend (gelezen) is, dus daar is geen aparte toets voor.

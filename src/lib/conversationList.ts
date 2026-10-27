@@ -17,6 +17,9 @@ export type ConversationView = "open" | "all" | "archive";
 export type ConversationChannel = "email" | "customer_portal" | "partner_portal" | "whatsapp" | "website";
 export type ChannelFilter = ConversationChannel | "all";
 
+export const VIEWS: ConversationView[] = ["open", "all", "archive"];
+export const CHANNELS: ChannelFilter[] = ["all", "email", "customer_portal", "partner_portal", "whatsapp", "website"];
+
 export const VIEW_LABEL: Record<ConversationView, string> = {
   open: "Te beantwoorden",
   all: "Alle gesprekken",
