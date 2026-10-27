@@ -40,7 +40,7 @@ const STEPS: Step[] = [
     image: stapSamenstellen,
     alt: "Erwin Soolsma van Bureau Vlieland aan een picknicktafel op het strand",
     title: "Wij stellen het samen",
-    text: `${RESPONSE_TIME.short}, met prijzen per onderdeel. Van eilanders die alle partners kennen en weten wat bij uw groep past.`,
+    text: `${RESPONSE_TIME.short}, met prijzen per onderdeel. Van eilanders die alle partners kennen. Is iets nog niet duidelijk, dan vragen we even door.`,
   },
   {
     image: stapAkkoord,
