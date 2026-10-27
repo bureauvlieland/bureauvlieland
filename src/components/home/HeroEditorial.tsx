@@ -4,136 +4,128 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, MapPin, Sparkles } from "lucide-react";
 import { RatingStars } from "@/components/RatingStars";
 import { useGoogleReviewsCache } from "@/hooks/useGoogleReviewsCache";
+import { RESPONSE_TIME } from "@/content/promises";
 
-import heroImage from "@/assets/sunset-dinner.jpg";
+import heroImage from "@/assets/hero-speedboot.jpg";
+import heroImage1600 from "@/assets/hero-speedboot-1600.jpg";
+import heroImage960 from "@/assets/hero-speedboot-960.jpg";
+
+/**
+ * De hero van de homepage: één foto over de volle breedte, zonder donkere
+ * verlopen, met de tekst in een compacte zandkaart. Vanaf `lg` ligt de
+ * kaart links over de foto (op een ultrawide scherm blijft hij even breed en
+ * wordt de foto groter); op een telefoon staat de foto bovenaan en schuift
+ * de kaart over de onderrand. De feiten staan in een smalle band eronder.
+ * De intro zegt wat het bureau is (eilandbureau voor groepen), niet wat het
+ * niet is.
+ *
+ * De foto is een groep in de speedboot in de haven van Vlieland, uit het
+ * origineel van 5933 px in de bouwstenen-opslag: 2880, 1600 en 960 px.
+ */
+const STATS = [
+  { num: "8-150", label: "personen per groep" },
+  { num: "200+", label: "groepen sinds 2017" },
+  { num: "1", label: "aanspreekpunt" },
+  { num: "1", label: "factuur" },
+];
 
 export const HeroEditorial = () => {
   const { data: google } = useGoogleReviewsCache();
   const rating = google?.rating && google.review_count > 0 ? google.rating : 4.9;
   return (
-    <section className="relative min-h-screen bg-ocean-deep overflow-hidden">
-      {/* Full-bleed background image */}
-      <div className="absolute inset-0">
-        <img
-          src={heroImage}
-          alt="Lange tafel voor een groep bij zonsondergang op Vlieland, met de vuurtoren op de achtergrond"
-          className="w-full h-full object-cover object-[50%_80%]"
-          width={1920}
-          height={1277}
-          fetchPriority="high"
-          loading="eager"
-          decoding="async"
-        />
-        {/* Top vignette for nav and headline legibility (the sky in this photo is light) */}
-        <div className="absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-ocean-deep/70 via-ocean-deep/30 to-transparent pointer-events-none" />
-        {/* Bottom warm gradient for text legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-[80%] bg-gradient-to-t from-ocean-deep/90 via-ocean-deep/55 to-transparent pointer-events-none" />
-        {/* Subtle left wash for headline contrast */}
-        <div className="absolute inset-0 bg-gradient-to-r from-ocean-deep/50 via-ocean-deep/10 to-transparent pointer-events-none" />
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl pt-28 pb-16 lg:pt-32 lg:pb-20 min-h-screen flex flex-col">
-        {/* Top meta line */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center gap-3 text-sand mb-8 lg:mb-10"
-        >
-          <div className="h-px w-12 bg-sunset" />
-          <MapPin className="h-4 w-4 text-sunset" />
-          <span className="text-eyebrow font-medium uppercase">
-            est. 2017 · 53°17′N · Vlieland
-          </span>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          className="font-display font-light text-primary-foreground leading-[0.92] tracking-tight max-w-5xl"
-        >
-          <span className="block text-[clamp(3rem,6.5vw,6.5rem)]">Het eiland</span>
-          <span className="block text-[clamp(3rem,6.5vw,6.5rem)] italic text-sunset font-normal">
-            voor uw groep.
-          </span>
-          <span className="mt-5 block max-w-2xl text-[clamp(1.25rem,1.8vw,1.75rem)] leading-snug tracking-normal text-sand">
-            Van 8 tot 150 personen, van boot tot borrel.
-          </span>
-        </motion.h1>
-
-        {/* Lower content row */}
-        <div className="grid grid-cols-12 gap-6 mt-10 lg:mt-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-            className="col-span-12 lg:col-span-6 lg:col-start-1"
-          >
-            <p className="text-lg lg:text-xl text-sand/95 leading-relaxed font-light">
-              Bureau Vlieland is <em className="text-primary-foreground not-italic font-normal">niet van een hotel</em>.
-              Wij kiezen per groep de overnachting die past, regelen eten, programma en de boot, en sturen u <em className="text-primary-foreground not-italic font-normal">één factuur</em>.
-              Eilanders die alle partners kennen, met één aanspreekpunt, ook tijdens uw verblijf.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.7 }}
-            className="col-span-12 lg:col-span-5 lg:col-start-8 flex flex-col gap-4 lg:items-end"
-          >
-            <Button asChild size="xl">
-              <Link to="/programma-op-maat">
-                <Sparkles aria-hidden="true" />
-                Start uw aanvraag
-                <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
-            <p className="text-sm text-sand/80 lg:text-right">Vrijblijvend, binnen 5 werkdagen een voorstel.</p>
-            <div className="flex items-center gap-2 text-sm text-sand/90 lg:justify-end">
-              <RatingStars value={rating} small />
-              <span className="font-medium text-primary-foreground">{rating.toFixed(1).replace(".", ",")}</span>
-              <span className="text-sand/70">·</span>
-              <span>200+ groepen sinds 2017</span>
-            </div>
-            <p className="text-sm text-sand/80 lg:text-right">
-              Liever eerst inspiratie?{" "}
-              <Link
-                to="/voorbeeldprogrammas"
-                className="text-sand underline underline-offset-4 decoration-sand/40 hover:text-primary-foreground hover:decoration-sand transition-colors"
-              >
-                Bekijk voorbeeldprogramma's
-              </Link>
-            </p>
-          </motion.div>
+    <section className="relative bg-sand/40">
+      <div className="relative">
+        {/* Foto over de volle breedte. Geen verloop: de kaart zorgt voor leesbaarheid. */}
+        <div className="relative h-[58vh] min-h-[380px] max-h-[640px] lg:h-[calc(100vh-4rem)] lg:min-h-[640px] lg:max-h-none">
+          <img
+            src={heroImage}
+            srcSet={`${heroImage960} 960w, ${heroImage1600} 1600w, ${heroImage} 2880w`}
+            sizes="100vw"
+            alt="Groep in gele jassen zwaait en lacht vanuit een speedboot in de haven van Vlieland"
+            className="absolute inset-0 h-full w-full object-cover object-[58%_45%]"
+            width={2880}
+            height={1923}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+          />
         </div>
 
-        {/* Stats strip */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="mt-auto pt-12 lg:pt-16 border-t border-sand/20 grid grid-cols-2 md:grid-cols-4 gap-8"
-        >
-          {[
-            { num: "8-150", label: "personen per groep" },
-            { num: "200+", label: "programma's sinds 2017" },
-            { num: "0", label: "eigen bedden te vullen" },
-            { num: "1", label: "factuur, alles geregeld" },
-          ].map((s, i) => (
-            <div key={i} className="text-sand">
-              <div className="font-display text-4xl lg:text-5xl text-primary-foreground font-light">
-                {s.num}
-              </div>
-              <div className="mt-2 text-eyebrow font-medium uppercase text-sand/80">
-                {s.label}
-              </div>
+        {/* Tekstkaart: op een telefoon over de onderrand van de foto, vanaf lg links over de foto. */}
+        <div className="relative -mt-20 px-4 sm:px-6 lg:absolute lg:inset-0 lg:mt-0 lg:flex lg:items-center lg:px-8 xl:px-16">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto w-full max-w-xl rounded-lg bg-sand p-6 shadow-dramatic sm:p-8 lg:mx-0 lg:p-10"
+          >
+            <div className="mb-5 flex items-center gap-3 text-primary">
+              <div className="h-px w-8 bg-sunset" />
+              <MapPin className="h-4 w-4 text-sunset" aria-hidden="true" />
+              <span className="text-eyebrow font-medium uppercase">Groepen op Vlieland</span>
             </div>
-          ))}
-        </motion.div>
+
+            <h1 className="font-display font-light text-primary leading-[0.95] tracking-tight">
+              <span className="block text-[clamp(2.5rem,4.5vw,4.25rem)]">Het eiland</span>
+              <span className="block text-[clamp(2.5rem,4.5vw,4.25rem)] italic text-sunset font-normal">
+                voor uw groep.
+              </span>
+              <span className="mt-4 block text-[clamp(1.125rem,1.4vw,1.375rem)] leading-snug tracking-normal text-foreground/80">
+                Van 8 tot 150 personen, van boot tot borrel.
+              </span>
+            </h1>
+
+            <p className="mt-5 text-base leading-relaxed text-foreground/80 lg:text-lg">
+              Bureau Vlieland is <strong className="font-normal text-primary">het eilandbureau voor groepen</strong>.
+              Wij wonen hier, kennen de koks, gidsen en hoteliers, en regelen per groep de overnachting, het eten,
+              het programma en de boot. U krijgt{" "}
+              <strong className="font-normal text-primary">één aanspreekpunt en één factuur</strong>, ook tijdens uw
+              verblijf.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <Button asChild size="xl" className="w-full sm:w-auto sm:self-start">
+                <Link to="/programma-op-maat">
+                  <Sparkles aria-hidden="true" />
+                  Start uw aanvraag
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">Vrijblijvend, {RESPONSE_TIME.within} een voorstel.</p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <RatingStars value={rating} small />
+                <span className="font-medium text-foreground">{rating.toFixed(1).replace(".", ",")}</span>
+                <span>·</span>
+                <span>200+ groepen sinds 2017</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Liever eerst inspiratie?{" "}
+                <Link
+                  to="/voorbeeldprogrammas"
+                  className="text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary transition-colors"
+                >
+                  Bekijk voorbeeldprogramma's
+                </Link>
+              </p>
+            </div>
+          </motion.div>
+        </div>
       </div>
+
+      {/* Feiten: smalle band onder de foto. */}
+      <motion.dl
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1, delay: 0.6 }}
+        className="container mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 md:grid-cols-4 lg:gap-8 lg:px-8 lg:py-10"
+      >
+        {STATS.map((s) => (
+          <div key={s.label}>
+            <dd className="font-display text-3xl font-light text-primary lg:text-4xl">{s.num}</dd>
+            <dt className="mt-1.5 text-eyebrow font-medium uppercase text-muted-foreground">{s.label}</dt>
+          </div>
+        ))}
+      </motion.dl>
     </section>
   );
 };
