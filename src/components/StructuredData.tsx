@@ -67,7 +67,8 @@ export const StructuredData = () => {
       "founder": { "@type": "Person", "name": "Erwin Soolsma" },
       "sameAs": [
         "https://www.instagram.com/bureau_vlieland/",
-        "https://www.facebook.com/bureauvlieland/"
+        "https://www.facebook.com/bureauvlieland/",
+        "https://www.linkedin.com/company/bureau-vlieland/"
       ],
       "areaServed": { "@type": "Place", "name": "Nederland" },
     };
