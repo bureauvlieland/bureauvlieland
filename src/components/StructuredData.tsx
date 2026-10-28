@@ -13,15 +13,12 @@ interface CacheRow {
   reviews: CachedReview[];
 }
 
-const FALLBACK_RATING = "4.9";
-const FALLBACK_COUNT = "3";
-
-const FALLBACK_REVIEWS: CachedReview[] = [
-  { author_name: "Mark de Vries", rating: 5, text: "Een fantastische ervaring! Het team van Bureau Vlieland heeft ons bedrijfsuitje tot in de puntjes verzorgd." },
-  { author_name: "Linda van der Berg", rating: 5, text: "Professionele organisatie en geweldige begeleiding. Onze teambuilding was een groot succes!" },
-  { author_name: "Peter Janssen", rating: 5, text: "Creatieve programma's en uitstekende service. Aanrader voor elk bedrijf dat een uniek uitje zoekt." },
-];
-
+/**
+ * Score, aantal en reviews komen uitsluitend uit de Google-reviewcache. Is
+ * die leeg, dan laten we ze weg: structured data met verzonnen beoordelingen
+ * is tegen de richtlijnen van Google en schaadt het vertrouwen als het
+ * zichtbaar wordt (de oude fallback had drie bedachte namen met een 4,9).
+ */
 export const StructuredData = () => {
   const [cache, setCache] = useState<CacheRow | null>(null);
 
@@ -39,14 +36,12 @@ export const StructuredData = () => {
   }, []);
 
   useEffect(() => {
-    const hasLive = cache && cache.rating && cache.review_count > 0;
-    const ratingValue = hasLive ? String(cache!.rating) : FALLBACK_RATING;
-    const reviewCount = hasLive ? String(cache!.review_count) : FALLBACK_COUNT;
+    const hasLive = Boolean(cache && cache.rating && cache.review_count > 0);
     const reviewsForSchema: CachedReview[] = hasLive
       ? (cache!.reviews || []).filter(r => (r.rating ?? 0) >= 4).slice(0, 5)
-      : FALLBACK_REVIEWS;
+      : [];
 
-    const localBusiness = {
+    const localBusiness: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": "LocalBusiness",
       "name": "Bureau Vlieland",
@@ -75,13 +70,14 @@ export const StructuredData = () => {
         "https://www.facebook.com/bureauvlieland/"
       ],
       "areaServed": { "@type": "Place", "name": "Nederland" },
-
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": ratingValue,
-        "reviewCount": reviewCount
-      }
     };
+    if (hasLive) {
+      localBusiness.aggregateRating = {
+        "@type": "AggregateRating",
+        "ratingValue": String(cache!.rating),
+        "reviewCount": String(cache!.review_count),
+      };
+    }
 
     const services = [
       { serviceType: "Team Building", description: "Op maat gemaakte teambuilding activiteiten op Vlieland. Van actieve uitdagingen tot creatieve workshops." },

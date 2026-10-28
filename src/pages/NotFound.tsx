@@ -35,6 +35,7 @@ const getRedirectDestination = (pathname: string): string | null => {
   if (path === "/activiteiten-op-vlieland/dagprogramma-inclusief-luxe-fietsen-lunch-en-activiteiten") return "/voorbeeldprogrammas";
   if (path.startsWith("/activiteiten-op-vlieland")) return "/bouwstenen";
   if (path.startsWith("/product")) return "/bouwstenen";
+  if (path.startsWith("/vakantiehuizen")) return "/logies-vlieland";
 
   if (path === "/bedrijfsuitje-naar-vlieland-2") return "/bedrijfsuitje-vlieland";
   if (path === "/incentive-op-vlieland-2") return "/incentive-reis-vlieland";

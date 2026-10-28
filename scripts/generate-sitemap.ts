@@ -79,6 +79,7 @@ const staticEntries: SitemapEntry[] = [
   { path: "/heisessie-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/bedrijfsuitje-ideeen-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/incentive-reis-vlieland", changefreq: "monthly", priority: "0.7" },
+  { path: "/groepsreizen-vlieland", changefreq: "monthly", priority: "0.8" },
   { path: "/groepsweekend-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/jubileum-vlieland", changefreq: "monthly", priority: "0.7" },
   { path: "/familieweekend-vlieland", changefreq: "monthly", priority: "0.7" },

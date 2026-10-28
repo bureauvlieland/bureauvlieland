@@ -7,27 +7,28 @@
     <link rel="preload" href="/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <title>Bureau Vlieland – Groepsprogramma's op Vlieland</title>
-    <meta name="description" content="Bureau Vlieland organiseert eendaagse en meerdaagse programma's voor groepen op Vlieland. Eén partij, één factuur — wij boeken alle eilandpartners.">
+    <!--
+      De tags met data-react-helmet zijn de startwaarden voor wie geen
+      JavaScript draait (Facebook, LinkedIn, WhatsApp). Zodra de pagina
+      rendert, vervangt react-helmet ze door de tags van die pagina; zonder dit
+      attribuut bleven ze staan en had elke pagina twee omschrijvingen, met die
+      van de homepage bovenaan (gezien op 28 oktober 2026).
+    -->
+    <meta name="description" data-react-helmet="true" content="Bureau Vlieland organiseert eendaagse en meerdaagse programma's voor groepen op Vlieland. Eén partij, één factuur — wij boeken alle eilandpartners.">
 
     <meta name="author" content="Bureau Vlieland" />
 
     <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://bureauvlieland.nl/" />
-    <meta property="og:title" content="Bureau Vlieland – Groepsprogramma's op Vlieland" />
-    <meta property="og:description" content="Lokale specialist voor groepsbezoek aan Vlieland: één partij, één factuur. Wij ontwikkelen het programma en boeken alle eilandpartners." />
-    <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:type" data-react-helmet="true" content="website" />
+    <meta property="og:url" data-react-helmet="true" content="https://bureauvlieland.nl/" />
+    <meta property="og:title" data-react-helmet="true" content="Bureau Vlieland – Groepsprogramma's op Vlieland" />
+    <meta property="og:description" data-react-helmet="true" content="Lokale specialist voor groepsbezoek aan Vlieland: één partij, één factuur. Wij ontwikkelen het programma en boeken alle eilandpartners." />
+    <meta property="og:image" data-react-helmet="true" content="https://bureauvlieland.nl/og-image.jpg" />
     <meta property="og:locale" content="nl_NL" />
     <meta property="og:site_name" content="Bureau Vlieland" />
 
-    <!-- Twitter Card -->
+    <!-- Twitter/X valt terug op de og-tags; alleen het kaarttype is eigen. -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://bureauvlieland.nl/" />
-    <meta name="twitter:title" content="Bureau Vlieland – Groepsprogramma's op Vlieland" />
-    <meta name="twitter:description" content="Lokale specialist voor groepsbezoek aan Vlieland: één partij, één factuur. Wij ontwikkelen het programma en boeken alle eilandpartners." />
-    <meta name="twitter:image" content="https://bureauvlieland.nl/og-image.jpg" />
 
     
     <!-- Google Site Verification -->
@@ -48,7 +49,8 @@
     </script>
     <!-- End Google Tag Manager -->
 
-  <link rel="icon" type="image/x-icon" href="https://storage.googleapis.com/gpt-engineer-file-uploads/4oM38v9FSNPtrMQgYQq4eMLnGbX2/uploads/1763217599021-BureauVlieland_CMYK_vierkant.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="512x512" href="/email-logo.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0f3a5b">
   <meta name="apple-mobile-web-app-capable" content="yes">

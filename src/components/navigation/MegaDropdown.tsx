@@ -131,6 +131,7 @@ const voorBedrijvenItems: NavItem[] = [
 ];
 
 const voorPriveItems: NavItem[] = [
+  { label: "Groepsreis Vlieland", href: "/groepsreizen-vlieland", highlight: true },
   { label: "Groepsweekend", href: "/groepsweekend-vlieland" },
   { label: "Jubileum vieren", href: "/jubileum-vlieland" },
   { label: "Familieweekend", href: "/familieweekend-vlieland" },

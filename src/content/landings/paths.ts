@@ -16,6 +16,7 @@ export const LANDING_PATHS = [
   "/groepsweekend-vlieland",
   "/jubileum-vlieland",
   "/familieweekend-vlieland",
+  "/groepsreizen-vlieland",
 ] as const;
 
 /** Activiteitpagina's (tweede sjabloonvariant). */
