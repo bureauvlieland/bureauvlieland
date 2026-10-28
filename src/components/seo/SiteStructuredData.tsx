@@ -41,6 +41,7 @@ const organizationSchema = {
   sameAs: [
     "https://www.instagram.com/bureau_vlieland/",
     "https://www.facebook.com/bureauvlieland/",
+    "https://www.linkedin.com/company/bureau-vlieland/",
   ],
   contactPoint: [
     {
