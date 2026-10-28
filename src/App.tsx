@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense, type ReactNode } from "react";
+import { PrerenderFallback, PrerenderSnapshotConsumer } from "@/components/PrerenderFallback";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -168,7 +169,8 @@ const App = () => {
             <PreSalesChatWidget />
           </ErrorBoundary>
           <RouteBoundary>
-          <Suspense fallback={null}>
+          <Suspense fallback={<PrerenderFallback />}>
+          <PrerenderSnapshotConsumer />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/onze-werkwijze" element={<OnzeWerkwijze />} />

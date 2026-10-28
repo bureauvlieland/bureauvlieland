@@ -4,6 +4,7 @@ import "./index.css";
 import { initErrorReporting } from "@/lib/errorReporting.init";
 import { installImageFallback } from "@/lib/supabaseImage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { captureSnapshot } from "@/lib/prerenderSnapshot";
 
 // Vóór het renderen aanzetten, zodat ook fouten in de eerste render gemeld worden.
 initErrorReporting();
@@ -19,7 +20,12 @@ window.addEventListener("vite:preloadError", (event) => {
 // Verkleinde foto die Supabase weigert (te grote bron): toon het origineel.
 installImageFallback();
 
-createRoot(document.getElementById("root")!).render(
+// Geprerenderde pagina (scripts/prerender.ts): de inhoud blijft zichtbaar
+// als Suspense-fallback tot het chunk van de route binnen is.
+const rootElement = document.getElementById("root")!;
+captureSnapshot(rootElement);
+
+createRoot(rootElement).render(
   <ErrorBoundary name="root">
     <App />
   </ErrorBoundary>,

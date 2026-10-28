@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  injectModulePreloads,
   insertRewrites,
   looksComplete,
   rewriteRuleFor,
@@ -82,5 +83,21 @@ describe("looksComplete", () => {
     expect(looksComplete(`<title>Pagina niet gevonden</title><div id="root"><h1>Hier waait geen pagina.</h1><p>${inhoud}</p></div>`)).toBe(false);
     expect(looksComplete(`<div id="root"><p>${inhoud}</p></div>`)).toBe(false);
     expect(looksComplete(`<div id="root"><h1>Leeg</h1></div>`)).toBe(false);
+  });
+});
+
+describe("injectModulePreloads", () => {
+  it("voegt alleen chunks toe die de pagina nog niet noemt, vóór </head>", () => {
+    const html = `<html><head><script type="module" src="/assets/index-a.js"></script><link rel="modulepreload" href="/assets/vendor-b.js"></head><body></body></html>`;
+    const out = injectModulePreloads(html, ["/assets/index-a.js", "/assets/vendor-b.js", "/assets/LandingRoute-c.js", "/assets/foto.jpg", "/rest/v1/x.js"]);
+    expect(out.match(/modulepreload/g)?.length).toBe(2);
+    expect(out).toContain('<link rel="modulepreload" crossorigin href="/assets/LandingRoute-c.js">\n</head>');
+    expect(out).not.toContain("foto.jpg");
+    expect(out).not.toContain("/rest/v1/x.js");
+  });
+
+  it("laat de HTML met rust als er niets te preloaden is", () => {
+    const html = `<html><head></head><body></body></html>`;
+    expect(injectModulePreloads(html, [])).toBe(html);
   });
 });
