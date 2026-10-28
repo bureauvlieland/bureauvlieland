@@ -36,6 +36,14 @@ Daarom draait na `vite build` `scripts/prerender.ts` (in de buildopdracht in
   (`StructuredData`, `LandingPageStructuredData`, `FaqSection`) vervangen
   daarom een bestaand script met hetzelfde id in plaats van het te
   verdubbelen; houd dat aan bij nieuwe injecties.
+- Omdat de routes lazy zijn, zou `createRoot` de momentopname wissen en de
+  bezoeker naar een lege pagina laten kijken tot het chunk van de route
+  binnen is (op een trage verbinding ruim een seconde). Daarom bewaart
+  `src/lib/prerenderSnapshot.ts` de HTML vóór de eerste render en toont de
+  Suspense-fallback van de routes (`PrerenderFallback`) hem tot de echte
+  pagina gemount is; daarna toont de fallback niets meer. Vite zet tijdens
+  de momentopname zelf al `modulepreload`-links voor de geladen chunks in
+  de head, dus die komen mee in de HTML.
 
 Bouwminuten: in productie gaan alle pagina's mee (lokaal 85 pagina's in
 ruim een minuut, op Netlify naar verwachting twee tot drie minuten). In

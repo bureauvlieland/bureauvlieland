@@ -3,7 +3,9 @@
 # wint, dus specifieke paden staan vóór de wildcards. Dezelfde kaart staat in
 # src/pages/NotFound.tsx voor adressen zonder slash aan het eind.
 
-/contact/                                    /#contact                301
+# /contact is op de nieuwe site een eigen pagina. De oude regel
+# `/contact/ → /#contact` stuurde ook /contact (Netlify negeert de slash) naar
+# de homepage, waardoor de contactpagina onbereikbaar was (gezien 28 oktober 2026).
 /programmas/                                 /voorbeeldprogrammas     301
 /programmas                                  /voorbeeldprogrammas     301
 /duurzame-zakenevents/                       /samenwerken             301

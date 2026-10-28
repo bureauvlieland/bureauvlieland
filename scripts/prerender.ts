@@ -87,6 +87,19 @@ export function selectRoutes(all: string[], env: Record<string, string | undefin
   return [...SUBSET, ...(first ? [first] : [])].filter((r, i, arr) => all.includes(r) && arr.indexOf(r) === i);
 }
 
+/**
+ * Voegt `modulepreload`-links toe voor de JS-chunks die de pagina tijdens de
+ * momentopname laadde (de lazy route en haar inhoud), voor zover index.html
+ * ze nog niet noemt. Zo haalt de browser ze samen met de hoofdbundel op in
+ * plaats van pas nadat React gestart is.
+ */
+export function injectModulePreloads(html: string, chunkPaths: string[]): string {
+  const missing = chunkPaths.filter((p) => /^\/assets\/[^"]+\.js$/.test(p) && !html.includes(`href="${p}"`) && !html.includes(`src="${p}"`));
+  if (missing.length === 0) return html;
+  const links = missing.map((p) => `<link rel="modulepreload" crossorigin href="${p}">`).join("\n");
+  return html.replace("</head>", `${links}\n</head>`);
+}
+
 /** Een momentopname die niet af is (404, geen kop, lege app) wordt niet weggeschreven. */
 export function looksComplete(html: string): boolean {
   if (!/<h1[\s>]/i.test(html)) return false;
@@ -198,8 +211,14 @@ async function main() {
       });
       await context.route("**/*", (route) => (BLOCKED.test(route.request().url()) ? route.abort() : route.continue()));
       const page = await context.newPage();
+      const chunks = new Set<string>();
+      page.on("request", (req) => {
+        const url = req.url();
+        if (req.resourceType() === "script" && url.startsWith(server.origin)) chunks.add(url.slice(server.origin.length));
+      });
 
       for (let route = queue.shift(); route; route = queue.shift()) {
+        chunks.clear();
         try {
           try {
             await page.goto(`${server.origin}${route}`, { waitUntil: "networkidle", timeout: 60_000 });
@@ -217,7 +236,7 @@ async function main() {
             window.scrollTo(0, 0);
           });
           await page.waitForTimeout(500);
-          const html = await page.evaluate(() => {
+          const rendered = await page.evaluate(() => {
             document
               .querySelectorAll('script[src*="googletagmanager"], [data-radix-portal], [data-sonner-toaster], [data-prerender-remove]')
               .forEach((el) => el.remove());
@@ -231,6 +250,7 @@ async function main() {
             document.body.style.removeProperty("pointer-events");
             return `<!doctype html>\n${document.documentElement.outerHTML}`;
           });
+          const html = injectModulePreloads(rendered, [...chunks]);
           if (!looksComplete(html)) {
             skipped.push(route);
             console.warn(`[prerender] overgeslagen (onvolledig): ${route}`);
