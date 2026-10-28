@@ -10,6 +10,7 @@ import { zakelijkEvenementVlieland } from "./zakelijk-evenement-vlieland";
 import { groepsweekendVlieland } from "./groepsweekend-vlieland";
 import { jubileumVlieland } from "./jubileum-vlieland";
 import { familieweekendVlieland } from "./familieweekend-vlieland";
+import { groepsreizenVlieland } from "./groepsreizen-vlieland";
 import { wadlopenVlieland } from "./wadlopen-vlieland";
 import { zeehondentochtenVlieland } from "./zeehondentochten-vlieland";
 
@@ -31,6 +32,7 @@ export const LANDINGS: LandingContent[] = [
   groepsweekendVlieland,
   jubileumVlieland,
   familieweekendVlieland,
+  groepsreizenVlieland,
 ];
 
 /** Activiteitpagina's (tweede sjabloonvariant, `ActivityPage`). */

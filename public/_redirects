@@ -51,10 +51,15 @@
 # Partner portal redirect
 /partner                                     /partner/login           301
 
-# Catch-all: redirect any other old URL to homepage
-/*                                           /                        200
-
-# Beach Grill Experience en Grillmaster uit het aanbod (17 september 2026)
+# Beach Grill Experience en Grillmaster uit het aanbod (17 september 2026).
+# Deze regels stonden eerst ónder de catch-all en werkten daardoor nooit
+# (Netlify neemt de eerste regel die past); gecontroleerd op 28 oktober 2026.
 /activiteit/outdoor-cooking                  /catering                301
 /activiteit/strand-bbq                       /catering                301
 /activiteit/grillmaster-zuiver-traiteur      /catering                301
+
+# Vakantiehuizen van de oude website staan nog in Google (28 oktober 2026)
+/vakantiehuizen/*                            /logies-vlieland         301
+
+# Catch-all: de app zelf; alles hieronder wordt nooit bereikt
+/*                                           /                        200
