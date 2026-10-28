@@ -9,6 +9,7 @@
     "prebuild": "bunx tsx scripts/generate-sitemap.ts && bunx tsx scripts/validate-activity-facts.ts",
     "build": "vite build",
     "build:dev": "vite build --mode development",
+    "prerender": "bunx tsx scripts/prerender.ts",
     "test": "vitest run",
     "lint": "eslint .",
     "design-debt": "bunx tsx scripts/check-design-debt.ts",

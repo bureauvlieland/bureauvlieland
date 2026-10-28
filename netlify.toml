@@ -19,20 +19,27 @@
   #
   # VITE_RELEASE koppelt een foutmelding in Sentry aan de commit die hem
   # veroorzaakte; COMMIT_REF wordt door Netlify gezet.
-  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build"
+  #
+  # scripts/prerender.ts schrijft na de build per publieke pagina de volledige
+  # HTML weg (zie docs/deployen.md → Prerendering); in productie alle pagina's
+  # uit de sitemap, in previews een vaste selectie.
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build && npx tsx scripts/prerender.ts"
 
 [build.environment]
   NODE_VERSION = "22"
+  # Chromium voor de prerender in node_modules zetten, zodat Netlify hem
+  # tussen builds bewaart in plaats van hem elke keer opnieuw te downloaden.
+  PLAYWRIGHT_BROWSERS_PATH = "0"
   # De VITE_-variabelen (Supabase, Sentry) staan in .env in de repo en worden
   # door Vite zelf geladen; die hoeven hier niet herhaald te worden.
 
 # Previews draaien onder mode "preview", zodat fouten uit een nog niet
 # goedgekeurde wijziging in Sentry niet tussen de productiemeldingen belanden.
 [context.deploy-preview]
-  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && npx tsx scripts/prerender.ts && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
 
 [context.branch-deploy]
-  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
+  command = "npx tsx scripts/generate-sitemap.ts && npx tsx scripts/validate-activity-facts.ts && VITE_RELEASE=$COMMIT_REF npx vite build --mode preview && npx tsx scripts/prerender.ts && printf 'User-agent: *\nDisallow: /\n' > dist/robots.txt"
 
 # Bestandsnamen in /assets bevatten een inhoudshash, dus die mogen onbeperkt
 # gecachet worden: bij een wijziging verandert de naam.
@@ -45,6 +52,13 @@
 # oude versie van de app verwezen worden.
 [[headers]]
   for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# De geprerenderde pagina's verwijzen net als index.html naar de JS van déze
+# build en mogen dus evenmin blijven hangen.
+[[headers]]
+  for = "/_prerender/*"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 

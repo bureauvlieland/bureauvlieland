@@ -165,6 +165,31 @@ jobs:
       - name: Bouwen zoals productie
         run: bunx vite build
 
+      # De prerender (scripts/prerender.ts) draait na elke Netlify-build; hier
+      # op de vaste selectie, zodat een wijziging die hem breekt hier faalt
+      # en niet pas stil op Netlify. Zelfde Chromium-cache als de visuele job.
+      - name: Playwright-versie bepalen
+        id: pw
+        run: echo "version=$(node -e 'console.log(require("@playwright/test/package.json").version)')" >> "$GITHUB_OUTPUT"
+
+      - name: Chromium uit de cache
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ steps.pw.outputs.version }}
+
+      - name: Chromium installeren
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+
+      - name: Systeemafhankelijkheden van Chromium
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      - name: Prerender (vaste selectie)
+        run: PRERENDER_REQUIRED=1 bunx tsx scripts/prerender.ts
+
   quality:
     name: Typecheck en lint
     runs-on: ubuntu-latest
