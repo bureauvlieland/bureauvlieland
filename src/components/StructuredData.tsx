@@ -114,6 +114,8 @@ export const StructuredData = () => {
 
 
     schemas.forEach((schema, index) => {
+      // De geprerenderde HTML bevat deze scripts al; vervangen, niet verdubbelen.
+      document.getElementById(`structured-data-${index}`)?.remove();
       const script = document.createElement('script');
       script.type = 'application/ld+json';
       script.id = `structured-data-${index}`;

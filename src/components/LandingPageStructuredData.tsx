@@ -77,6 +77,9 @@ export const LandingPageStructuredData = ({
     breadcrumbScript.text = JSON.stringify(breadcrumbSchema);
     breadcrumbScript.id = "landing-breadcrumb-schema";
 
+    // De geprerenderde HTML bevat deze scripts al; vervangen, niet verdubbelen.
+    document.getElementById("landing-service-schema")?.remove();
+    document.getElementById("landing-breadcrumb-schema")?.remove();
     document.head.appendChild(serviceScript);
     document.head.appendChild(breadcrumbScript);
 

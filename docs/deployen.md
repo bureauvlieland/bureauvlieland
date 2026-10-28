@@ -11,6 +11,53 @@ automatisch op bureauvlieland.nl. Elke pull request krijgt een eigen preview
 (`https://deploy-preview-<nummer>--bureauvlieland.netlify.app`). Hier hoef je
 niets voor te doen.
 
+## Prerendering van de publieke pagina's
+
+De site is een client-side React-app. Zonder extra stap levert elk adres
+dezelfde lege `index.html` met de meta-tags van de homepage: Google rendert
+dat wel (trager), maar Facebook, LinkedIn en WhatsApp voeren geen JavaScript
+uit en toonden bij elke gedeelde link de homepage-kaart, en de bezoeker keek
+2 à 3 seconden naar een lege pagina (gemeten 28 oktober 2026).
+
+Daarom draait na `vite build` `scripts/prerender.ts` (in de buildopdracht in
+`netlify.toml`, en als `npm run prerender`):
+
+- Voor elk adres uit `dist/sitemap.xml` opent een headless Chromium de
+  gebouwde site (met Supabase-data, cookiebanner onderdrukt, GTM en Sentry
+  geblokkeerd), scrolt door de pagina en schrijft de volledige HTML naar
+  `dist/_prerender/<pad>.html`. Onvolledige pagina's (404, geen kop, lege
+  app) worden overgeslagen.
+- In `dist/_redirects` komt vóór de catch-all per adres een rewrite naar dat
+  bestand (`/catering  /_prerender/catering.html  200`; de homepage met
+  `200!`, omdat daar al een bestand bestaat). `public/_redirects` blijft
+  ongemoeid; `robots.txt` sluit `/_prerender/` uit.
+- De app start daarna gewoon over de momentopname heen (`createRoot` in
+  `src/main.tsx`), dus alles blijft dynamisch. De JSON-LD-injecties
+  (`StructuredData`, `LandingPageStructuredData`, `FaqSection`) vervangen
+  daarom een bestaand script met hetzelfde id in plaats van het te
+  verdubbelen; houd dat aan bij nieuwe injecties.
+
+Bouwminuten: in productie gaan alle pagina's mee (lokaal 85 pagina's in
+ruim een minuut, op Netlify naar verwachting twee tot drie minuten). In
+previews en branch-deploys alleen de vaste selectie uit `SUBSET` in het
+script (homepage, bedrijfsuitje, groepsreis, wadlopen en één activiteit);
+`PRERENDER_ALL=1` dwingt alles af. Chromium staat via
+`PLAYWRIGHT_BROWSERS_PATH=0` in `node_modules`, zodat Netlify hem tussen
+builds bewaart; ontbreekt hij, dan installeert het script hem zelf.
+
+Start Chromium niet (bijvoorbeeld een ontbrekende systeembibliotheek op de
+Netlify-builder), dan waarschuwt het script in het deploylog
+(`[prerender] Chromium start niet`) en gaat de deploy door als gewone app:
+de site werkt dan, maar zonder momentopnames. In CI (`Productiebuild`) is
+dat wél een harde fout (`PRERENDER_REQUIRED=1`), zodat een wijziging die de
+prerender breekt niet stil op Netlify belandt. Controleer na een deploy met
+`curl -s https://bureauvlieland.nl/teamuitje-vlieland | grep '<h1'`: staat de
+kop in de HTML, dan werkt het.
+
+Lokaal: `npx vite build && PRERENDER_CHROMIUM_PATH=<pad naar chromium>
+npm run prerender` (de variabele alleen als de Playwright-browser van het
+project niet geïnstalleerd is).
+
 ## Backend — via GitHub Actions naar Supabase
 
 Alles onder `supabase/`: de edge functions (`supabase/functions/`), de
