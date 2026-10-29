@@ -14,7 +14,7 @@ export const groepsweekendVlieland: LandingContent = {
   path: "/groepsweekend-vlieland",
   breadcrumb: "Groepsweekend Vlieland",
   parent: { label: "Voor wie", to: "/voor-wie" },
-  seo: { title: "Groepsweekend op Vlieland op maat | Vereniging, club of vriendengroep", description },
+  seo: { title: "Groepsweekend op Vlieland op maat | Vereniging, club of vriendengroep", description, image: "/og/groepsweekend-vlieland.jpg" },
   service: { name: "Groepsweekend op Vlieland", description },
   hero: {
     image: heroImage,

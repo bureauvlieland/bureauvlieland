@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -86,7 +87,7 @@ export const LandingPage = ({ content }: { content: LandingContent }) => {
         <link rel="canonical" href={canonical} />
         <meta property="og:title" content={content.seo.title} />
         <meta property="og:description" content={content.seo.description} />
-        <meta property="og:image" content={`${SITE}/og-image.jpg`} />
+        {socialImageMeta(content.seo.image)}
         <meta property="og:url" content={canonical} />
         <meta property="og:type" content="website" />
       </Helmet>

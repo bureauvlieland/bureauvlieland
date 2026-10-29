@@ -14,7 +14,7 @@ export const bedrijfsuitjeIdeeenVlieland: LandingContent = {
   path: "/bedrijfsuitje-ideeen-vlieland",
   breadcrumb: "Bedrijfsuitje ideeën Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Bedrijfsuitje ideeën op Vlieland | Inspiratie en maatwerk", description },
+  seo: { title: "Bedrijfsuitje ideeën op Vlieland | Inspiratie en maatwerk", description, image: "/og/bedrijfsuitje-ideeen-vlieland.jpg" },
   service: { name: "Bedrijfsuitje ideeën op Vlieland", description },
   hero: {
     image: heroImage,

@@ -14,7 +14,7 @@ export const meerdaagsBedrijfsuitjeVlieland: LandingContent = {
   path: "/meerdaags-bedrijfsuitje-vlieland",
   breadcrumb: "Meerdaags bedrijfsuitje Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Meerdaags bedrijfsuitje op Vlieland | Teambuilding of heisessie met overnachting", description },
+  seo: { title: "Meerdaags bedrijfsuitje op Vlieland | Teambuilding of heisessie met overnachting", description, image: "/og/meerdaags-bedrijfsuitje-vlieland.jpg" },
   service: { name: "Meerdaags bedrijfsuitje op Vlieland", description },
   hero: {
     image: heroImage,

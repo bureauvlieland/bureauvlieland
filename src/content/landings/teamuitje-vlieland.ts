@@ -14,7 +14,7 @@ export const teamuitjeVlieland: LandingContent = {
   path: "/teamuitje-vlieland",
   breadcrumb: "Teambuilding Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Teambuilding op Vlieland | Teamuitje met inhoud op het Waddeneiland", description },
+  seo: { title: "Teambuilding op Vlieland | Teamuitje met inhoud op het Waddeneiland", description, image: "/og/teamuitje-vlieland.jpg" },
   service: { name: "Teambuilding op Vlieland", description },
   hero: {
     image: heroImage,

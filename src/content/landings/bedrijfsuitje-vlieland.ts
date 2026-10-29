@@ -10,7 +10,7 @@ export const bedrijfsuitjeVlieland: LandingContent = {
   slug: "bedrijfsuitje-vlieland",
   path: "/bedrijfsuitje-vlieland",
   breadcrumb: "Bedrijfsuitje Vlieland",
-  seo: { title: "Bedrijfsuitje op Vlieland | Programma, boot en logies geregeld", description },
+  seo: { title: "Bedrijfsuitje op Vlieland | Programma, boot en logies geregeld", description, image: "/og/bedrijfsuitje-vlieland.jpg" },
   service: { name: "Bedrijfsuitje op Vlieland", description },
   hero: {
     image: heroImage,

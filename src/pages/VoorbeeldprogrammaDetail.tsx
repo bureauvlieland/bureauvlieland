@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowRight, BookOpen, Calendar, Euro, MessageSquareHeart, PenLine, Sparkles, Users } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -117,7 +118,7 @@ const VoorbeeldprogrammaDetail = () => {
         <meta property="og:title" content={template?.name || "Voorbeeldprogramma Vlieland"} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={canonical} />
-        {template?.image_url && <meta property="og:image" content={template.image_url} />}
+        {template?.image_url && socialImageMeta(transformImageUrl(template.image_url, { width: 1200, quality: 78 }))}
         {jsonLd && <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>}
       </Helmet>
       <Navigation />

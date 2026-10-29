@@ -13,7 +13,7 @@ export const jubileumVlieland: LandingContent = {
   path: "/jubileum-vlieland",
   breadcrumb: "Jubileum vieren",
   parent: { label: "Voor wie", to: "/voor-wie" },
-  seo: { title: "Jubileum vieren op Vlieland | Bureau Vlieland", description },
+  seo: { title: "Jubileum vieren op Vlieland | Bureau Vlieland", description, image: "/og/jubileum-vlieland.jpg" },
   service: { name: "Jubileum vieren op Vlieland", description },
   hero: {
     image: heroImage,

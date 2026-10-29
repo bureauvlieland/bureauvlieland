@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -55,7 +56,7 @@ export const ActivityPage = ({ content }: { content: ActivityLandingContent }) =
         <meta property="og:title" content={content.seo.title} />
         <meta property="og:description" content={content.seo.description} />
         <meta property="og:url" content={canonical} />
-        <meta property="og:image" content={heroImageAbs} />
+        {socialImageMeta(content.seo.image)}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",

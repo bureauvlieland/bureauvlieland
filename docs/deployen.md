@@ -66,6 +66,19 @@ Lokaal: `npx vite build && PRERENDER_CHROMIUM_PATH=<pad naar chromium>
 npm run prerender` (de variabele alleen als de Playwright-browser van het
 project niet geïnstalleerd is).
 
+### Deelplaatjes (WhatsApp, Facebook, LinkedIn)
+
+Elke publieke pagina heeft een eigen `og:image`, via `socialImageMeta()` in
+`src/lib/socialImage.tsx`. De vaste plaatjes staan in `public/og/<naam>.jpg`
+(1200 × 630, jpg, onder de 300 kB: webp en grotere bestanden laat WhatsApp
+weg) en komen uit `scripts/og-images.sh` (ImageMagick); de uitkomst wordt
+meegecommit. Nieuwe pagina: regel toevoegen aan dat script, draaien, en in de
+`<Helmet>` `{socialImageMeta("/og/<naam>.jpg")}` zetten. Foto's uit Supabase
+gaan via `transformImageUrl(url, { width: 1200 })`, dan levert de opslag een
+jpeg. WhatsApp bewaart een eenmaal opgehaalde kaart lang: test een wijziging
+met een toevoeging aan het adres (`?v=2`) of ververs via de Facebook Sharing
+Debugger.
+
 ## Backend — via GitHub Actions naar Supabase
 
 Alles onder `supabase/`: de edge functions (`supabase/functions/`), de

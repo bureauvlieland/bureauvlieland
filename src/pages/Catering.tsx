@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { ChefHat, Clock, FileText, MapPin, MessageSquareHeart, Sparkles, Users } from "lucide-react";
 import { RESPONSE_TIME } from "@/content/promises";
 import { Navigation } from "@/components/Navigation";
@@ -195,7 +196,7 @@ const Catering = () => {
         <link rel="canonical" href={URL} />
         <meta property="og:title" content="Catering op Vlieland – koken op locatie door eigen chefs" />
         <meta property="og:description" content="Lunch, borrel, BBQ op locatie of high-end diner. Door eigen chefs op uw locatie. Eén aanspreekpunt, één factuur." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/catering.jpg")}
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
         <meta property="og:locale" content="nl_NL" />

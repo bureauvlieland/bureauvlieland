@@ -21,7 +21,7 @@ export const personeelsuitjeVlieland: LandingContent = {
   path: "/personeelsuitje-vlieland",
   breadcrumb: "Personeelsuitje Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Personeelsuitje op Vlieland | Hele organisatie, tot 150 collega's", description },
+  seo: { title: "Personeelsuitje op Vlieland | Hele organisatie, tot 150 collega's", description, image: "/og/personeelsuitje-vlieland.jpg" },
   service: { name: "Personeelsuitje op Vlieland", description },
   hero: {
     image: heroImage,

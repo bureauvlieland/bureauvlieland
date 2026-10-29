@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { useNavigate, useParams } from "react-router-dom";
 import { BookOpen, MessageSquareHeart, PenLine } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -10,6 +11,7 @@ import { StickyMobileCTA } from "@/components/home/StickyMobileCTA";
 import { Container, LoadingState, RouteChooser, Section, SectionHeader, type RouteChooserRoute } from "@/components/system";
 import { ReferenceCard } from "@/components/referenties/ReferenceCard";
 import { heroImageFor } from "@/components/referenties/heroImage";
+import { transformImageUrl } from "@/lib/supabaseImage";
 import { ReferenceCaseView } from "@/components/referenties/ReferenceCaseView";
 import { usePublishedReferenceCase, usePublishedReferenceCases } from "@/hooks/usePublishedReferenceCases";
 import { caseKind, wizardUrlForProgram } from "@/lib/referenceCases";
@@ -85,7 +87,7 @@ const ReferentieDetail = () => {
         <meta property="og:title" content={item?.title ?? "Referentie Bureau Vlieland"} />
         <meta property="og:description" content={description} />
         <meta property="og:url" content={canonical} />
-        {item?.photos[0] && <meta property="og:image" content={heroImageFor(item)} />}
+        {item?.photos[0] && socialImageMeta(transformImageUrl(item.photos[0].url, { width: 1200, quality: 78 }))}
         {jsonLd && <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>}
       </Helmet>
       <Navigation />

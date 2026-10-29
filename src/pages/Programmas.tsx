@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Award, BookOpen, Briefcase, GraduationCap, Handshake, MapPin, MessageSquareHeart, Package, PenLine, Truck, UserCheck, Utensils } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -141,6 +142,7 @@ const Programmas = () => {
         <meta property="og:title" content="Samenwerken met Bureau Vlieland | Lokale partner" />
         <meta property="og:description" content="Lokale partner voor evenementenbureaus, trainers en coaches op Vlieland. Logistiek, catering en coördinatie uit één hand." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/samenwerken.jpg")}
       </Helmet>
       <Navigation />
       <main id="main-content">

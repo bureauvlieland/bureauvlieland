@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link } from "react-router-dom";
 import { ArrowRight, ExternalLink } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -123,7 +124,7 @@ const Evenementen = () => {
         <link rel="canonical" href={URL} />
         <meta property="og:title" content="Agenda en evenementen Vlieland | Bureau Vlieland" />
         <meta property="og:description" content="De agenda van Vlieland: Vuurtorenloop, Amusetour en meer. Bureau Vlieland regelt boot, logies en programma rond het evenement." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/evenementen.jpg")}
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>

@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -49,6 +50,7 @@ const OverOns = () => {
         <meta property="og:title" content="Over ons – Bureau Vlieland" />
         <meta property="og:description" content="Leer Erwin Soolsma en Bureau Vlieland kennen. Lokale expertise op Vlieland." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/over-ons.jpg")}
       </Helmet>
       <Navigation />
       <main id="main-content">

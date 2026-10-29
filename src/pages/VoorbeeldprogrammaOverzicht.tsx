@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { BookOpen, MessageSquareHeart, PenLine, Search } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -115,6 +116,7 @@ const VoorbeeldprogrammaOverzicht = () => {
         <meta property="og:title" content="Voorbeeldprogramma's Vlieland | Bureau Vlieland" />
         <meta property="og:description" content="Kant-en-klare programma's voor groepen op Vlieland, van avontuur tot wellness." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/voorbeeldprogrammas.jpg")}
         {itemListJsonLd && <script type="application/ld+json">{JSON.stringify(itemListJsonLd)}</script>}
       </Helmet>
       <Navigation />

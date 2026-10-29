@@ -15,7 +15,7 @@ export const familieweekendVlieland: LandingContent = {
   path: "/familieweekend-vlieland",
   breadcrumb: "Familieweekend Vlieland",
   parent: { label: "Voor wie", to: "/voor-wie" },
-  seo: { title: "Familieweekend op Vlieland organiseren | Bureau Vlieland", description },
+  seo: { title: "Familieweekend op Vlieland organiseren | Bureau Vlieland", description, image: "/og/familieweekend-vlieland.jpg" },
   service: { name: "Familieweekend op Vlieland", description },
   hero: {
     image: heroImage,

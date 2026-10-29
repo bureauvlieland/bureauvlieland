@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { useSearchParams } from "react-router-dom";
 
 import { format, addDays } from "date-fns";
@@ -178,6 +179,11 @@ const ActiviteitenBoeken = () => {
           name="description"
           content="Boek direct activiteiten op Vlieland via Bureau Vlieland. Beschikbaarheid in real-time, eenvoudig reserveren."
         />
+        <link rel="canonical" href="https://bureauvlieland.nl/activiteiten-boeken" />
+        <meta property="og:title" content="Activiteiten boeken | Bureau Vlieland" />
+        <meta property="og:description" content="Boek direct activiteiten op Vlieland. Beschikbaarheid in real-time, eenvoudig reserveren." />
+        <meta property="og:url" content="https://bureauvlieland.nl/activiteiten-boeken" />
+        {socialImageMeta("/og/activiteiten-boeken.jpg")}
       </Helmet>
       <Navigation />
 

@@ -3,6 +3,7 @@ import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { useSearchParams } from "react-router-dom";
 import { CateringQuickRequest } from "@/components/catering/CateringQuickRequest";
 import { Container, FunnelHead, Section } from "@/components/system";
@@ -20,6 +21,10 @@ const CateringAanvragen = () => {
           content={`Vraag catering aan op Vlieland: lunch, borrel, BBQ op locatie of diner. Vrijblijvend voorstel op maat ${RESPONSE_TIME.within}. Aanvragen graag minimaal 7 dagen vóór de gewenste datum.`}
         />
         <link rel="canonical" href="https://bureauvlieland.nl/catering-aanvragen" />
+        <meta property="og:title" content="Catering aanvragen op Vlieland – Bureau Vlieland" />
+        <meta property="og:description" content="Lunch, borrel, BBQ op locatie of diner op Vlieland: vraag vrijblijvend een voorstel op maat aan." />
+        <meta property="og:url" content="https://bureauvlieland.nl/catering-aanvragen" />
+        {socialImageMeta("/og/catering-aanvragen.jpg")}
       </Helmet>
       <div className="min-h-screen flex flex-col">
         <Navigation />

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Clock, Search, Ticket, Zap } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -193,6 +194,7 @@ const Bouwstenen = () => {
         <meta property="og:title" content="Bouwstenen | Bureau Vlieland" />
         <meta property="og:description" content="Alle activiteiten en diensten voor uw programma op Vlieland." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/bouwstenen.jpg")}
       </Helmet>
       <Navigation />
       <LandingBreadcrumb items={[{ label: "Bouwstenen" }]} />

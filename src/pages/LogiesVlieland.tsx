@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Building, Building2, CheckCircle2, ClipboardList, Home, MessageSquareHeart, PenLine, Receipt, Scale, Search, Users } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -19,10 +20,8 @@ const DESCRIPTION =
   "Groepsaccommodatie op Vlieland zoeken en vergelijken: hotels, vakantiehuizen en groepsverblijven voor 20 tot 200 personen. Wij vragen de offertes op, u kiest.";
 // Het origineel is 1,3 MB; via de beeldtransformatie komt een verkleinde
 // versie, zodat de header niet seconden leeg blijft.
-const heroImage = transformImageUrl(
-  `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg`,
-  { width: 1800, quality: 80 },
-);
+const originalHeroImage = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/building-block-images/1778074823160-hotel_zeezicht_2.jpg`;
+const heroImage = transformImageUrl(originalHeroImage, { width: 1800, quality: 80 });
 
 const types: LandingSection = {
   kind: "features",
@@ -116,7 +115,7 @@ const LogiesVlieland = () => {
         <link rel="canonical" href={URL} />
         <meta property="og:title" content="Groepsaccommodatie en logies op Vlieland | Bureau Vlieland" />
         <meta property="og:description" content={DESCRIPTION} />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta(transformImageUrl(originalHeroImage, { width: 1200, quality: 78 }))}
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>

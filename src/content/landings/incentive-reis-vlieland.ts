@@ -14,7 +14,7 @@ export const incentiveReisVlieland: LandingContent = {
   path: "/incentive-reis-vlieland",
   breadcrumb: "Incentive Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Incentive op Vlieland | Beloningsreis met overnachting", description },
+  seo: { title: "Incentive op Vlieland | Beloningsreis met overnachting", description, image: "/og/incentive-reis-vlieland.jpg" },
   service: { name: "Incentive op Vlieland", description },
   hero: {
     image: heroImage,

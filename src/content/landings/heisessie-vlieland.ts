@@ -14,7 +14,7 @@ export const heisessieVlieland: LandingContent = {
   path: "/heisessie-vlieland",
   breadcrumb: "Heisessie Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Heisessie op Vlieland | Vergaderen en strategie in alle rust", description },
+  seo: { title: "Heisessie op Vlieland | Vergaderen en strategie in alle rust", description, image: "/og/heisessie-vlieland.jpg" },
   service: { name: "Heisessie op Vlieland", description },
   hero: {
     image: heroImage,

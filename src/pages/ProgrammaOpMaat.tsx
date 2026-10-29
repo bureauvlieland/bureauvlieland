@@ -1,6 +1,7 @@
 import { RESPONSE_TIME } from "@/content/promises";
 import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link, useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -303,6 +304,10 @@ const ProgrammaOpMaat = () => {
           content="Vertel ons wat u zoekt voor uw groep op Vlieland. Wij stellen het programma samen en sturen binnen 5 werkdagen een vrijblijvend voorstel."
         />
         <link rel="canonical" href="https://bureauvlieland.nl/programma-op-maat" />
+        <meta property="og:title" content="Start uw aanvraag – Bureau Vlieland" />
+        <meta property="og:description" content="Vertel ons wat u zoekt voor uw groep op Vlieland. Wij stellen het programma samen en sturen een vrijblijvend voorstel." />
+        <meta property="og:url" content="https://bureauvlieland.nl/programma-op-maat" />
+        {socialImageMeta("/og/programma-op-maat.jpg")}
       </Helmet>
       <Navigation />
 

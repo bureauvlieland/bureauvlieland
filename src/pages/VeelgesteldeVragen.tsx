@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link } from "react-router-dom";
 import { Mail, MessageCircle } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -111,7 +112,8 @@ export default function VeelgesteldeVragen() {
         <meta property="og:title" content="Veelgestelde vragen – Bureau Vlieland" />
         <meta property="og:description" content="Prijzen, offerte, maatwerk en logistiek voor bedrijfsuitjes en groepsprogramma's op Vlieland." />
         <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/veelgestelde-vragen.jpg")}
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 

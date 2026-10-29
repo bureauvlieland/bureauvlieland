@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Link } from "react-router-dom";
 import { BookOpen, MessageSquareHeart, PenLine } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -68,6 +69,7 @@ const Referenties = () => {
         <meta property="og:title" content={TITLE} />
         <meta property="og:description" content={DESCRIPTION} />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/referenties.jpg")}
         {itemListJsonLd && <script type="application/ld+json">{JSON.stringify(itemListJsonLd)}</script>}
       </Helmet>
       <Navigation />

@@ -14,7 +14,7 @@ export const zakelijkEvenementVlieland: LandingContent = {
   path: "/zakelijk-evenement-vlieland",
   breadcrumb: "Zakelijk evenement Vlieland",
   parent: { label: "Bedrijfsuitje Vlieland", to: "/bedrijfsuitje-vlieland" },
-  seo: { title: "Zakelijk evenement of congres op Vlieland | Organisatie van A tot Z", description },
+  seo: { title: "Zakelijk evenement of congres op Vlieland | Organisatie van A tot Z", description, image: "/og/zakelijk-evenement-vlieland.jpg" },
   service: { name: "Zakelijk evenement op Vlieland", description },
   hero: {
     image: heroImage,

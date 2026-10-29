@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -57,7 +58,7 @@ const OnzeWerkwijze = () => {
           property="og:description"
           content="Twee routes, één belofte: één partij, één factuur. Ontdek hoe Bureau Vlieland uw programma op Vlieland organiseert."
         />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/onze-werkwijze.jpg")}
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>

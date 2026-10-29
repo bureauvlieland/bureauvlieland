@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { BasicsForm, type BasicsFormData } from "@/components/configurator/BasicsForm";
 import { ProgramBuilderView } from "@/components/configurator/ProgramBuilderView";
 import { Container, Section, SectionHeader, StepperBar } from "@/components/system";
@@ -326,7 +327,7 @@ const ProgrammaSamenstellen = () => {
         <link rel="canonical" href="https://bureauvlieland.nl/programma-samenstellen" />
         <meta property="og:title" content="Stel zelf uw programma samen | Bureau Vlieland" />
         <meta property="og:description" content="Stel uw programma op Vlieland samen en vraag vrijblijvend een offerte aan." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/programma-samenstellen.jpg")}
         <meta property="og:url" content="https://bureauvlieland.nl/programma-samenstellen" />
         <meta property="og:type" content="website" />
       </Helmet>

@@ -15,6 +15,7 @@ export const zeehondentochtenVlieland: ActivityLandingContent = {
   path: "/zeehondentochten-vlieland",
   breadcrumb: "Zeehondentochten Vlieland",
   seo: {
+    image: "/og/zeehondentochten-vlieland.jpg",
     title: "Zeehondentocht Vlieland boeken | Zeehonden spotten op de zandbanken",
     description:
       "Een zeehondentocht vanaf Vlieland: per boot naar de zandbanken in de Waddenzee. Gewone én grijze zeehonden van dichtbij. Direct online te boeken of als groep.",

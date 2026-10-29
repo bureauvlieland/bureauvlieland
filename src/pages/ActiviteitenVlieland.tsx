@@ -6,6 +6,7 @@
  * vlieland", "uitjes vlieland". Op het ontwerpsysteem sinds fase 4 deel 2.
  */
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Bike, CalendarDays, Clock, Flower2, Landmark, Leaf, Ship, Snowflake, Sun, Users, UtensilsCrossed, Waves, type LucideIcon } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -157,6 +158,7 @@ const ActiviteitenVlieland = () => {
         <meta property="og:title" content="Activiteiten Vlieland: wat te doen op het eiland" />
         <meta property="og:description" content="Het complete overzicht van activiteiten op Vlieland: wadexcursie, zeehonden, fietsen, cultuur en meer." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/activiteiten-vlieland.jpg")}
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",

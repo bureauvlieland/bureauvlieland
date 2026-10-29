@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, ExternalLink, Globe, MapPin } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -117,6 +118,7 @@ const Partners = () => {
         <meta property="og:title" content="Onze eilandpartners | Bureau Vlieland" />
         <meta property="og:description" content="De lokale ondernemers en aanbieders achter onze programma's op Vlieland." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/partners.jpg")}
       </Helmet>
       <Navigation />
 

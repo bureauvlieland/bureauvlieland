@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { RelatedLinks } from "@/components/RelatedLinks";
@@ -57,6 +58,7 @@ const VoorWie = () => {
         <meta property="og:title" content="Voor wie – Bureau Vlieland" />
         <meta property="og:description" content="Bureau Vlieland organiseert voor bedrijven, teams en organisaties die kwaliteit en één aanspreekpunt centraal stellen." />
         <meta property="og:url" content={URL} />
+        {socialImageMeta("/og/voor-wie.jpg")}
       </Helmet>
       <Navigation />
       <main id="main-content">

@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
@@ -56,7 +57,7 @@ const Contact = () => {
           property="og:description"
           content="Neem contact op met Erwin Soolsma van Bureau Vlieland voor uw programma op Vlieland. Telefonisch, per e-mail of kom langs op het eiland."
         />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/contact.jpg")}
         <meta property="og:url" content={URL} />
         <meta property="og:type" content="website" />
       </Helmet>

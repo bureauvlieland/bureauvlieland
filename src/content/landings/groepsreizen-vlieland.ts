@@ -20,7 +20,7 @@ export const groepsreizenVlieland: LandingContent = {
   path: "/groepsreizen-vlieland",
   breadcrumb: "Groepsreis Vlieland",
   parent: { label: "Voor wie", to: "/voor-wie" },
-  seo: { title: "Groepsreis naar Vlieland | Met een groep naar het eiland, alles geregeld", description },
+  seo: { title: "Groepsreis naar Vlieland | Met een groep naar het eiland, alles geregeld", description, image: "/og/groepsreizen-vlieland.jpg" },
   service: { name: "Groepsreis naar Vlieland", description },
   hero: {
     image: heroImage,

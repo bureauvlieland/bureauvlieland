@@ -17,6 +17,7 @@ export const wadlopenVlieland: ActivityLandingContent = {
   path: "/wadlopen-vlieland",
   breadcrumb: "Wadexcursie Vlieland",
   seo: {
+    image: "/og/wadlopen-vlieland.jpg",
     title: "Wadexcursie Vlieland boeken | Wadlopen met gids, alle leeftijden",
     description:
       "Het wad op met een ervaren gids op Vlieland: leerzaam, voor alle leeftijden. Ontdek zeehonden, vogels en het leven op het wad. Boek uw wadexcursie direct online.",

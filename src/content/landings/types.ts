@@ -81,7 +81,8 @@ export interface LandingContent {
   /** Laatste kruimel; de kruimels ervoor via `parent`. */
   breadcrumb: string;
   parent?: LandingLink;
-  seo: { title: string; description: string };
+  /** `image`: deelplaatje voor WhatsApp en social media, een pad onder public (zie scripts/og-images.sh). */
+  seo: { title: string; description: string; image: string };
   /** Voor de Service-structured data. */
   service: { name: string; description: string };
   hero: {
@@ -114,7 +115,7 @@ export interface ActivityLandingContent {
   slug: string;
   path: string;
   breadcrumb: string;
-  seo: { title: string; description: string };
+  seo: { title: string; description: string; image: string };
   trip: { name: string; description: string; touristType: string; lowPrice: string; highPrice: string };
   hero: { image: string; alt: string; eyebrow: string; title: string; intro: string };
   /** Eén samenvattende alinea in de kaart "In het kort". */
