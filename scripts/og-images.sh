@@ -22,6 +22,7 @@ cd "$(dirname "$0")/.."
 W=1200; H=630; MAX_BYTES=290000
 
 MAP="
+home                             hero-speedboot.jpg
 bedrijfsuitje-ideeen-vlieland    beach-activity.jpg
 bedrijfsuitje-vlieland           team-beach.jpg
 familieweekend-vlieland          dunes-group.jpg
@@ -44,7 +45,7 @@ activiteiten-vlieland            beach-activity.jpg
 activiteiten-boeken              surf-activity.jpg
 voorbeeldprogrammas              cycling-group.jpg
 referenties                      vandermost-12.jpg
-veelgestelde-vragen              hero-speedboot.jpg
+veelgestelde-vragen              beach-signs.jpg
 catering                         hero-vlieland.jpg
 catering-aanvragen               food-platters.jpg
 over-ons                         lighthouse-vlieland.jpg

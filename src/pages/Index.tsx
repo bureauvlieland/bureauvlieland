@@ -4,6 +4,7 @@ import { StructuredData } from "@/components/StructuredData";
 import { CookieConsent } from "@/components/CookieConsent";
 import { Testimonials } from "@/components/Testimonials";
 import { Helmet } from "react-helmet";
+import { socialImageMeta } from "@/lib/socialImage";
 import { HeroEditorial } from "@/components/home/HeroEditorial";
 import { ActivitiesShowcase } from "@/components/home/ActivitiesShowcase";
 import { ProgramTemplatesPreview } from "@/components/home/ProgramTemplatesPreview";
@@ -28,7 +29,7 @@ const Index = () => {
         <link rel="canonical" href="https://bureauvlieland.nl" />
         <meta property="og:title" content="Bureau Vlieland – Lokale specialist voor Vlieland" />
         <meta property="og:description" content="Uw lokale specialist voor groepsprogramma's op Vlieland. Eén partij, één factuur — wij regelen alles met de eilanders." />
-        <meta property="og:image" content="https://bureauvlieland.nl/og-image.jpg" />
+        {socialImageMeta("/og/home.jpg")}
         <meta property="og:url" content="https://bureauvlieland.nl" />
         <meta property="og:type" content="website" />
       </Helmet>
