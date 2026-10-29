@@ -1,5 +1,6 @@
 import { isCustomerBilled } from "@/lib/invoiceBilledTo";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { 
@@ -25,8 +26,16 @@ type RawAllocationRow = {
 export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
   const queryClient = useQueryClient();
 
-  const { data: invoices, isLoading } = useQuery({
-    queryKey: ["purchase-invoices", filters],
+  // Zoeken op factuurnummer gebeurt in de browser: anders start elke
+  // toetsaanslag een nieuwe serverquery en springt de pagina naar de
+  // laad-skeleton, waardoor het zoekveld zijn focus verliest.
+  const { search, ...serverFilters } = filters ?? {};
+
+  const { data: fetchedInvoices, isLoading } = useQuery({
+    queryKey: ["purchase-invoices", serverFilters],
+    // Bij een andere project-/partner-/statusfilter blijft de vorige lijst
+    // staan tot de nieuwe binnen is, in plaats van een volledige herlaad.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
         .from("partner_purchase_invoices")
@@ -43,22 +52,21 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
 
       // Een verzamelfactuur (kop zonder project) hoort bij elk project waar
       // een regel van haar op staat.
-      if (filters?.requestId) {
+      if (serverFilters.requestId) {
         const { data: lineRows } = await supabase
           .from("purchase_invoice_lines")
           .select("invoice_id")
-          .eq("request_id", filters.requestId);
+          .eq("request_id", serverFilters.requestId);
         const lineInvoiceIds = Array.from(new Set((lineRows ?? []).map((r) => r.invoice_id)));
         query = lineInvoiceIds.length > 0
-          ? query.or(`request_id.eq.${filters.requestId},id.in.(${lineInvoiceIds.join(",")})`)
-          : query.eq("request_id", filters.requestId);
+          ? query.or(`request_id.eq.${serverFilters.requestId},id.in.(${lineInvoiceIds.join(",")})`)
+          : query.eq("request_id", serverFilters.requestId);
       }
-      if (filters?.partnerId) query = query.eq("partner_id", filters.partnerId);
+      if (serverFilters.partnerId) query = query.eq("partner_id", serverFilters.partnerId);
       // "customer_billed" is geen status maar een zicht: facturen die de gast
       // rechtstreeks betaalde (alleen commissiegrondslag).
-      if (filters?.status === "customer_billed") query = query.eq("billed_to", "customer");
-      else if (filters?.status && filters.status !== 'all') query = query.eq("status", filters.status);
-      if (filters?.search) query = query.ilike("invoice_number", `%${filters.search}%`);
+      if (serverFilters.status === "customer_billed") query = query.eq("billed_to", "customer");
+      else if (serverFilters.status && serverFilters.status !== 'all') query = query.eq("status", serverFilters.status);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -112,6 +120,12 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       return rows;
     },
   });
+
+  const invoices = useMemo(() => {
+    const needle = search?.trim().toLowerCase();
+    if (!fetchedInvoices || !needle) return fetchedInvoices;
+    return fetchedInvoices.filter((i) => (i.invoice_number ?? "").toLowerCase().includes(needle));
+  }, [fetchedInvoices, search]);
 
   const stats: PurchaseInvoiceStats = {
     // Een factuur aan de gast wacht nergens op: het bureau stuurt hem niet door.
