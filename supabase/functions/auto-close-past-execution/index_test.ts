@@ -212,11 +212,11 @@ Deno.test("runAutoClose dryRun muteert niets", async () => {
   assertEquals(past.completion_status, "in_progress");
 });
 
-Deno.test("runAutoClose normaliseert projecten die al klaar voor facturatie zijn", async () => {
+Deno.test("runAutoClose normaliseert afgelopen projecten die al klaar voor facturatie zijn", async () => {
   const store = seed();
   store.program_requests.push({
     id: "ready-1",
-    selected_dates: ["2026-12-01"],
+    selected_dates: ["2026-06-01"],
     cancelled_at: null,
     completion_status: "ready_for_invoice",
   });
@@ -234,6 +234,55 @@ Deno.test("runAutoClose normaliseert projecten die al klaar voor facturatie zijn
   const readyItem = store.program_request_items.find((i) => i.id === "ready-alt")!;
   assertEquals(readyItem.status, "confirmed");
   assertEquals(readyItem.auto_closed_reason, "auto_past_execution");
+});
+
+Deno.test("runAutoClose laat een toekomstig project met rust, ook als het al op facturatie staat (BV-2606-0004)", async () => {
+  const store = seed();
+  // Handtekening vóór 26 oktober 2026 zette het project op ready_for_invoice,
+  // terwijl de programmadagen nog moesten komen.
+  store.program_requests.push({
+    id: "ready-future",
+    selected_dates: ["2026-11-05", "2026-11-06"],
+    cancelled_at: null,
+    completion_status: "ready_for_invoice",
+  });
+  store.program_request_items.push({
+    id: "ready-future-pending",
+    request_id: "ready-future",
+    status: "pending",
+    auto_closed_reason: null,
+    partner_price_change_acknowledged_at: "2026-10-01T09:48:13Z",
+  });
+  store.admin_todos.push({
+    id: "todo-ready-future-ferry",
+    related_request_id: "ready-future",
+    status: "todo",
+    auto_type: "book_ferry_tickets",
+  });
+  const client = buildClient(store);
+  const res = await runAutoClose(client, { now: NOW });
+
+  assertEquals(res.projects_past_execution, 1, "alleen past-1; ready-future ligt in de toekomst");
+  const item = store.program_request_items.find((i) => i.id === "ready-future-pending")!;
+  assertEquals(item.status, "pending");
+  assertEquals(item.auto_closed_reason, null);
+  const todo = store.admin_todos.find((t) => t.id === "todo-ready-future-ferry")!;
+  assertEquals(todo.status, "todo");
+  const project = store.program_requests.find((p) => p.id === "ready-future")!;
+  assertEquals(project.completion_status, "ready_for_invoice");
+});
+
+Deno.test("runAutoClose: facturatiestatus zonder datums telt nog steeds als afgelopen", async () => {
+  const store = seed();
+  store.program_requests.push({
+    id: "ready-nodates",
+    selected_dates: [],
+    cancelled_at: null,
+    completion_status: "partially_invoiced",
+  });
+  const client = buildClient(store);
+  const res = await runAutoClose(client, { now: NOW });
+  assertEquals(res.projects_past_execution, 2, "past-1 + ready-nodates");
 });
 
 Deno.test("runAutoClose zet onderdelen zonder offertetraject op uitgevoerd, niet op afgesloten", async () => {
