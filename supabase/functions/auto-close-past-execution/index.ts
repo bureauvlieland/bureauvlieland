@@ -3,6 +3,13 @@
 // Sluit automatisch acties af voor projecten waarvan de uitvoeringsdatum in het
 // verleden ligt. Deze functie is idempotent en veilig om vaker per dag te draaien.
 //
+// Een project geldt als afgelopen (past_execution) als de laatste programmadag
+// vóór vandaag ligt. Projecten die al in de facturatiefase staan
+// (ready_for_invoice/partially_invoiced) tellen ook mee, maar alleen als hun
+// datums dat bevestigen: tot 26 oktober 2026 zette een handtekening het
+// project meteen op ready_for_invoice, ook maanden vooraf (BV-2606-0004), en
+// dan sloot deze functie onderdelen en taken van een toekomstig programma.
+//
 // Wat er gebeurt per project (past_execution én niet cancelled, niet fully_invoiced):
 //  1. program_request_items met status 'pending', 'alternative' of 'counter_proposed'
 //     → status='confirmed', auto_closed_reason='auto_past_execution'
@@ -117,15 +124,18 @@ export async function runAutoClose(
   result.projects_scanned = projects?.length ?? 0;
   const pastProjects: Array<{ id: string; completion_status: string | null }> = [];
   for (const p of projects ?? []) {
+    const last = lastValidDate(p.selected_dates ?? null);
+    const datesStillAhead = !!last && startOfDay(last).getTime() >= today.getTime();
+    // Programmadatums in de toekomst: nooit afsluiten, ook niet als de
+    // afrondingsstatus al op facturatie staat (die status is dan per abuis
+    // gezet; de dagelijkse controles horen het project gewoon te blijven zien).
+    if (datesStillAhead) continue;
     if (p.completion_status === "ready_for_invoice" || p.completion_status === "partially_invoiced") {
       pastProjects.push({ id: p.id, completion_status: p.completion_status });
       continue;
     }
-    const last = lastValidDate(p.selected_dates ?? null);
     if (!last) continue;
-    if (startOfDay(last).getTime() < today.getTime()) {
-      pastProjects.push({ id: p.id, completion_status: p.completion_status });
-    }
+    pastProjects.push({ id: p.id, completion_status: p.completion_status });
   }
   result.projects_past_execution = pastProjects.length;
   if (pastProjects.length === 0) return result;
