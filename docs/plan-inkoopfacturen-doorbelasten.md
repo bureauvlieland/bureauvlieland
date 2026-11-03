@@ -264,6 +264,17 @@ die partner (`existingCostPostFor`, op `provider_name`) en biedt "Nieuwe
 kostenpost" alleen aan als die er nog niet is. Lege spookposten van vóór de
 migratie kennen de vlag niet; die gaan met het prullenbakje weg.
 
+Bijvangst van dezelfde factuur: het btw-overzicht van Badhotel Bruin splitst
+21 % in "Accommodatie" (€ 1.644,16) en "Eten en drinken" (€ 242,05), maar de
+scanner vroeg "één entry per uniek tarief" en telde die op tot één regel
+"BTW 21%" van € 1.886,21; logies en dranken waren daarna niet meer uit elkaar
+te halen. `vat_breakdown` heeft nu per entry een `label` (de classificatie
+zoals gedrukt, of null) en de prompt vraagt één entry per tarief én
+classificatie. `buildLinesFromScan` noemt zo'n regel "Accommodatie 21%" of
+"Eten en drinken 9%" (`breakdownRowDescription`, met tests); zonder label
+blijft het "BTW 21%", en een label dat toeristenbelasting noemt wordt
+"Toeristenbelasting".
+
 ## 1. Hoe het nu werkt
 
 ```

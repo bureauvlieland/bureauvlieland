@@ -15,6 +15,7 @@ export interface InboxScanResult {
     vat_rate: number;
     amount_excl: number;
     vat_amount: number;
+    label?: string | null;
   }>;
   line_items: Array<{
     description: string;

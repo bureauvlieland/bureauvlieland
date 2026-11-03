@@ -29,7 +29,7 @@ Extracteer gestructureerde data via de tool 'extract_invoice'. Belangrijke regel
 
 VAT BREAKDOWN (KRITIEK):
 - Vrijwel elke factuur toont onderaan een BTW-overzicht/grondslag-tabel met de subtotalen per tarief (bv. "9% over 871,56 = 78,44" en "21% over 231,40 = 48,60"). Lees dit overzicht ZORGVULDIG.
-- Vul vat_breakdown ALTIJD in met één entry per uniek BTW-tarief dat op de factuur voorkomt (sla 0%-regels met bedrag 0 over).
+- Vul vat_breakdown ALTIJD in. Toont het overzicht naast het tarief ook een classificatie of omschrijving per regel (bv. "Accommodatie", "Eten en drinken", "Belastingen", "Logies", "Dranken")? Maak dan één entry per combinatie van tarief en classificatie en zet die tekst letterlijk in label. Hotels splitsen 21% vaak in "Accommodatie" en "Eten en drinken": dat zijn dan TWEE entries met vat_rate 21. Toont het overzicht alleen tarieven, dan één entry per uniek tarief met label null. Sla 0%-regels met bedrag 0 over.
 - Staat de grondslag per tarief op de factuur (kolom "Grondslag", "Excl.", "Over" of "Bedrag")? Neem die dan LETTERLIJK over, cent voor cent. NOOIT zelf herberekenen uit het BTW-bedrag: hotels en kassa's ronden de BTW per regel af, waardoor bedrag ÷ tarief een paar cent naast de gedrukte grondslag zit.
 - Staat er ALLEEN een BTW-BEDRAG per tarief (bv. "BTW laag € 35,60") en geen grondslag? Alleen dan bereken je de grondslag zelf: bedrag ÷ (tarief/100).
 - Neem ook het BTW-BEDRAG per tarief letterlijk over zoals gedrukt; dat is het bedrag dat de partner afdraagt.
@@ -37,7 +37,7 @@ VAT BREAKDOWN (KRITIEK):
 - Toeristenbelasting staat vaak als aparte 0%-groep in het overzicht (of als losse regel onder het totaal). Neem die op als entry met vat_rate 0 en vat_amount 0; sla alleen 0%-entries met bedrag 0 over.
 - Som van vat_breakdown[].amount_excl MOET gelijk zijn aan amount_excl_vat (header).
 - Som van vat_breakdown[].vat_amount MOET gelijk zijn aan vat_amount (header).
-- BIJ GEMENGDE TARIEVEN (meerdere entries in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
+- BIJ GEMENGDE TARIEVEN (meer dan één verschillend tarief in vat_breakdown): zet header-veld vat_rate op null. NOOIT één tarief verzinnen — dat leidt tot foute herberekening.
 - Bij één enkel tarief mag header vat_rate gelijk zijn aan dat tarief.
 
 PRICES_INCLUDE_VAT (HEEL BELANGRIJK voor horeca/POS-bonnen):
@@ -99,15 +99,21 @@ export const INVOICE_SCAN_TOOL = {
         },
         vat_breakdown: {
           type: "array",
-          description: "Eén entry per uniek BTW-tarief op de factuur",
+          description:
+            "Het BTW-overzicht van de factuur: één entry per combinatie van tarief en classificatie zoals gedrukt (bv. 21% Accommodatie en 21% Eten en drinken apart), anders één per uniek tarief.",
           items: {
             type: "object",
             properties: {
               vat_rate: { type: "number" },
               amount_excl: { type: "number" },
               vat_amount: { type: "number" },
+              label: {
+                type: ["string", "null"],
+                description:
+                  "Classificatie of omschrijving van deze groep zoals de factuur die toont (bv. 'Accommodatie', 'Eten en drinken', 'Belastingen'); null als er alleen een tarief staat.",
+              },
             },
-            required: ["vat_rate", "amount_excl", "vat_amount"],
+            required: ["vat_rate", "amount_excl", "vat_amount", "label"],
             additionalProperties: false,
           },
         },

@@ -122,3 +122,12 @@ Deno.test("prompt en schema dekken de velden waar de verwerking op leunt", () =>
     assertEquals(required.includes(field), true, `${field} ontbreekt in required`);
   }
 });
+
+Deno.test("btw-overzicht: een entry per tarief én classificatie, met label", () => {
+  const props = INVOICE_SCAN_TOOL.function.parameters.properties as Record<string, any>;
+  const entry = props.vat_breakdown.items;
+  assertEquals("label" in entry.properties, true, "label ontbreekt in vat_breakdown");
+  assertEquals(entry.required.includes("label"), true, "label ontbreekt in required");
+  assertStringIncludes(INVOICE_SCAN_SYSTEM_PROMPT, "één entry per combinatie van tarief en classificatie");
+  assertStringIncludes(INVOICE_SCAN_SYSTEM_PROMPT, "TWEE entries met vat_rate 21");
+});

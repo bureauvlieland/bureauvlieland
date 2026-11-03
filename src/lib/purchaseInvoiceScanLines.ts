@@ -32,6 +32,8 @@ export interface ScanVatBreakdownEntry {
   vat_rate: number;
   amount_excl: number;
   vat_amount: number;
+  /** Classificatie uit het btw-overzicht ("Accommodatie", "Eten en drinken"); null als de factuur alleen tarieven toont. */
+  label?: string | null;
 }
 
 export interface ScanResultLike {
@@ -169,6 +171,21 @@ const absorbRoundingDifference = (rows: ScanLineRow[], headerIncl: number | null
   });
 };
 
+/**
+ * Naam van een regel uit het btw-overzicht. Met classificatie wordt het
+ * "Accommodatie 21%" of "Eten en drinken 9%", zodat de regel in het werkblad
+ * en op de klantfactuur iets zegt; zonder blijft het "BTW 21%". De 0%-groep
+ * heet toeristenbelasting als de factuur die noemt.
+ */
+export const breakdownRowDescription = (entry: ScanVatBreakdownEntry, touristTax: boolean): string => {
+  const rate = Number(entry.vat_rate) || 0;
+  const label = entry.label?.trim();
+  if (label && isTouristTaxDescription(label)) return "Toeristenbelasting";
+  if (rate === 0 && touristTax) return "Toeristenbelasting";
+  if (label) return `${label} ${rate}%`;
+  return `BTW ${entry.vat_rate}%`;
+};
+
 const rowsFromBreakdown = (
   breakdown: ScanVatBreakdownEntry[],
   result: Pick<ScanResultLike, "description" | "line_items" | "amount_incl_vat">,
@@ -179,9 +196,8 @@ const rowsFromBreakdown = (
     .map((b) => {
       const excl = breakdownExclVat(b);
       const vat = Number(b.vat_amount) || 0;
-      const rate = Number(b.vat_rate) || 0;
       return {
-        description: rate === 0 && touristTax ? "Toeristenbelasting" : `BTW ${b.vat_rate}%`,
+        description: breakdownRowDescription(b, touristTax),
         quantity: "1",
         unit_price: String(excl),
         vat_rate: String(b.vat_rate),

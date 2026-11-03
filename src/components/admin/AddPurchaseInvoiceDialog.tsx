@@ -92,7 +92,7 @@ interface ScanResult {
   /** De groep of opdrachtgever waarvoor het werk was, als de partner die noemt. */
   customer_reference?: string | null;
   line_items: ScanLineItem[];
-  vat_breakdown?: Array<{ vat_rate: number; amount_excl: number; vat_amount: number }>;
+  vat_breakdown?: Array<{ vat_rate: number; amount_excl: number; vat_amount: number; label?: string | null }>;
 }
 
 interface LineRow {
