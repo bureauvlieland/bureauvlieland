@@ -66,6 +66,7 @@ export interface WorksheetItem {
   admin_price_override?: number | null;
   keep_quoted_price?: boolean | null;
   override_people?: number | null;
+  created_from_purchase_lines?: boolean | null;
 }
 
 interface ChargeWorksheetCardProps {
@@ -121,10 +122,23 @@ const draftToDecision = (lineId: string, draft: Draft): ChargeDecision | null =>
   }
 };
 
-const draftFromMatch = (match: LineMatch): Draft => {
+/**
+ * De kostenpost die het werkblad eerder voor deze partner aanmaakte
+ * (provider_name = partner, zonder dag). Die hergebruiken we in plaats van
+ * er bij elke "Wijzig" een nieuwe naast te zetten.
+ */
+const existingCostPostFor = (costItems: WorksheetItem[], partnerName: string | null | undefined): WorksheetItem | undefined => {
+  const name = partnerName?.trim();
+  if (!name) return undefined;
+  return costItems.find((it) => it.provider_name?.trim() === name);
+};
+
+const draftFromMatch = (match: LineMatch, costItems: WorksheetItem[], partnerName: string | null | undefined): Draft => {
   const p = match.proposal;
   if (p.kind === "item") return { kind: "item", itemId: p.itemId };
   if (p.kind === "skip") return { kind: "skip", reason: "toeristenbelasting" };
+  const existing = existingCostPostFor(costItems, partnerName);
+  if (existing) return { kind: "item", itemId: existing.id };
   return { kind: "new_cost", costKey: p.costKey, costName: p.costName };
 };
 
@@ -227,7 +241,7 @@ export const ChargeWorksheetCard = ({
           continue;
         }
         const match = matches.get(line.id);
-        if (match) next[line.id] = draftFromMatch(match);
+        if (match) next[line.id] = draftFromMatch(match, costItems, invoiceById.get(line.invoice_id)?.partner?.name);
       }
       return next;
     });
@@ -246,7 +260,7 @@ export const ChargeWorksheetCard = ({
       }
       return next;
     });
-  }, [openLines, matches, itemById]);
+  }, [openLines, matches, itemById, costItems, invoiceById]);
 
   const invoicesWithoutLines = useMemo(
     () =>
@@ -319,6 +333,7 @@ export const ChargeWorksheetCard = ({
         if (result.kept > 0) parts.push(`${result.kept} op offerteprijs`);
         if (result.skipped > 0) parts.push(`${result.skipped} niet doorbelast`);
         if (result.new_costs > 0) parts.push(`${result.new_costs} ${result.new_costs === 1 ? "nieuwe kostenpost" : "nieuwe kostenposten"}`);
+        if ((result.removed_costs ?? 0) > 0) parts.push(`${result.removed_costs} ${result.removed_costs === 1 ? "lege kostenpost verwijderd" : "lege kostenposten verwijderd"}`);
       }
       toast.success(`Verwerkt: ${parts.join(", ") || "niets gewijzigd"}`);
       setEditing({});
@@ -452,7 +467,9 @@ export const ChargeWorksheetCard = ({
                   Kostenpost: {it.block_name}
                 </SelectItem>
               ))}
-              <SelectItem value={`new:${partnerKey}`}>Nieuwe kostenpost: {costNames[partnerKey] ?? partnerName}</SelectItem>
+              {!existingCostPostFor(costItems, invoice?.partner?.name) && (
+                <SelectItem value={`new:${partnerKey}`}>Nieuwe kostenpost: {costNames[partnerKey] ?? partnerName}</SelectItem>
+              )}
               <SelectItem value="new:own">Nieuwe kostenpost met eigen naam…</SelectItem>
             </SelectGroup>
             <SelectGroup>
@@ -576,7 +593,10 @@ export const ChargeWorksheetCard = ({
               className="h-7 text-xs"
               onClick={() => {
                 setEditing((prev) => ({ ...prev, [line.id]: true }));
-                if (!drafts[line.id] && match) setDrafts((prev) => ({ ...prev, [line.id]: draftFromMatch(match) }));
+                if (!drafts[line.id] && match) {
+                  const partnerName = invoiceById.get(line.invoice_id)?.partner?.name;
+                  setDrafts((prev) => ({ ...prev, [line.id]: draftFromMatch(match, costItems, partnerName) }));
+                }
               }}
             >
               Wijzig

@@ -77,6 +77,8 @@ export interface ApplyChargesResult {
   skipped: number;
   reopened: number;
   new_costs: number;
+  /** Kostenposten uit het werkblad die leeg raakten en zijn verwijderd. */
+  removed_costs?: number;
   new_cost_ids: Record<string, string>;
 }
 

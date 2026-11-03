@@ -3415,6 +3415,7 @@ export type Database = {
           invoiced_file_path: string | null
           invoiced_number: string | null
           is_custom_quote: boolean
+          created_from_purchase_lines: boolean
           keep_quoted_price: boolean
           item_quote_status: string | null
           location_address: string | null
@@ -3536,6 +3537,7 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
+          created_from_purchase_lines?: boolean
           keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
@@ -3657,6 +3659,7 @@ export type Database = {
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
+          created_from_purchase_lines?: boolean
           keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
