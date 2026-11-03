@@ -17,7 +17,6 @@ import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel
 import {
   generateTimeSlots,
   getBlockedTimeSlotsFromPartnerItems,
-  isTimeSlotBlocked,
   minutesToTime,
   formatDurationWindow,
   formatTimeHHmm,
@@ -28,6 +27,7 @@ import { itemDisplayStatusConfig, deriveItemDisplayStatusLoose } from "@/lib/ite
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
 import { isConfirmOnlyItem, isInformationalItem, partnerBillingNote, requiresPartnerQuote } from "@/lib/itemHandling";
 import { formatEuro } from "@/lib/formatEuro";
+import { getAlwaysAllowedProposalTimes, isProposalTimeBlocked } from "@/lib/partnerProposalTimes";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
 
 /**
@@ -95,14 +95,19 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
     return getBlockedTimeSlotsFromPartnerItems(sameDayItems, item.day_index, item.id);
   }, [item]);
 
+  // Vrije tijden, plus de tijden die de klant nu al ziet (gewenst, liever,
+  // bevestigd of eigen voorstel): die mag de partner altijd kiezen, ook als ze
+  // botsen met een ander onderdeel. Anders kan hij de prijs niet aanpassen
+  // zonder de tijd te wijzigen.
   const availableTimeSlots = useMemo(() => {
-    const filtered = generateTimeSlots().filter((time) => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
-    if (item?.preferred_time && !filtered.includes(item.preferred_time)) {
-      filtered.push(item.preferred_time);
-      filtered.sort();
+    if (!item) return [];
+    const filtered = generateTimeSlots().filter((time) => !isProposalTimeBlocked(time, item, blockedTimeSlots));
+    for (const time of getAlwaysAllowedProposalTimes(item)) {
+      if (!filtered.includes(time)) filtered.push(time);
     }
+    filtered.sort();
     return filtered;
-  }, [blockedTimeSlots, item?.duration, item?.preferred_time]);
+  }, [blockedTimeSlots, item]);
 
   const request = item?.program_requests;
   const effectivePeopleForItem = item ? (item.override_people ?? request!.number_of_people) : 0;
@@ -214,7 +219,7 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
       if (!proposedTime) {
         setTimeError("Kies een tijd.");
         hasError = true;
-      } else if (isTimeSlotBlocked(proposedTime, item.duration || null, blockedTimeSlots)) {
+      } else if (isProposalTimeBlocked(proposedTime, item, blockedTimeSlots)) {
         setTimeError("Op deze tijd staat al een ander onderdeel.");
         hasError = true;
       }
@@ -619,7 +624,13 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
                   <FormField label="Andere prijs (incl. btw)" htmlFor="quotedPriceAlt" help="Alleen als de prijs afwijkt." leading={<Euro />}>
                     <Input type="text" inputMode="decimal" placeholder="0,00" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} />
                   </FormField>
-                  <FormField label="Toelichting voor de klant" htmlFor="statusNote" required error={noteError}>
+                  <FormField
+                    label="Toelichting voor de klant"
+                    htmlFor="statusNote"
+                    required
+                    error={noteError}
+                    help={`${request.customer_company || request.customer_name} leest dit in het portaal en in de mail; Bureau Vlieland leest mee.`}
+                  >
                     <Textarea
                       placeholder="Bijvoorbeeld: om 10:00 zit de vorige groep er nog; 14:00 past beter."
                       value={statusNote}
