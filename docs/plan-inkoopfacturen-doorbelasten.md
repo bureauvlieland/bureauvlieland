@@ -246,6 +246,24 @@ btw-uitsplitsing staat in `bureau_invoice_lines`) en de tabel
 `partner_purchase_invoice_ticket_matches`; `finalize-collective-invoice`
 schrijft die niet meer. Daarmee is het plan afgerond.
 
+**Nazorg (3 november 2026), lege kostenposten.** Op BV-2606-0013 stond
+"Badhotel Bruin" twee keer in Overige kosten: één post van € 2.691,19 zonder
+klantregels naast de echte van € 2.848,16. Oorzaak: `apply_purchase_line_charges`
+zet het bedrag van een kostenpost gelijk aan de som van de klantregels, maar
+liet bij "Wijzig" (regels ergens anders heen) alleen de vergrendeling los en
+het bedrag staan; het werkblad stelde daarna "Nieuwe kostenpost: Badhotel
+Bruin" voor in plaats van de bestaande. Migratie `20261103140000`:
+`program_request_items.created_from_purchase_lines` markeert posten die het
+werkblad aanmaakte; raakt zo'n post leeg (geen klantregels en geen
+inkoopregels meer), dan verwijdert de functie hem (`removed_costs` in het
+resultaat, in de melding), een handmatige post die als bestemming diende
+gaat op € 0. `purchaseInvoiceCleanup.ts` doet hetzelfde bij verwijderen of
+opnieuw verwerken van een factuur (`planResetForItems`, met tests). Het
+werkblad kiest voor een regel zonder onderdeel de bestaande kostenpost van
+die partner (`existingCostPostFor`, op `provider_name`) en biedt "Nieuwe
+kostenpost" alleen aan als die er nog niet is. Lege spookposten van vóór de
+migratie kennen de vlag niet; die gaan met het prullenbakje weg.
+
 ## 1. Hoe het nu werkt
 
 ```

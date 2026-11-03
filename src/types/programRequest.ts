@@ -366,6 +366,8 @@ export interface ProgramRequestItem {
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
   admin_price_notes: string | null;
+  /** Kostenpost die het werkblad Doorbelasten aanmaakte uit inkoopregels; gaat weg zodra hij leeg raakt. */
+  created_from_purchase_lines?: boolean;
   partner_instructions?: string | null;
   skip_partner_notification: boolean;
   /** Wat de partner moet doen: quote (offerte), confirm (alleen bevestigen), inform (ter kennisgeving). Zie lib/itemHandling. */
