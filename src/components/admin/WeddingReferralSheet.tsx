@@ -42,6 +42,8 @@ import {
   PARTNER_CLAIM_LABEL,
   PARTNER_CONFIRMATION_LABEL,
   PARTNER_RESPONSE_WORKING_DAYS,
+  REFERRAL_KINDS,
+  REFERRAL_KIND_LABEL,
   REFERRAL_STATUSES,
   REFERRAL_STATUS_LABEL,
   alreadyKnownFeeNote,
@@ -54,10 +56,13 @@ import {
   isDueForAnonymization,
   nextInvoiceStatus,
   partnerConfirmation,
+  referralKindOf,
+  subjectWord,
   toIsoDate,
   validateFeeOverride,
   type InvoiceStatus,
   type PartnerClaim,
+  type ReferralKind,
   type ReferralStatus,
 } from "@/lib/weddingReferrals";
 import { describeTier, normalizeTiers } from "@/lib/weddingReferralFee";
@@ -69,7 +74,8 @@ import type { ProjectCommunication } from "@/types/projectCommunication";
  * (docs/plan-bruiloftsdoorverwijzingen.md, fase 1). Bij "geboekt" verschijnt
  * direct de vergoeding uit de staffel die gold op de datum doorverwezen;
  * overschrijven kan met een opmerking. Alleen partners met de instelling
- * "ontvangt bruiloftsdoorverwijzingen" zijn te kiezen.
+ * "ontvangt doorverwijzingen" zijn te kiezen. De soort (bruiloft of ander
+ * evenement) bepaalt alleen de bewoording; de regels zijn gelijk.
  */
 interface Props {
   open: boolean;
@@ -80,6 +86,7 @@ interface Props {
 }
 
 interface FormState {
+  referral_kind: ReferralKind;
   couple_names: string;
   couple_email: string;
   couple_phone: string;
@@ -117,6 +124,7 @@ type LinkResult =
   | { kind: "inbox"; id: string; label: string; name: string; email: string; phone: string; requestedAt: string; guests: number | null };
 
 const leeg = (today: string): FormState => ({
+  referral_kind: "wedding",
   couple_names: "",
   couple_email: "",
   couple_phone: "",
@@ -150,6 +158,7 @@ const leeg = (today: string): FormState => ({
 });
 
 const vanRij = (r: WeddingReferralRow): FormState => ({
+  referral_kind: referralKindOf(r),
   couple_names: r.couple_names,
   couple_email: r.couple_email ?? "",
   couple_phone: r.couple_phone ?? "",
@@ -406,8 +415,10 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
     setZoekterm("");
   };
 
+  const wie = subjectWord(form.referral_kind);
+
   const opslaan = async () => {
-    if (!form.couple_names.trim()) return toast.error("Vul de namen van het bruidspaar in.");
+    if (!form.couple_names.trim()) return toast.error(form.referral_kind === "wedding" ? "Vul de namen van het bruidspaar in." : "Vul de naam van de klant in.");
     if (!form.partner_id) return toast.error("Kies een partner.");
     if (!form.requested_at || !form.referred_at) return toast.error("Datum aanvraag en datum doorverwezen zijn verplicht.");
     if (form.referred_at < form.requested_at) return toast.error("De datum doorverwezen ligt vóór de datum van de aanvraag.");
@@ -416,6 +427,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
       form.expected_precision === "month" ? (form.expected_month ? `${form.expected_month}-01` : null) : form.expected_day || null;
 
     const values: WeddingReferralInsert = {
+      referral_kind: form.referral_kind,
       couple_names: form.couple_names.trim(),
       couple_email: form.couple_email.trim() || null,
       couple_phone: form.couple_phone.trim() || null,
@@ -524,7 +536,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           <SheetDescription>
             {referral
               ? "Werk de status, de uitkomst en de facturatie bij. De vergoeding volgt de staffel die gold op de datum doorverwezen."
-              : "Leg vast welke bruiloftsaanvraag naar welke partner is gegaan. De vervaldatum ligt 18 maanden na de datum doorverwezen."}
+              : "Leg vast welke aanvraag (bruiloft of ander evenement) naar welke partner is gegaan. De vervaldatum ligt 18 maanden na de datum doorverwezen."}
           </SheetDescription>
         </SheetHeader>
 
@@ -540,7 +552,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-2">
                   <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  Mail aan het bruidspaar{klantMail?.communication_date ? ` op ${datumLabel(klantMail.communication_date.slice(0, 10))}` : ""}
+                  Mail aan {wie}{klantMail?.communication_date ? ` op ${datumLabel(klantMail.communication_date.slice(0, 10))}` : ""}
                   {typeof klantMail?.metadata.cc === "string" ? `, cc ${klantMail.metadata.cc}` : ""}
                 </span>
                 <Button type="button" variant="outline" size="sm" onClick={() => setMailOpen("klant")} disabled={!klantMail}>
@@ -564,10 +576,32 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           )}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold">Bruidspaar</h3>
+            <h3 className="text-sm font-semibold">{form.referral_kind === "wedding" ? "Bruidspaar" : "Klant"}</h3>
             <div className="space-y-2">
-              <Label htmlFor="wr-namen">Namen *</Label>
-              <Input id="wr-namen" value={form.couple_names} onChange={(e) => set("couple_names", e.target.value)} placeholder="Anna & Bram" disabled={Boolean(referral?.anonymized_at)} />
+              <Label>Soort *</Label>
+              <Select value={form.referral_kind} onValueChange={(v) => set("referral_kind", v as ReferralKind)}>
+                <SelectTrigger className="sm:w-60">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REFERRAL_KINDS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {REFERRAL_KIND_LABEL[k]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Bruiloft of een ander evenement dat naar een partner is gegaan. Zelfde regels, andere mails en bewoording.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wr-namen">{form.referral_kind === "wedding" ? "Namen" : "Naam"} *</Label>
+              <Input
+                id="wr-namen"
+                value={form.couple_names}
+                onChange={(e) => set("couple_names", e.target.value)}
+                placeholder={form.referral_kind === "wedding" ? "Anna & Bram" : "Jan Jansen"}
+                disabled={Boolean(referral?.anonymized_at)}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -653,7 +687,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
                 </SelectContent>
               </Select>
               {kiesbarePartners.length === 0 && (
-                <p className="text-xs text-muted-foreground">Geen enkele partner heeft "Ontvangt bruiloftsdoorverwijzingen" aan. Zet dat aan op de partnerpagina.</p>
+                <p className="text-xs text-muted-foreground">Geen enkele partner heeft "Ontvangt doorverwijzingen" aan. Zet dat aan op de partnerpagina.</p>
               )}
               {gekozenPartner && <p className="text-xs text-muted-foreground">Doorverwijsadres: {referralEmailFor(gekozenPartner)}</p>}
             </div>
@@ -670,7 +704,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
             </div>
             <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
               <div className="space-y-2">
-                <Label>Verwachte trouwdatum</Label>
+                <Label>{form.referral_kind === "wedding" ? "Verwachte trouwdatum" : "Verwachte datum"}</Label>
                 <Select value={form.expected_precision} onValueChange={(v) => set("expected_precision", v as "day" | "month")}>
                   <SelectTrigger className="w-[150px]">
                     <SelectValue />
@@ -699,7 +733,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
               <Textarea id="wr-notities" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} disabled={Boolean(referral?.anonymized_at)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="wr-eerder-contact">Eerder contact volgens het bruidspaar</Label>
+              <Label htmlFor="wr-eerder-contact">Eerder contact volgens {wie}</Label>
               <Input
                 id="wr-eerder-contact"
                 value={form.prior_contact_note}
@@ -715,7 +749,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           <section className="space-y-3">
             <h3 className="text-sm font-semibold">Melding partner</h3>
             <p className="text-xs text-muted-foreground">
-              De partner staat in cc en meldt binnen {PARTNER_RESPONSE_WORKING_DAYS} werkdagen als het bruidspaar al bekend was. Blijft dat uit, dan geldt de
+              De partner staat in cc en meldt binnen {PARTNER_RESPONSE_WORKING_DAYS} werkdagen als {wie} al bekend was. Blijft dat uit, dan geldt de
               doorverwijzing als bevestigd nieuw.
             </p>
             <div className="space-y-2">
@@ -792,7 +826,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="wr-trouwdatum">Definitieve trouwdatum</Label>
+                    <Label htmlFor="wr-trouwdatum">{form.referral_kind === "wedding" ? "Definitieve trouwdatum" : "Definitieve datum"}</Label>
                     <Input id="wr-trouwdatum" type="date" value={form.final_wedding_date} onChange={(e) => set("final_wedding_date", e.target.value)} />
                   </div>
                   <div className="space-y-2">
@@ -802,7 +836,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
                 </div>
                 <div className="flex items-center justify-between rounded-md border px-3 py-2">
                   <div className="space-y-0.5">
-                    <Label htmlFor="wr-meerdaags">Meerdaagse bruiloft</Label>
+                    <Label htmlFor="wr-meerdaags">{form.referral_kind === "wedding" ? "Meerdaagse bruiloft" : "Meerdaags evenement"}</Label>
                     <p className="text-xs text-muted-foreground">Toeslag volgens de staffel.</p>
                   </div>
                   <Switch id="wr-meerdaags" checked={form.is_multi_day} onCheckedChange={(v) => set("is_multi_day", v)} />
@@ -851,7 +885,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
                 <div className="space-y-3">
                   {form.invoice_status === "not_applicable" && (getal(form.fee_amount) ?? 1) <= 0 ? (
                     <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
-                      Geen factuur: de vergoeding is nul{alBekend ? ", want het bruidspaar was al bij de partner bekend" : ""}.
+                      Geen factuur: de vergoeding is nul{alBekend ? `, want ${wie} was al bij de partner bekend` : ""}.
                     </p>
                   ) : (
                   <div className="space-y-2">
@@ -931,7 +965,7 @@ export function WeddingReferralSheet({ open, onOpenChange, referral, partners, s
           <AlertDialogHeader>
             <AlertDialogTitle>Persoonsgegevens anonimiseren?</AlertDialogTitle>
             <AlertDialogDescription>
-              Namen, e-mail, telefoon en notities van het bruidspaar worden gewist. Partner, data, aantallen, vergoeding en factuurgegevens blijven staan. Dit is niet terug te draaien.
+              Namen, e-mail, telefoon en notities van {wie} worden gewist. Partner, data, aantallen, vergoeding en factuurgegevens blijven staan. Dit is niet terug te draaien.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

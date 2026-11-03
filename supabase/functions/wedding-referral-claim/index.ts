@@ -7,6 +7,10 @@
 // - "report": de partner meldt dat het bruidspaar al bekend was, met de datum
 //   van het eerste contact en een optionele opmerking.
 //
+// Sinds november 2026 kan een doorverwijzing ook een evenement zijn (geen
+// bruiloft, `referral_kind = 'event'`); de pagina en de bureaumail noemen de
+// klant dan "aanvrager" in plaats van "bruidspaar". Verder is er geen verschil.
+//
 // Openbaar (verify_jwt = false): de link is het bewijs, net als bij de
 // beoordelingspagina. De link werkt tot en met de vijfde werkdag (Nederlandse
 // tijd) na de doorverwijsmail; daarna is hij verlopen en verandert er niets
@@ -49,12 +53,20 @@ export const BodySchema = z.discriminatedUnion("action", [
 export type ClaimInput = z.infer<typeof BodySchema>;
 
 export type ClaimState = "open" | "reported" | "expired";
+export type ReferralKind = "wedding" | "event";
+
+/** Bruiloft tenzij de rij uitdrukkelijk een evenement is (oudere rijen hebben de kolom met standaardwaarde). */
+export const referralKindOf = (row: { referral_kind?: string | null }): ReferralKind => (row.referral_kind === "event" ? "event" : "wedding");
+
+/** Hoe we de klant noemen in teksten aan het bureau: bruidspaar of aanvrager. */
+export const subjectWord = (kind: ReferralKind): string => (kind === "wedding" ? "bruidspaar" : "aanvrager");
 
 export interface ClaimRow {
   id: string;
   request_id: string | null;
   partner_id: string;
   couple_names: string;
+  referral_kind?: string | null;
   referred_at: string;
   partner_claim: string;
   partner_claim_reported_at: string | null;
@@ -65,6 +77,8 @@ export interface ClaimRow {
 /** Wat de pagina te zien krijgt. Geen contactgegevens van het bruidspaar, alleen de namen. */
 export interface ClaimView {
   state: ClaimState;
+  /** Bruiloft of evenement: bepaalt de bewoording op de pagina. */
+  kind: ReferralKind;
   partnerName: string;
   coupleNames: string;
   referredAt: string;
@@ -83,6 +97,7 @@ export function claimState(row: Pick<ClaimRow, "partner_claim" | "referred_at">,
 export function toView(row: ClaimRow, partnerName: string, state: ClaimState): ClaimView {
   return {
     state,
+    kind: referralKindOf(row),
     partnerName,
     coupleNames: row.couple_names,
     referredAt: row.referred_at,
@@ -121,7 +136,7 @@ export interface ClaimContext {
 export const BUREAU_MAIL_TYPE = "wedding_referral_claim_bureau";
 
 export interface BureauMailInput {
-  referral: Pick<ClaimRow, "id" | "request_id" | "partner_id" | "couple_names" | "referred_at">;
+  referral: Pick<ClaimRow, "id" | "request_id" | "partner_id" | "couple_names" | "referred_at" | "referral_kind">;
   partnerName: string;
   firstContactAt: string;
   reportedAt: string;
@@ -144,10 +159,11 @@ function rij(label: string, value: string): string {
 
 export function bureauMailHtml(input: BureauMailInput): string {
   const base = getPortalBaseUrl(input.origin);
+  const wie = subjectWord(referralKindOf(input.referral));
   const rijen = [
     input.project?.reference_number ? rij("Project", input.project.reference_number) : "",
     input.project ? rij("Klant", input.project.customer_name) : "",
-    rij("Bruidspaar", input.referral.couple_names),
+    rij(wie === "bruidspaar" ? "Bruidspaar" : "Aanvrager", input.referral.couple_names),
     rij("Partner", input.partnerName || "Partner"),
     rij("Doorverwezen op", formatIsoDateNL(input.referral.referred_at)),
     rij("Eerste contact volgens de partner", formatIsoDateNL(input.firstContactAt)),
@@ -164,13 +180,13 @@ export function bureauMailHtml(input: BureauMailInput): string {
     ? `<a href="${base}/admin/aanvragen/${input.referral.request_id}" style="color:#0F4C5C; margin-left:16px;">Open het project</a>`
     : "";
   return `<div style="font-family: Arial, sans-serif; max-width:600px; margin:0 auto; color:#0f172a;">
-    <h2 style="color:#0F4C5C; margin-bottom:4px;">Partner meldt: bruidspaar was al bekend</h2>
+    <h2 style="color:#0F4C5C; margin-bottom:4px;">Partner meldt: ${wie} was al bekend</h2>
     <p style="margin:0 0 16px; color:#64748b; font-size:14px;">Interne melding via de link in de partnermail — geen actie voor de klant of partner. Er staat ook een taak in de Werkbank.</p>
     <table style="width:100%; border-collapse:collapse; background:#f8fafc; border-radius:8px; padding:8px;">
       ${rijen}
     </table>
     ${opmerking}
-    <p style="margin:16px 0 0; font-size:14px;">Bekijk de doorverwijzing onder Bruiloften. Bij een boeking is de vergoeding dan nul.</p>
+    <p style="margin:16px 0 0; font-size:14px;">Bekijk de doorverwijzing onder Doorverwijzingen. Bij een boeking is de vergoeding dan nul.</p>
     <p style="margin:24px 0;">
       <a href="${base}/admin/bruiloften" style="background:#0F4C5C; color:#ffffff; padding:12px 20px; border-radius:6px; text-decoration:none; display:inline-block;">
         Bekijk de doorverwijzing
@@ -197,7 +213,7 @@ async function mailBureau(ctx: ClaimContext, input: BureauMailInput): Promise<vo
   };
   const metadata = {
     template_name: BUREAU_MAIL_TYPE,
-    actor: "partner → bureau (bruidspaar al bekend gemeld)",
+    actor: `partner → bureau (${subjectWord(referralKindOf(input.referral))} al bekend gemeld)`,
     referral_id: input.referral.id,
     partner_name: input.partnerName,
     idempotency_key: idempotencyKey,
@@ -256,7 +272,7 @@ async function mailBureau(ctx: ClaimContext, input: BureauMailInput): Promise<vo
 export type ClaimResult = { status: number; body: Record<string, unknown> };
 
 const COLUMNS =
-  "id, request_id, partner_id, couple_names, referred_at, partner_claim, partner_claim_reported_at, partner_claim_first_contact_at, partner_claim_note";
+  "id, request_id, partner_id, couple_names, referral_kind, referred_at, partner_claim, partner_claim_reported_at, partner_claim_first_contact_at, partner_claim_note";
 
 export async function handleClaim(input: ClaimInput, ctx: ClaimContext): Promise<ClaimResult> {
   const { data, error } = await ctx.db.from("wedding_referrals").select(COLUMNS).eq("claim_token", input.token).maybeSingle();
@@ -282,7 +298,9 @@ export async function handleClaim(input: ClaimInput, ctx: ClaimContext): Promise
   if (eerstContact > row.referred_at) {
     return {
       status: 400,
-      body: { error: `Het eerste contact moet vóór onze doorverwijzing van ${formatIsoDateNL(row.referred_at)} liggen. Was dat later, dan was het bruidspaar nog niet bij jullie bekend.` },
+      body: {
+        error: `Het eerste contact moet vóór onze doorverwijzing van ${formatIsoDateNL(row.referred_at)} liggen. Was dat later, dan was ${referralKindOf(row) === "wedding" ? "het bruidspaar" : "de aanvrager"} nog niet bij jullie bekend.`,
+      },
     };
   }
 
@@ -320,7 +338,7 @@ export async function handleClaim(input: ClaimInput, ctx: ClaimContext): Promise
     description: [
       `Eerste contact volgens de partner: ${formatIsoDateNL(eerstContact)}.`,
       input.note ? `Opmerking: ${input.note}` : null,
-      "Bekijk de doorverwijzing onder Bruiloften. Bij een boeking is de vergoeding dan nul.",
+      "Bekijk de doorverwijzing onder Doorverwijzingen. Bij een boeking is de vergoeding dan nul.",
     ]
       .filter(Boolean)
       .join("\n"),

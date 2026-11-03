@@ -14,6 +14,7 @@ import {
   isDueForAnonymization,
   nextInvoiceStatus,
   partnerConfirmation,
+  referralKindOf,
   referralsToExpire,
   seasonOf,
   shouldExpire,
@@ -32,6 +33,7 @@ let teller = 0;
 const doorverwijzing = (extra: Partial<ReferralLike> = {}): ReferralLike => ({
   id: `r-${++teller}`,
   partner_id: "paal-50",
+  referral_kind: "wedding",
   couple_names: "Anna & Bram",
   couple_email: "anna@example.com",
   couple_phone: "0612345678",
@@ -208,11 +210,18 @@ describe("controlelijst", () => {
     expect(buildControlList(alle, "2026-07-15", "paal-50").map((r) => r.id)).toEqual(["maand", "verstreken"]);
   });
 
-  it("maakt een puntkomma-CSV met kopregel en ontsnapte waarden", () => {
-    const csv = controlListCsv([doorverwijzing({ notes: 'Belt zelf; "misschien"' })], "Paal 50");
+  it("maakt een puntkomma-CSV met kopregel, soort en ontsnapte waarden", () => {
+    const csv = controlListCsv([doorverwijzing({ notes: 'Belt zelf; "misschien"' }), doorverwijzing({ referral_kind: "event", couple_names: "Jan Jansen" })], "Paal 50");
     const regels = csv.split("\n");
-    expect(regels[0]).toBe("Partner;Bruidspaar;E-mail;Telefoon;Datum aanvraag;Datum doorverwezen;Verwachte trouwdatum;Geschat aantal gasten;Vervaldatum;Melding partner;Notities");
-    expect(regels[1]).toBe('Paal 50;Anna & Bram;anna@example.com;0612345678;2026-03-01;2026-03-05;12 jun. 2027;80;2027-09-05;Geen melding;"Belt zelf; ""misschien"""');
+    expect(regels[0]).toBe("Partner;Soort;Klant;E-mail;Telefoon;Datum aanvraag;Datum doorverwezen;Verwachte datum;Geschat aantal gasten;Vervaldatum;Melding partner;Notities");
+    expect(regels[1]).toBe('Paal 50;Bruiloft;Anna & Bram;anna@example.com;0612345678;2026-03-01;2026-03-05;12 jun. 2027;80;2027-09-05;Geen melding;"Belt zelf; ""misschien"""');
+    expect(regels[2].startsWith("Paal 50;Evenement;Jan Jansen;")).toBe(true);
+  });
+
+  it("leest de soort: bruiloft tenzij de rij een evenement is", () => {
+    expect(referralKindOf({ referral_kind: "event" })).toBe("event");
+    expect(referralKindOf({ referral_kind: "wedding" })).toBe("wedding");
+    expect(referralKindOf({})).toBe("wedding");
   });
 });
 

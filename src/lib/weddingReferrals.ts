@@ -15,6 +15,22 @@ import { addWorkingDays, claimDeadline, PARTNER_RESPONSE_WORKING_DAYS } from "..
 // De termijn voor "al bekend" wordt op één plek uitgerekend (de edge functions gebruiken dezelfde module).
 export { addWorkingDays, PARTNER_RESPONSE_WORKING_DAYS };
 
+/**
+ * Soort doorverwijzing: een bruiloft (het oorspronkelijke geval) of een ander
+ * evenement dat het bureau naar een partner doorzet. Zelfde tabel en flow,
+ * andere mailsjablonen en bewoording.
+ */
+export type ReferralKind = "wedding" | "event";
+export const REFERRAL_KINDS: ReferralKind[] = ["wedding", "event"];
+export const REFERRAL_KIND_LABEL: Record<ReferralKind, string> = {
+  wedding: "Bruiloft",
+  event: "Evenement",
+};
+/** Bruiloft tenzij de rij uitdrukkelijk een evenement is. */
+export const referralKindOf = (r: { referral_kind?: string | null }): ReferralKind => (r.referral_kind === "event" ? "event" : "wedding");
+/** Hoe we de klant noemen in schermteksten: "het bruidspaar" of "de klant". */
+export const subjectWord = (kind: ReferralKind): string => (kind === "wedding" ? "het bruidspaar" : "de klant");
+
 export type ReferralStatus = "referred" | "booked" | "not_proceeded" | "expired";
 export type InvoiceStatus = "not_applicable" | "to_invoice" | "invoiced" | "paid";
 
@@ -66,6 +82,8 @@ export const ANONYMIZED_NAME = "Geanonimiseerd";
 export interface ReferralLike {
   id: string;
   partner_id: string;
+  /** "wedding" of "event"; zie ReferralKind. */
+  referral_kind: string;
   couple_names: string;
   couple_email: string | null;
   couple_phone: string | null;
@@ -368,10 +386,11 @@ const csvCel = (v: string | number | null | undefined): string => {
 
 /** CSV (puntkomma, opent in Excel) van de controlelijst voor één partner. */
 export function controlListCsv(rows: ReferralLike[], partnerName: string): string {
-  const kop = ["Partner", "Bruidspaar", "E-mail", "Telefoon", "Datum aanvraag", "Datum doorverwezen", "Verwachte trouwdatum", "Geschat aantal gasten", "Vervaldatum", "Melding partner", "Notities"];
+  const kop = ["Partner", "Soort", "Klant", "E-mail", "Telefoon", "Datum aanvraag", "Datum doorverwezen", "Verwachte datum", "Geschat aantal gasten", "Vervaldatum", "Melding partner", "Notities"];
   const regels = rows.map((r) =>
     [
       partnerName,
+      REFERRAL_KIND_LABEL[referralKindOf(r)],
       r.couple_names,
       r.couple_email,
       r.couple_phone,

@@ -24,17 +24,20 @@ import {
 // zodat een typfout in het sjabloon of een ontbrekende variabele hier opvalt.
 
 const MIGRATIE = new URL("../../migrations/20261004100000_bruiloftsdoorverwijzing-partnermail.sql", import.meta.url);
+const EVENT_MIGRATIE = new URL("../../migrations/20261103100000_doorverwijzing-evenementen.sql", import.meta.url);
 
-function laadSjabloon(id: string): { subject: string; body: string } {
-  const sql = Deno.readTextFileSync(MIGRATIE);
+function laadSjabloon(id: string, bestand: URL = MIGRATIE): { subject: string; body: string } {
+  const sql = Deno.readTextFileSync(bestand);
   const re = new RegExp(`'${id}',\\s*'(?:[^']|'')*',\\s*'(?:[^']|'')*',\\s*'((?:[^']|'')*)',\\s*\\$body\\$([\\s\\S]*?)\\$body\\$`);
   const m = sql.match(re);
-  if (!m) throw new Error(`Sjabloon ${id} niet gevonden in ${MIGRATIE.pathname}`);
+  if (!m) throw new Error(`Sjabloon ${id} niet gevonden in ${bestand.pathname}`);
   return { subject: m[1].replaceAll("''", "'"), body: m[2] };
 }
 
 const PARTNER_SJABLOON = laadSjabloon("wedding_referral_partner");
 const KLANT_SJABLOON = laadSjabloon("wedding_referral_customer");
+const EVENT_PARTNER_SJABLOON = laadSjabloon("event_referral_partner", EVENT_MIGRATIE);
+const EVENT_KLANT_SJABLOON = laadSjabloon("event_referral_customer", EVENT_MIGRATIE);
 
 // Zoals getRenderedTemplate: de tekst met de (ontsmette) waarden, het onderwerp
 // met de platte waarden.
@@ -137,8 +140,8 @@ function context(store: Record<string, Row[]>, overrides: Partial<HandlerContext
       (store.email_log ||= []).push({ id: `log-${logged.length}`, idempotency_key: entry.idempotency_key ?? null, created_at: "2026-09-28T10:00:01Z" });
     },
     wrap: async (inner) => `<html>${inner}</html>`,
-    renderPartnerTemplate: async (vars, onderwerp) => {
-      const r = render(PARTNER_SJABLOON, vars, onderwerp);
+    renderPartnerTemplate: async (vars, onderwerp, kind) => {
+      const r = render(kind === "event" ? EVENT_PARTNER_SJABLOON : PARTNER_SJABLOON, vars, onderwerp);
       return { subject: r.subject, body: `<html>${r.body}</html>` };
     },
     newToken: () => TOKEN,
@@ -248,9 +251,70 @@ Deno.test("handler: verstuurt, logt, maakt de doorverwijzing met vervaldatum en 
 Deno.test("handler: weigert een partner zonder de instelling, of een onbekende partner", async () => {
   const uit = await handleWeddingReferral(invoer(), context({ partners: [partner({ receives_wedding_referrals: false })] }).ctx);
   assertEquals(uit.status, 400);
-  assertStringIncludes(String(uit.body.error), "ontvangt geen bruiloftsdoorverwijzingen");
+  assertStringIncludes(String(uit.body.error), "ontvangt geen doorverwijzingen");
   const onbekend = await handleWeddingReferral(invoer({ partnerId: "bestaat-niet" }), context({ partners: [partner()] }).ctx);
   assertEquals(onbekend.status, 404);
+});
+
+Deno.test("BodySchema: soort is standaard bruiloft en kent alleen bruiloft of evenement", () => {
+  assertEquals(invoer().kind, "wedding");
+  assertEquals(invoer({ kind: "event" }).kind, "event");
+  assertEquals(BodySchema.safeParse({ ...invoer(), kind: "congres" }).success, false);
+});
+
+Deno.test("handler: een evenement gebruikt de evenementsjablonen, legt de soort vast en noteert 'evenement'", async () => {
+  const inboxId = "22222222-2222-4222-8222-222222222222";
+  const { ctx, stub, sent, logged } = context({ partners: [partner()], sales_inbox: [{ id: inboxId, status: "new", notes: null }] });
+  const result = await handleWeddingReferral(
+    invoer({
+      kind: "event",
+      salesInboxId: inboxId,
+      coupleNames: "Jan Jansen",
+      coupleEmail: "jan@example.com",
+      subject: "Uw evenement op Vlieland",
+      body: "Beste Jan,\n\nWij hebben uw aanvraag doorgegeven aan Paal 50.",
+      expectedWeddingDate: "2027-06-12",
+      expectedWeddingPrecision: "day",
+    }),
+    ctx,
+  );
+  assertEquals(result.status, 200, JSON.stringify(result.body));
+  assertEquals(sent.length, 2);
+
+  // De klantmail blijft de tekst uit het dialoog, met de partner in cc.
+  assertEquals(sent[0].To[0].Email, "jan@example.com");
+  assertEquals(sent[0].Cc?.[0].Email, "info@paal50.nl");
+  assertEquals(logged[0].email_type, "event_referral_customer");
+  assertEquals(logged[0].metadata.template_name, "event_referral_customer");
+  assertEquals(logged[0].metadata.actor, "admin → klant (doorverwijzing, partner in cc)");
+
+  // De partnermail komt uit het evenementsjabloon: ander onderwerp, geen "bruidspaar".
+  const m = sent[1];
+  assertEquals(m.Subject, "Nieuwe aanvraag evenement: Jan Jansen, 12 juni 2027");
+  const html = String(m.HTMLPart);
+  assertStringIncludes(html, "voor een evenement op Vlieland");
+  assertStringIncludes(html, "Gewenste datum:</td><td style=\"padding:2px 0;\">12 juni 2027");
+  assertStringIncludes(html, "Deze klant was al bij ons bekend");
+  assertStringIncludes(html, `https://bureauvlieland.nl/doorverwijzing/${TOKEN}`);
+  assertEquals(html.includes("bruidspaar"), false);
+  assertEquals(html.includes("{{"), false);
+  assertEquals(logged[1].email_type, "event_referral_partner");
+  assertEquals(logged[1].metadata.actor, "admin → partner (nieuwe aanvraag evenement)");
+
+  // De doorverwijzing draagt de soort; de inboxnotitie noemt het evenement.
+  const rij = stub.store.wedding_referrals[0];
+  assertEquals(rij.referral_kind, "event");
+  assertEquals(rij.couple_names, "Jan Jansen");
+  assertEquals(stub.store.sales_inbox[0].notes, "Doorverwezen naar Paal 50 op 2026-09-28 (evenement).");
+});
+
+Deno.test("handler: een bruiloft blijft referral_kind 'wedding' met de bruiloftsjablonen", async () => {
+  const { ctx, stub, logged } = context({ partners: [partner()] });
+  const result = await handleWeddingReferral(invoer(), ctx);
+  assertEquals(result.status, 200);
+  assertEquals(stub.store.wedding_referrals[0].referral_kind, "wedding");
+  assertEquals(logged[0].email_type, "wedding_referral_customer");
+  assertEquals(logged[1].email_type, "wedding_referral_partner");
 });
 
 Deno.test("handler: sales-inboxmail gaat op verwerkt met een notitie", async () => {
@@ -318,6 +382,24 @@ Deno.test("sjabloon bruidspaar: zonder datum en aantal gasten blijft de tekst he
   assertStringIncludes(r.body, "aan hen doorgegeven en hen in deze mail meegenomen.");
   assertEquals(r.body.includes("ongeveer"), false);
   assertEquals(r.body.includes("{{"), false);
+});
+
+Deno.test("sjabloon klant evenement: eigen onderwerp en tekst, zonder bruiloft; zonder datum en gasten blijft de tekst heel", () => {
+  const vol = render(EVENT_KLANT_SJABLOON, { voornaam: "Jan", datum: "12 juni 2027", partner_naam: "Paal 50", aantal_gasten: "40", partner_email: "info@paal50.nl" });
+  assertEquals(vol.subject, "Uw evenement op Vlieland");
+  assertStringIncludes(vol.body, "Beste Jan,");
+  assertStringIncludes(vol.body, "voor een evenement op Vlieland op 12 juni 2027.");
+  assertStringIncludes(vol.body, "Voor dit soort evenementen werken wij samen met Paal 50, die u graag verder helpt.");
+  assertStringIncludes(vol.body, "inclusief de ongeveer 40 gasten waar u op rekent, en hen in deze mail meegenomen.");
+  assertStringIncludes(vol.body, "U kunt Paal 50 ook zelf bereiken via info@paal50.nl.");
+  assertEquals(vol.body.toLowerCase().includes("bruiloft"), false);
+  assertEquals(vol.body.includes("{{"), false);
+
+  const kaal = render(EVENT_KLANT_SJABLOON, { voornaam: "Jan", datum: "", partner_naam: "Paal 50", aantal_gasten: "", partner_email: "info@paal50.nl" });
+  assertStringIncludes(kaal.body, "voor een evenement op Vlieland. Wat leuk");
+  assertStringIncludes(kaal.body, "aan hen doorgegeven en hen in deze mail meegenomen.");
+  assertEquals(kaal.body.includes("ongeveer"), false);
+  assertEquals(kaal.body.includes("{{"), false);
 });
 
 // ── Mail aan de partner ──────────────────────────────────────────────────

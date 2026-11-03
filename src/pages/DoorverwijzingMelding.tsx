@@ -17,12 +17,15 @@ import { GENERAL_CONTACT_EMAIL } from "@/lib/bureauContact";
  * → Mail aan de partner): "Was dit bruidspaar al bij jullie bekend?". Zonder
  * login; de link met token is het bewijs. Praat alleen met de edge function
  * `wedding-referral-claim`. De link werkt tot en met de vijfde werkdag na de
- * doorverwijsmail; daarna toont de pagina dat hij verlopen is.
+ * doorverwijsmail; daarna toont de pagina dat hij verlopen is. Bij een
+ * doorverwezen evenement (geen bruiloft) spreekt de pagina van "deze klant".
  */
 type ClaimState = "open" | "reported" | "expired";
+type ReferralKind = "wedding" | "event";
 
 interface ClaimView {
   state: ClaimState;
+  kind: ReferralKind;
   partnerName: string;
   coupleNames: string;
   referredAt: string;
@@ -93,6 +96,12 @@ const DoorverwijzingMelding = () => {
     window.scrollTo({ top: 0 });
   };
 
+  // Bruiloft: "dit bruidspaar", "het bruidspaar"; evenement: "deze klant", "de klant".
+  const bruiloft = (view?.kind ?? "wedding") === "wedding";
+  const dit = bruiloft ? "dit bruidspaar" : "deze klant";
+  const het = bruiloft ? "het bruidspaar" : "de klant";
+  const soort = bruiloft ? "bruiloft" : "evenement";
+
   const titel =
     fase === "ongeldig"
       ? "Deze link werkt niet"
@@ -100,23 +109,23 @@ const DoorverwijzingMelding = () => {
         ? "Bedankt voor jullie melding"
         : view?.state === "expired"
           ? "Deze link is verlopen"
-          : "Was dit bruidspaar al bij jullie bekend?";
+          : `Was ${dit} al bij jullie bekend?`;
 
   const intro =
     fase === "klaar" && view?.state === "open"
-      ? `${view.coupleNames} is op ${dag(view.referredAt)} door Bureau Vlieland doorverwezen naar ${view.partnerName}. Was het bruidspaar al eerder bij jullie in beeld? Meld het dan hier, uiterlijk ${dag(view.deadline)}.`
+      ? `${view.coupleNames} is op ${dag(view.referredAt)} door Bureau Vlieland doorverwezen naar ${view.partnerName}. Was ${het} al eerder bij jullie in beeld? Meld het dan hier, uiterlijk ${dag(view.deadline)}.`
       : undefined;
 
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Doorverwijzing bruiloft – Bureau Vlieland</title>
+        <title>{`Doorverwijzing ${soort} – Bureau Vlieland`}</title>
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
       <Navigation />
 
       <main id="main-content">
-        <FunnelHead eyebrow="Doorverwijzing bruiloft" title={titel} intro={intro} />
+        <FunnelHead eyebrow={`Doorverwijzing ${soort}`} title={titel} intro={intro} />
 
         <Section>
           <Container size="content">
@@ -128,7 +137,7 @@ const DoorverwijzingMelding = () => {
                 description="De link is onvolledig of hoort bij een doorverwijzing die niet meer bestaat. Mail ons gerust."
                 action={
                   <Button asChild variant="outline">
-                    <a href={`mailto:${GENERAL_CONTACT_EMAIL}?subject=Doorverwijzing bruiloft`}>Mail {GENERAL_CONTACT_EMAIL}</a>
+                    <a href={`mailto:${GENERAL_CONTACT_EMAIL}?subject=Doorverwijzing`}>Mail {GENERAL_CONTACT_EMAIL}</a>
                   </Button>
                 }
               />
@@ -144,8 +153,8 @@ const DoorverwijzingMelding = () => {
                 }}
               >
                 <Notice tone="info">
-                  Meld je alleen als het bruidspaar al <strong>vóór onze doorverwijzing</strong> contact met jullie had. Dan valt deze aanvraag buiten de
-                  doorverwijsafspraak met Bureau Vlieland. Was het bruidspaar nieuw voor jullie, dan hoef je niets te doen.
+                  Meld je alleen als {het} al <strong>vóór onze doorverwijzing</strong> contact met jullie had. Dan valt deze aanvraag buiten de
+                  doorverwijsafspraak met Bureau Vlieland. Was {het} nieuw voor jullie, dan hoef je niets te doen.
                 </Notice>
 
                 <div className="space-y-5">
@@ -166,7 +175,7 @@ const DoorverwijzingMelding = () => {
                     />
                   </FormField>
 
-                  <FormField label="Opmerking" htmlFor="opmerking" help="Optioneel: hoe nam het bruidspaar contact op, of wat is er al besproken?">
+                  <FormField label="Opmerking" htmlFor="opmerking" help={`Optioneel: hoe nam ${het} contact op, of wat is er al besproken?`}>
                     <Textarea id="opmerking" value={opmerking} onChange={(e) => setOpmerking(e.target.value)} rows={4} maxLength={2000} />
                   </FormField>
                 </div>
@@ -175,7 +184,7 @@ const DoorverwijzingMelding = () => {
 
                 <div className="space-y-3">
                   <Button type="submit" size="lg" disabled={bezig} className="w-full sm:w-auto">
-                    {bezig ? "Versturen…" : "Ja, dit bruidspaar was al bij ons bekend"}
+                    {bezig ? "Versturen…" : `Ja, ${dit} was al bij ons bekend`}
                   </Button>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Je kunt tot en met {dag(view.deadline)} melden. Vragen? Mail {GENERAL_CONTACT_EMAIL}.
@@ -205,10 +214,10 @@ const DoorverwijzingMelding = () => {
             {fase === "klaar" && view?.state === "expired" && (
               <EmptyState
                 title={`De termijn voor ${view.coupleNames} liep af op ${dag(view.deadline)}`}
-                description={`De link werkt vijf werkdagen na onze doorverwijzing. Hoor je dit nu pas of was het bruidspaar toch al bij ${view.partnerName} bekend? Mail ons, dan kijken we samen wat er kan.`}
+                description={`De link werkt vijf werkdagen na onze doorverwijzing. Hoor je dit nu pas of was ${het} toch al bij ${view.partnerName} bekend? Mail ons, dan kijken we samen wat er kan.`}
                 action={
                   <Button asChild variant="outline">
-                    <a href={`mailto:${GENERAL_CONTACT_EMAIL}?subject=${encodeURIComponent(`Doorverwijzing bruiloft: ${view.coupleNames}`)}`}>Mail {GENERAL_CONTACT_EMAIL}</a>
+                    <a href={`mailto:${GENERAL_CONTACT_EMAIL}?subject=${encodeURIComponent(`Doorverwijzing ${soort}: ${view.coupleNames}`)}`}>Mail {GENERAL_CONTACT_EMAIL}</a>
                   </Button>
                 }
               />

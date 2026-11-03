@@ -18,7 +18,7 @@ export type EmailTypeCategory =
   | "Chat"
   | "Klant"
   | "Bureau"
-  | "Bruiloft"
+  | "Doorverwijzing"
   | "Systeem"
   | "Overig";
 
@@ -109,10 +109,12 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   admin_project_email: { label: "E-mail vanuit dossier", category: "Bureau" },
   inbound_reply_to_customer: { label: "Antwoord aan klant", category: "Bureau" },
 
-  // Bruiloft
-  wedding_referral_customer: { label: "Doorverwijzing bruiloft (bruidspaar)", category: "Bruiloft" },
-  wedding_referral_partner: { label: "Doorverwijzing bruiloft (partner)", category: "Bruiloft" },
-  wedding_referral_claim_bureau: { label: "Bruidspaar al bekend bij partner (melding bureau)", category: "Bruiloft" },
+  // Doorverwijzingen naar een partner: bruiloften en evenementen
+  wedding_referral_customer: { label: "Doorverwijzing bruiloft (bruidspaar)", category: "Doorverwijzing" },
+  wedding_referral_partner: { label: "Doorverwijzing bruiloft (partner)", category: "Doorverwijzing" },
+  event_referral_customer: { label: "Doorverwijzing evenement (klant)", category: "Doorverwijzing" },
+  event_referral_partner: { label: "Doorverwijzing evenement (partner)", category: "Doorverwijzing" },
+  wedding_referral_claim_bureau: { label: "Klant al bekend bij partner (melding bureau)", category: "Doorverwijzing" },
 
   // Systeem
   cron_watchdog_alert: { label: "Systeemwaarschuwing", category: "Systeem" },

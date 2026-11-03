@@ -119,6 +119,29 @@ Deno.test("status: de link werkt binnen vijf werkdagen, ook op de laatste dag to
   assertEquals((laatste.body.view as { state: string }).state, "open");
 });
 
+Deno.test("status: een bruiloft en een evenement geven hun soort mee aan de pagina", async () => {
+  const bruiloft = await handleClaim(status(), context(winkel(), DRIE_DAGEN_LATER).ctx);
+  assertEquals((bruiloft.body.view as { kind: string }).kind, "wedding");
+  const evenement = await handleClaim(status(), context(winkel({ referral_kind: "event" }), DRIE_DAGEN_LATER).ctx);
+  assertEquals((evenement.body.view as { kind: string }).kind, "event");
+});
+
+Deno.test("melden bij een evenement: de bureaumail en de foutmelding noemen de aanvrager, niet het bruidspaar", async () => {
+  const c = context(winkel({ referral_kind: "event", request_id: null }), DRIE_DAGEN_LATER);
+  const teLaat = await handleClaim(meld({ firstContactAt: "2026-09-29" }), c.ctx);
+  assertEquals(teLaat.status, 400);
+  assertStringIncludes(String(teLaat.body.error), "dan was de aanvrager nog niet bij jullie bekend");
+
+  const r = await handleClaim(meld(), c.ctx);
+  assertEquals(r.status, 200, JSON.stringify(r.body));
+  assertEquals((r.body.view as { kind: string }).kind, "event");
+  const html = c.sent[0].HTMLPart ?? "";
+  assertStringIncludes(html, "Partner meldt: aanvrager was al bekend");
+  assertStringIncludes(html, "Aanvrager");
+  assertEquals(html.includes("ruidspaar"), false);
+  assertEquals(c.logged[0].metadata.actor, "partner → bureau (aanvrager al bekend gemeld)");
+});
+
 Deno.test("status: na vijf werkdagen is de link verlopen", async () => {
   const r = await handleClaim(status(), context(winkel(), VERLOPEN).ctx);
   assertEquals(r.status, 200);

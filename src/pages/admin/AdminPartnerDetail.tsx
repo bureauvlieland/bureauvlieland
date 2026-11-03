@@ -1010,13 +1010,14 @@ const AdminPartnerDetail = () => {
 
                   <Separator />
 
-                  {/* Bruiloften: docs/plan-bruiloftsdoorverwijzingen.md */}
+                  {/* Doorverwijzingen (bruiloften en evenementen): docs/plan-bruiloftsdoorverwijzingen.md */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <Label htmlFor="receives_wedding_referrals">Ontvangt bruiloftsdoorverwijzingen</Label>
+                        <Label htmlFor="receives_wedding_referrals">Ontvangt doorverwijzingen</Label>
                         <p className="text-xs text-slate-500">
-                          Alleen partners met deze instelling zijn te kiezen bij een doorverwijzing onder Bruiloften
+                          Bruiloften en andere evenementen die het bureau doorzet. Alleen partners met deze instelling zijn te kiezen bij een
+                          doorverwijzing onder Doorverwijzingen
                         </p>
                       </div>
                       <Switch
@@ -1035,7 +1036,7 @@ const AdminPartnerDetail = () => {
                             type="email"
                             value={formData.wedding_referral_email}
                             onChange={(e) => handleChange("wedding_referral_email", e.target.value)}
-                            placeholder="bruiloften@bedrijf.nl"
+                            placeholder="doorverwijzingen@bedrijf.nl"
                             className="pl-10"
                           />
                         </div>

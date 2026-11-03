@@ -407,14 +407,14 @@ export function ProjectDetailPanel({ project }: { project: ProjectSummary | null
                 )}
               </div>
               <p className="mt-1 text-pink-800 dark:text-pink-300">
-                De partner regelt deze bruiloft; dit dossier vraagt geen actie meer van het bureau en krijgt
+                De partner regelt deze aanvraag; dit dossier vraagt geen actie meer van het bureau en krijgt
                 geen automatische taken of herinneringen. Binnenkomende berichten blijven zichtbaar.{" "}
                 <button
                   type="button"
                   className="underline underline-offset-2"
                   onClick={() => navigate("/admin/bruiloften")}
                 >
-                  Naar Bruiloften
+                  Naar Doorverwijzingen
                 </button>
               </p>
             </div>

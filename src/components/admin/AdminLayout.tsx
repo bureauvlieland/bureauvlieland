@@ -136,7 +136,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
         { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
         { title: "CRM", url: "/admin/crm", icon: Users },
-        { title: "Bruiloften", url: "/admin/bruiloften", icon: Heart },
+        { title: "Doorverwijzingen", url: "/admin/bruiloften", icon: Heart },
       ],
     },
     {
@@ -453,7 +453,7 @@ const ADMIN_TITLE_MAP: Array<{ match: RegExp; title: string }> = [
   { match: /^\/admin\/projecten/, title: "Projecten & Planning" },
   { match: /^\/admin\/programma-nieuw/, title: "Nieuw programma" },
   { match: /^\/admin\/crm/, title: "CRM" },
-  { match: /^\/admin\/bruiloften/, title: "Bruiloften" },
+  { match: /^\/admin\/bruiloften/, title: "Doorverwijzingen" },
   { match: /^\/admin\/partnerafspraken/, title: "Partnerafspraken" },
   { match: /^\/admin\/partners\/[^/]+/, title: "Partnerdetail" },
   { match: /^\/admin\/chat/, title: "Chat" },

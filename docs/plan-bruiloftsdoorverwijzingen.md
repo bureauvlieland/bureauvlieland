@@ -388,6 +388,61 @@ projecten al wel weg (`splitReferred`).
   verder als project? Annuleer hem dan via het menu.") blijft; annuleren
   kan, maar hoeft niet meer om de Werkbank rustig te houden.
 
+## Evenementen doorverwijzen (gebouwd 3 november)
+
+Vraag van Erwin: een algemene aanvraag voor een evenement die via
+bureauvlieland.nl binnenkomt en geen bruiloft is, ook kunnen doorzetten naar
+een collega-partner (Paal 50), met een andere tekst in de mails. Gekozen:
+geen tweede tabel of scherm, maar een **soort** op de bestaande
+doorverwijzing. Alles wat voor bruiloften is gebouwd (partner in cc, eigen
+partnermail met de "al bekend"-link, vijf werkdagen, status, staffel bij een
+boeking, controlelijst, anonimiseren, Werkbank-status "Doorverwezen") geldt
+ongewijzigd voor evenementen.
+
+- **Datamodel** (migratie `20261103100000_doorverwijzing-evenementen.sql`):
+  `wedding_referrals.referral_kind` met `wedding` (standaard, alle bestaande
+  rijen) of `event`. De tabel- en functienamen blijven `wedding_*`; hernoemen
+  zou alle code en migraties raken zonder dat een gebruiker er iets van ziet.
+- **Sjablonen** `event_referral_customer` ("Uw evenement op Vlieland",
+  placeholders `voornaam`, `datum`, `partner_naam`, `aantal_gasten`,
+  `partner_email`) en `event_referral_partner` ("Nieuwe aanvraag evenement:
+  {{naam_klant}}, {{datum}}", dezelfde gegevensregels als de bruiloftsvariant,
+  knop "Deze klant was al bij ons bekend"). Beide bij Email Templates te
+  bewerken; de migratie overschrijft een aangepaste tekst niet. Het
+  evenementsjabloon gebruikt `datum` in plaats van `trouwdatum`; de edge
+  function levert beide aan.
+- **Doorverwijsknop**: het dialoog "Doorverwijzen naar…" (sales-inbox en
+  projectmenu) begint met de keuze **Soort aanvraag**: Bruiloft of Evenement.
+  Wisselen laadt de voorzet van het bijpassende sjabloon opnieuw; de labels
+  volgen de soort ("Bruidspaar"/"Naam klant", "Verwachte trouwdatum"/
+  "Gewenste datum", "Mail aan het bruidspaar"/"Mail aan de klant"). De edge
+  function `send-wedding-referral` krijgt `kind` mee, kiest daarmee de
+  sjablonen, logt onder `event_referral_*` en schrijft `referral_kind`; de
+  notitie op een sales-inboxmail zegt "(evenement)".
+- **Meldpagina en bureaumail** (`wedding-referral-claim`): de pagina achter de
+  link spreekt bij een evenement van "deze klant" in plaats van "dit
+  bruidspaar"; de bureaumail en de werkbanktaak zeggen "aanvrager".
+- **Admin**: het menu heet nu "Doorverwijzingen" (route `/admin/bruiloften`
+  blijft, zodat links in verzonden mails en taken blijven werken). In de
+  lijst een filter op soort en een badge "Evenement"; de controlelijst-CSV
+  heeft de kolom "Soort". In het formulier is de soort te kiezen en volgen
+  de labels. Partnerpagina: de schakelaar heet "Ontvangt doorverwijzingen"
+  (kolom `receives_wedding_referrals` ongewijzigd) en geldt voor beide
+  soorten; Paal 50 en Seeduyn staan allebei aan, de admin kiest in het
+  dialoog wie de aanvraag krijgt.
+- **Vergoeding**: een geboekt evenement volgt dezelfde staffel als een
+  bruiloft (gasten, meerdaags). Is voor evenementen een ander tarief
+  afgesproken, dan is dat bij "geboekt" te overschrijven met een opmerking,
+  of later als aparte staffel per soort te bouwen. De doorverwijsregeling
+  in het portaal spreekt alleen over bruiloften; de waarschuwing in het
+  dialoog blijft ook bij een evenement staan. **Te doen door Erwin:** de
+  afspraak met Paal 50 over evenementen vastleggen (tarief en de vijf
+  werkdagen), eventueel als nieuwe versie van de regeling.
+- Tests: Deno-tests voor beide edge functions (soort standaard bruiloft,
+  evenement gebruikt de evenementsjablonen en legt de soort vast, de
+  meldpagina en bureaumail noemen de aanvrager; de sjabloonteksten worden uit
+  de migratie gelezen), vitest voor `referralKindOf` en de CSV-kolom.
+
 ## Partnerafspraken met akkoord in het portaal (gebouwd 29 september)
 
 Vraag van Erwin: kunnen we de afspraken met partners in het portaal

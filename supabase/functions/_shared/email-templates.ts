@@ -372,6 +372,9 @@ export const TemplateIds = {
   // Bruiloft doorverwezen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md)
   WEDDING_REFERRAL_CUSTOMER: "wedding_referral_customer",
   WEDDING_REFERRAL_PARTNER: "wedding_referral_partner",
+  // Evenement (geen bruiloft) doorverwezen naar een partner: zelfde flow, eigen teksten
+  EVENT_REFERRAL_CUSTOMER: "event_referral_customer",
+  EVENT_REFERRAL_PARTNER: "event_referral_partner",
 } as const;
 
 /**
