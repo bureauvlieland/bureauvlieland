@@ -17,7 +17,6 @@ import { ProjectDocumentsPanel } from "@/components/shared/ProjectDocumentsPanel
 import {
   generateTimeSlots,
   getBlockedTimeSlotsFromPartnerItems,
-  isTimeSlotBlocked,
   minutesToTime,
   formatDurationWindow,
   formatTimeHHmm,
@@ -28,6 +27,7 @@ import { itemDisplayStatusConfig, deriveItemDisplayStatusLoose } from "@/lib/ite
 import { canPartnerInvoiceItem, isAwaitingInvoicingRelease } from "@/lib/partnerInvoicing";
 import { isConfirmOnlyItem, isInformationalItem, partnerBillingNote, requiresPartnerQuote } from "@/lib/itemHandling";
 import { formatEuro } from "@/lib/formatEuro";
+import { getAlwaysAllowedProposalTimes, isProposalTimeBlocked } from "@/lib/partnerProposalTimes";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
 
 /**
@@ -95,14 +95,19 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
     return getBlockedTimeSlotsFromPartnerItems(sameDayItems, item.day_index, item.id);
   }, [item]);
 
+  // Vrije tijden, plus de tijden die de klant nu al ziet (gewenst, liever,
+  // bevestigd of eigen voorstel): die mag de partner altijd kiezen, ook als ze
+  // botsen met een ander onderdeel. Anders kan hij de prijs niet aanpassen
+  // zonder de tijd te wijzigen.
   const availableTimeSlots = useMemo(() => {
-    const filtered = generateTimeSlots().filter((time) => !isTimeSlotBlocked(time, item?.duration || null, blockedTimeSlots));
-    if (item?.preferred_time && !filtered.includes(item.preferred_time)) {
-      filtered.push(item.preferred_time);
-      filtered.sort();
+    if (!item) return [];
+    const filtered = generateTimeSlots().filter((time) => !isProposalTimeBlocked(time, item, blockedTimeSlots));
+    for (const time of getAlwaysAllowedProposalTimes(item)) {
+      if (!filtered.includes(time)) filtered.push(time);
     }
+    filtered.sort();
     return filtered;
-  }, [blockedTimeSlots, item?.duration, item?.preferred_time]);
+  }, [blockedTimeSlots, item]);
 
   const request = item?.program_requests;
   const effectivePeopleForItem = item ? (item.override_people ?? request!.number_of_people) : 0;
@@ -214,7 +219,7 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
       if (!proposedTime) {
         setTimeError("Kies een tijd.");
         hasError = true;
-      } else if (isTimeSlotBlocked(proposedTime, item.duration || null, blockedTimeSlots)) {
+      } else if (isProposalTimeBlocked(proposedTime, item, blockedTimeSlots)) {
         setTimeError("Op deze tijd staat al een ander onderdeel.");
         hasError = true;
       }
