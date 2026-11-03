@@ -273,3 +273,48 @@ describe("regels uit het btw-overzicht van een logiesfactuur", () => {
     expect(rows[2].unit_price).toBe("1546.9");
   });
 });
+
+describe("btw-overzicht met classificatie per tarief (Badhotel Bruin, BHB22-12778)", () => {
+  // Het hotel splitst 21% in "Accommodatie" en "Eten en drinken". Zonder label
+  // werden die opgeteld tot één "BTW 21%"-regel, waardoor logies en dranken
+  // niet meer uit elkaar te halen waren bij het doorbelasten.
+  const bruin = {
+    description: "Logies (Classic Garden kamers 16-10-2026 t/m 18-10-2026), toeristenbelasting en restaurantconsumpties",
+    amount_excl_vat: 2477.48,
+    vat_rate: null,
+    vat_amount: 406.8,
+    amount_incl_vat: 2884.28,
+    line_items: [],
+    vat_breakdown: [
+      { vat_rate: 0, amount_excl: 36.12, vat_amount: 0, label: "Belastingen" },
+      { vat_rate: 9, amount_excl: 882.53, vat_amount: 79.42, label: "Eten en drinken" },
+      { vat_rate: 21, amount_excl: 200.03, vat_amount: 42.02, label: "Eten en drinken" },
+      { vat_rate: 21, amount_excl: 1358.8, vat_amount: 285.36, label: "Accommodatie" },
+    ],
+  };
+
+  it("maakt per combinatie van tarief en classificatie een regel met een sprekende naam", () => {
+    const rows = buildLinesFromScan(bruin);
+    expect(rows.map((r) => [r.description, r.vat_rate, r.unit_price])).toEqual([
+      ["Toeristenbelasting", "0", "36.12"],
+      ["Eten en drinken 9%", "9", "882.53"],
+      ["Eten en drinken 21%", "21", "200.03"],
+      ["Accommodatie 21%", "21", "1358.8"],
+    ]);
+    const totalIncl = rows.reduce((s, r) => s + Number(r.amount_incl_override), 0);
+    expect(totalIncl).toBeCloseTo(2884.28, 2);
+  });
+
+  it("herkent toeristenbelasting ook aan het label als de omschrijving er niets over zegt", () => {
+    const rows = buildLinesFromScan({
+      ...bruin,
+      description: "Factuur",
+      vat_breakdown: [
+        { vat_rate: 0, amount_excl: 36.12, vat_amount: 0, label: "Toeristenbelasting" },
+        { vat_rate: 21, amount_excl: 1358.8, vat_amount: 285.36, label: null },
+      ],
+      amount_incl_vat: 1680.28,
+    });
+    expect(rows.map((r) => r.description)).toEqual(["Toeristenbelasting", "BTW 21%"]);
+  });
+});
