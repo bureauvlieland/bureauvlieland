@@ -45,6 +45,7 @@ import { isFeeExcluded } from "@/lib/excludedFees";
 import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
 import { resolveFeeStructure } from "@/lib/feeEngine";
 import { renderInvoicePdf, type InvoiceCategory } from "@/lib/invoicePdfRenderer";
+import { formatEventDates } from "@/lib/eventDateRange";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
@@ -726,9 +727,7 @@ const AdminInvoicePreview = () => {
       .filter(Boolean)
       .join(", ");
 
-    const eventDates = request.selected_dates
-      .map((d) => format(new Date(d), "d MMM yyyy", { locale: nl }))
-      .join(" – ");
+    const eventDates = formatEventDates(request.selected_dates);
 
     const priorOther = priorInvoices.filter((p) => p.invoice_number !== invoiceNumber);
 
@@ -1095,9 +1094,7 @@ const AdminInvoicePreview = () => {
                             <div className="flex justify-end gap-4">
                               <span className="text-gray-500">Datum evenement:</span>
                               <span className="w-36 text-right">
-                                {request.selected_dates
-                                  .map((d) => format(new Date(d), "EEE d MMM yyyy", { locale: nl }))
-                                  .join(" – ")}
+                                {formatEventDates(request.selected_dates)}
                               </span>
                             </div>
                           </div>

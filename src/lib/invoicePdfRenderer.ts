@@ -11,6 +11,12 @@ import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import logoUrl from "@/assets/logo.png";
+import {
+  registerInvoiceFonts,
+  sanitizeForStandardFont,
+  type FontBytesLoader,
+  type InvoiceFontFamily,
+} from "@/lib/invoicePdfFonts";
 
 // ─── Page geometry ───────────────────────────────────────────
 const PAGE_W = 210;
@@ -34,6 +40,27 @@ const LIGHT_BORDER: [number, number, number] = [226, 232, 240];
 const TEXT_MUTED: [number, number, number] = [100, 116, 139];
 const TEXT_FAINT: [number, number, number] = [148, 163, 184];
 const TEXT: [number, number, number] = [26, 26, 26];
+
+// ─── Typografie ──────────────────────────────────────────────
+// Eén lettertype (Inter, zie invoicePdfFonts) en één schaal van vijf
+// stappen. Daarvoor stonden er negen verschillende groottes op de factuur,
+// wat rommelig oogde (FV-BV-2606-0013-001, 3 november 2026).
+const FS = {
+  /** "Factuur" */
+  title: 18,
+  /** Bureaunaam, klantnaam, "Te betalen" */
+  heading: 10,
+  /** Lopende tekst: regels, adres, totalen */
+  body: 9,
+  /** Kopjes in kapitalen, subregels, toelichtingen, voorwaarden */
+  small: 8,
+  /** Eenheid achter de prijs, paginavoet */
+  tiny: 7,
+} as const;
+/** Regelafstanden (mm) bij body en small. */
+const LH = { body: 4.2, small: 3.6 } as const;
+
+let activeFont: InvoiceFontFamily = "helvetica";
 
 // ─── Public types ────────────────────────────────────────────
 export interface InvoiceLineRow {
@@ -196,14 +223,14 @@ async function renderHeader(pdf: jsPDF, data: InvoiceData, _state: RenderState) 
   const rightX = PAGE_W - MARGIN_R;
   let y = MARGIN_T + 4;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.heading);
   setText(pdf, NAVY);
   pdf.text(data.bureau.legalName, rightX, y, { align: "right" });
   y += 4.2;
 
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(8.5);
+  pdf.setFont(activeFont, "normal");
+  pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
   if (data.bureau.street) {
     pdf.text(data.bureau.street, rightX, y, { align: "right" });
@@ -240,8 +267,8 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   let y = startY;
 
   // Title "Factuur"
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(20);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.title);
   setText(pdf, NAVY);
   pdf.text("Factuur", MARGIN_L, y);
   y += 8;
@@ -255,20 +282,20 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   let yRight = y;
 
   // ── Customer block (left)
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.body);
   setText(pdf, TEXT_FAINT);
   pdf.text("FACTUURADRES", leftX, yLeft);
   yLeft += 4.5;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(10);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.heading);
   setText(pdf, TEXT);
   pdf.text(data.customer.name, leftX, yLeft);
   yLeft += 4.5;
 
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9.5);
+  pdf.setFont(activeFont, "normal");
+  pdf.setFontSize(FS.body);
   setText(pdf, TEXT);
   if (data.customer.contactName && data.customer.contactName !== data.customer.name) {
     pdf.text(data.customer.contactName, leftX, yLeft);
@@ -284,7 +311,7 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   }
   if (data.customer.vatNumber) {
     setText(pdf, TEXT_MUTED);
-    pdf.setFontSize(8.5);
+    pdf.setFontSize(FS.small);
     pdf.text(`BTW-nr: ${data.customer.vatNumber}`, leftX, yLeft);
     yLeft += 4;
   }
@@ -307,13 +334,13 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
     metaRows.push(["Leverdatum", data.meta.deliveryDate]);
   }
 
-  pdf.setFontSize(9.5);
+  pdf.setFontSize(FS.body);
   const valueMaxW = rightValueX - rightLabelX - 25;
   for (const [label, value] of metaRows) {
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont(activeFont, "normal");
     setText(pdf, TEXT_MUTED);
     pdf.text(label, rightLabelX, yRight);
-    pdf.setFont("helvetica", label === "Factuurnummer" ? "bold" : "normal");
+    pdf.setFont(activeFont, label === "Factuurnummer" ? "bold" : "normal");
     setText(pdf, TEXT);
     const valueLines = pdf.splitTextToSize(value, valueMaxW) as string[];
     for (let i = 0; i < valueLines.length; i++) {
@@ -336,8 +363,8 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
   pdf.roundedRect(MARGIN_L, y0, boxW, boxH, 1.5, 1.5, "FD");
 
   // Title strip
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.body);
   setText(pdf, NAVY);
   pdf.text("BETAALGEGEVENS", MARGIN_L + 4, y0 + 5);
 
@@ -356,11 +383,11 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
   ];
 
   for (const [label, value, bold] of rows) {
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.body);
     setText(pdf, TEXT_MUTED);
     pdf.text(label, labelX, y);
-    pdf.setFont("helvetica", bold ? "bold" : "normal");
+    pdf.setFont(activeFont, bold ? "bold" : "normal");
     setText(pdf, bold ? NAVY : TEXT);
     pdf.text(value, valueX, y);
     y += 4.2;
@@ -374,8 +401,8 @@ function renderTableHeader(pdf: jsPDF, y: number): number {
   pdf.setLineWidth(0.5);
   pdf.line(MARGIN_L, y, PAGE_W - MARGIN_R, y);
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
   pdf.text("OMSCHRIJVING", COL_DESC_X, y + 4.5);
   pdf.text("AANTAL", COL_QTY_X + 18, y + 4.5, { align: "right" });
@@ -388,28 +415,37 @@ function renderTableHeader(pdf: jsPDF, y: number): number {
   return y + 9;
 }
 
+/**
+ * Toelichting onder een regel. Gelijk aan de omschrijving (kostenpost
+ * "Badhotel Bruin" met partner "Badhotel Bruin") zegt hij niets en vervalt.
+ */
+const subDescriptionFor = (row: InvoiceLineRow): string | undefined => {
+  const sub = row.subDescription?.trim();
+  if (!sub || sub === row.description.trim()) return undefined;
+  return sub;
+};
+
 /** Estimate row height in mm before drawing (so we know if a page break is needed). */
 function estimateRowHeight(pdf: jsPDF, row: InvoiceLineRow): number {
-  const baseFont = row.isSubRow ? 8.5 : 9.5;
+  const baseFont = row.isSubRow ? FS.small : FS.body;
   const descW = COL_DESC_W - (row.isSubRow ? 6 : 0);
   pdf.setFontSize(baseFont);
   const descLines = pdf.splitTextToSize(row.description, descW) as string[];
-  pdf.setFontSize(7.5);
-  const subLines = row.subDescription
-    ? (pdf.splitTextToSize(row.subDescription, descW) as string[]).length
-    : 0;
-  const lineH = row.isSubRow ? 3.4 : 4;
-  return Math.max(5, descLines.length * lineH + subLines * 3.2 + 1.5);
+  pdf.setFontSize(FS.small);
+  const sub = subDescriptionFor(row);
+  const subLines = sub ? (pdf.splitTextToSize(sub, descW) as string[]).length : 0;
+  const lineH = row.isSubRow ? LH.small : LH.body;
+  return Math.max(5, descLines.length * lineH + subLines * LH.small + 1.5);
 }
 
 function renderRow(pdf: jsPDF, row: InvoiceLineRow, y: number): number {
-  const baseFont = row.isSubRow ? 8.5 : 9.5;
+  const baseFont = row.isSubRow ? FS.small : FS.body;
   const descX = row.isSubRow ? COL_DESC_X + 6 : COL_DESC_X;
   const descW = COL_DESC_W - (row.isSubRow ? 6 : 0);
-  const lineH = row.isSubRow ? 3.4 : 4;
+  const lineH = row.isSubRow ? LH.small : LH.body;
 
   pdf.setFontSize(baseFont);
-  pdf.setFont("helvetica", row.bold ? "bold" : "normal");
+  pdf.setFont(activeFont, row.bold ? "bold" : "normal");
   setText(pdf, row.isSubRow ? TEXT_MUTED : TEXT);
 
   const descLines = pdf.splitTextToSize(row.description, descW) as string[];
@@ -419,40 +455,44 @@ function renderRow(pdf: jsPDF, row: InvoiceLineRow, y: number): number {
     yCursor += lineH;
   }
 
-  if (row.subDescription) {
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(7.5);
-    setText(pdf, TEXT_FAINT);
-    const subLines = pdf.splitTextToSize(row.subDescription, descW) as string[];
+  const sub = subDescriptionFor(row);
+  if (sub) {
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.small);
+    setText(pdf, TEXT_MUTED);
+    const subLines = pdf.splitTextToSize(sub, descW) as string[];
     for (const ln of subLines) {
       pdf.text(ln, descX, yCursor);
-      yCursor += 3.2;
+      yCursor += LH.small;
     }
   }
 
   // Right-side cells aligned to the first description line (top of row)
   const valueY = y + lineH;
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont(activeFont, "normal");
   pdf.setFontSize(baseFont);
   setText(pdf, row.isSubRow ? TEXT_MUTED : TEXT);
 
-  pdf.text(row.qty || "—", COL_QTY_X + 18, valueY, { align: "right" });
+  // Een groepsregel (onderdeel met subregels) heeft alleen een totaal; daar
+  // zeggen streepjes in aantal en prijs niets.
+  const placeholder = row.bold ? "" : "—";
+  pdf.text(row.qty || placeholder, COL_QTY_X + 18, valueY, { align: "right" });
 
   // Price and suffix share one right-aligned slot so a long price never runs into the qty column
   const priceRight = COL_PRICE_X + 18;
-  const priceText = row.unitPrice || "—";
+  const priceText = row.unitPrice || placeholder;
   let priceEnd = priceRight;
   if (row.unitPriceSuffix) {
-    pdf.setFontSize(6.5);
+    pdf.setFontSize(FS.tiny);
     setText(pdf, TEXT_FAINT);
     pdf.text(row.unitPriceSuffix, priceRight, valueY, { align: "right" });
     priceEnd = priceRight - pdf.getTextWidth(row.unitPriceSuffix) - 1.2;
     pdf.setFontSize(baseFont);
     setText(pdf, row.isSubRow ? TEXT_MUTED : TEXT);
   }
-  pdf.text(priceText, priceEnd, valueY, { align: "right" });
+  if (priceText) pdf.text(priceText, priceEnd, valueY, { align: "right" });
 
-  pdf.setFont("helvetica", row.bold ? "bold" : row.isSubRow ? "normal" : "normal");
+  pdf.setFont(activeFont, row.bold ? "bold" : row.isSubRow ? "normal" : "normal");
   pdf.setFontSize(baseFont);
   setText(pdf, TEXT);
   if (row.amount) {
@@ -469,8 +509,8 @@ function renderRow(pdf: jsPDF, row: InvoiceLineRow, y: number): number {
 }
 
 function renderCategoryHeader(pdf: jsPDF, label: string, y: number): number {
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(7.5);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
   pdf.text(label.toUpperCase(), COL_DESC_X, y + 4);
   setDraw(pdf, LIGHT_BORDER);
@@ -489,8 +529,8 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
   const leftCol3 = MARGIN_L + 50;
   const leftHeaderY = y0;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
   pdf.text("BTW %", leftCol1, leftHeaderY);
   pdf.text("GRONDSLAG", leftCol2 + 22, leftHeaderY, { align: "right" });
@@ -501,8 +541,8 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
   pdf.line(MARGIN_L, leftHeaderY + 1.5, MARGIN_L + 80, leftHeaderY + 1.5);
 
   let yL = leftHeaderY + 5;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
+  pdf.setFont(activeFont, "normal");
+  pdf.setFontSize(FS.body);
   setText(pdf, TEXT);
   for (const line of data.totals.vatLines) {
     pdf.text(fmtNumber(line.rate), leftCol1, yL);
@@ -522,9 +562,9 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
     ["Totaal incl. btw", fmtEuro(data.totals.totalInclVat), false],
   ];
 
-  pdf.setFontSize(9.5);
+  pdf.setFontSize(FS.body);
   for (const [label, value, bold] of totalsRows) {
-    pdf.setFont("helvetica", bold ? "bold" : "normal");
+    pdf.setFont(activeFont, bold ? "bold" : "normal");
     setText(pdf, bold ? NAVY : TEXT);
     pdf.text(label, rightLabelX, yR);
     pdf.text(value, rightValueX, yR, { align: "right" });
@@ -536,12 +576,12 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
   const priorSum = priorInvoices.reduce((s, p) => s + p.amountInclVat, 0);
   if (priorInvoices.length > 0) {
     yR += 1;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.5);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.small);
     setText(pdf, TEXT_MUTED);
     pdf.text("Reeds gefactureerd:", rightLabelX, yR);
     yR += 4;
-    pdf.setFontSize(8);
+    pdf.setFontSize(FS.small);
     for (const prior of priorInvoices) {
       const label = `${prior.invoiceNumber} (${format(prior.invoiceDate, "d MMM yyyy", { locale: nl })})`;
       pdf.text(label, rightLabelX + 2, yR);
@@ -554,8 +594,8 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
 
   // Final "Te betalen" — net of prior invoices
   const netDue = data.totals.totalInclVat - priorSum;
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(9.5);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.body);
   setText(pdf, NAVY);
   pdf.text("Te betalen", rightLabelX, yR);
   pdf.text(fmtEuro(netDue), rightValueX, yR, { align: "right" });
@@ -586,8 +626,8 @@ function renderTotalsBlock(pdf: jsPDF, data: InvoiceData, startY: number): numbe
       lines[i].vatAmount = Math.round((lines[i].vatAmount + diff) * 100) / 100;
     }
 
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.small);
     setText(pdf, TEXT_MUTED);
     pdf.text("waarvan BTW over deze factuur:", rightLabelX, yR);
     yR += 3.6;
@@ -607,13 +647,13 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
 
   // Notes (if any)
   if (data.notes) {
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8.5);
+    pdf.setFont(activeFont, "bold");
+    pdf.setFontSize(FS.small);
     setText(pdf, TEXT_MUTED);
     pdf.text("OPMERKINGEN", MARGIN_L, y);
     y += 4;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.body);
     setText(pdf, TEXT);
     const noteLines = pdf.splitTextToSize(data.notes, CONTENT_W) as string[];
     for (const ln of noteLines) {
@@ -624,8 +664,8 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
   }
 
   // Payment terms text
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(8.5);
+  pdf.setFont(activeFont, "normal");
+  pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
   const termsText = `Voorwaarden: betaling binnen ${data.meta.paymentTermDays} dagen na factuurdatum onder vermelding van factuurnummer ${data.meta.invoiceNumber}. Op deze factuur zijn onze algemene voorwaarden van toepassing (${data.bureau.website}/voorwaarden).`;
   const wrapped = pdf.splitTextToSize(termsText, CONTENT_W) as string[];
@@ -641,8 +681,8 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
   pdf.line(MARGIN_L, y, PAGE_W - MARGIN_R, y);
   y += 4;
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
+  pdf.setFont(activeFont, "bold");
+  pdf.setFontSize(FS.small);
   setText(pdf, NAVY);
   const parts = [
     data.bureau.legalName,
@@ -656,8 +696,8 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
 }
 
 function renderFooter(pdf: jsPDF, data: InvoiceData, page: number, totalPages: number) {
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(7.5);
+  pdf.setFont(activeFont, "normal");
+  pdf.setFontSize(FS.tiny);
   setText(pdf, TEXT_FAINT);
   const parts = [
     `Pagina ${page} / ${totalPages}`,
@@ -667,9 +707,61 @@ function renderFooter(pdf: jsPDF, data: InvoiceData, page: number, totalPages: n
   pdf.text(parts.join("   •   "), PAGE_W / 2, PAGE_H - 10, { align: "center" });
 }
 
+export interface RenderInvoiceOptions {
+  /** Alleen voor tests: lettertypen van schijf in plaats van via fetch. */
+  fontLoader?: FontBytesLoader;
+}
+
+/** Alle tekst op de factuur door één functie halen (fallback zonder Inter). */
+function mapInvoiceText(data: InvoiceData, fn: (s: string) => string): InvoiceData {
+  const opt = (s: string | null | undefined) => (s == null ? s : fn(s));
+  return {
+    ...data,
+    bureau: {
+      legalName: fn(data.bureau.legalName),
+      street: fn(data.bureau.street),
+      postalCode: fn(data.bureau.postalCode),
+      city: fn(data.bureau.city),
+      phone: fn(data.bureau.phone),
+      email: fn(data.bureau.email),
+      website: fn(data.bureau.website),
+      iban: fn(data.bureau.iban),
+      kvkNumber: fn(data.bureau.kvkNumber),
+      vatNumber: fn(data.bureau.vatNumber),
+    },
+    customer: {
+      ...data.customer,
+      name: fn(data.customer.name),
+      contactName: opt(data.customer.contactName) ?? undefined,
+      street: opt(data.customer.street) ?? undefined,
+      postalCity: opt(data.customer.postalCity) ?? undefined,
+      vatNumber: opt(data.customer.vatNumber) ?? undefined,
+      customerNumber: opt(data.customer.customerNumber) ?? undefined,
+      billingReference: opt(data.customer.billingReference),
+      customerReference: opt(data.customer.customerReference),
+    },
+    meta: { ...data.meta, invoiceNumber: fn(data.meta.invoiceNumber), deliveryDate: opt(data.meta.deliveryDate) ?? undefined },
+    categories: data.categories.map((c) => ({
+      label: fn(c.label),
+      rows: c.rows.map((r) => ({
+        ...r,
+        description: fn(r.description),
+        subDescription: opt(r.subDescription) ?? undefined,
+        qty: fn(r.qty),
+        unitPrice: fn(r.unitPrice),
+        unitPriceSuffix: opt(r.unitPriceSuffix) ?? undefined,
+        amount: fn(r.amount),
+      })),
+    })),
+    notes: opt(data.notes) ?? undefined,
+  };
+}
+
 // ─── Main entry ──────────────────────────────────────────────
-export async function renderInvoicePdf(data: InvoiceData): Promise<Blob> {
+export async function renderInvoicePdf(input: InvoiceData, options: RenderInvoiceOptions = {}): Promise<Blob> {
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  activeFont = await registerInvoiceFonts(pdf, options.fontLoader);
+  const data = activeFont === "helvetica" ? mapInvoiceText(input, sanitizeForStandardFont) : input;
 
   const state: RenderState = { page: 1, totalPages: 1, y: 0 };
 
@@ -702,12 +794,12 @@ export async function renderInvoicePdf(data: InvoiceData): Promise<Blob> {
       const targetH = (logo.h / logo.w) * targetW;
       pdf.addImage(logo.dataUrl, "PNG", MARGIN_L, MARGIN_T, targetW, targetH);
     }
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(10);
+    pdf.setFont(activeFont, "bold");
+    pdf.setFontSize(FS.heading);
     setText(pdf, NAVY);
     pdf.text(data.bureau.legalName, PAGE_W - MARGIN_R, MARGIN_T + 4, { align: "right" });
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(8.5);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.small);
     setText(pdf, TEXT_MUTED);
     pdf.text(
       `Factuur ${data.meta.invoiceNumber}  •  ${data.customer.name}`,
