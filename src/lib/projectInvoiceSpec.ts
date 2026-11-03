@@ -290,7 +290,10 @@ export function buildProjectInvoiceSpec(input: BuildSpecInput): ProjectInvoiceSp
     const kind: SpecLineKind = item.day_index === -1 ? "extra_cost" : "program";
     const section = sectionLabelForCategory(item.block_category);
     const billing = linesByItem[item.id];
-    const subInfo = [item.provider_name, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null]
+    // Een kostenpost uit het werkblad heet als de partner; die naam nog eens
+    // als toelichting eronder zegt niets.
+    const providerInfo = item.provider_name && item.provider_name.trim() !== item.block_name.trim() ? item.provider_name : null;
+    const subInfo = [providerInfo, item.booking_reference ? `Boekingsnr: ${item.booking_reference}` : null]
       .filter(Boolean)
       .join(" • ");
 

@@ -72,3 +72,32 @@ toeristenbelasting, natuurbijdrage, opslag en coördinatiefee:
   de inkoopfactuur van de accommodatie in de commissiewerklijst.
 
 De migratie zet de sleutel meteen op BV-2602-0005.
+
+## Factuur-PDF: lettertype en typografie (3 november 2026)
+
+Op FV-BV-2606-0013-001 viel op dat de PDF rommelig oogde: negen
+lettergroottes door elkaar, de pijl in "Overtocht Harlingen → Vlieland"
+als "!'" (jsPDF kent standaard alleen Helvetica met WinAnsi, zonder pijlen),
+de leverdatum als drie losse datums over twee regels, en een kostenpost
+"Badhotel Bruin" met daaronder nog eens "Badhotel Bruin" als partner.
+
+- **Inter in de PDF** (`src/lib/invoicePdfFonts.ts`): een Latijnse subset
+  van Inter Regular en Bold met leestekens, valuta en pijlen staat in
+  `src/assets/fonts` (SIL Open Font License, ±53 kB per bestand) en wordt
+  bij het renderen via `addFileToVFS`/`addFont` ingesloten. Laadt het
+  lettertype niet, dan valt de renderer terug op Helvetica en maakt
+  `sanitizeForStandardFont` van pijlen een streepje. Klant- en
+  commissiefactuur delen dit.
+- **Eén schaal** in `invoicePdfRenderer.ts`: `FS` met vijf stappen (18
+  titel, 10 koppen, 9 lopende tekst, 8 kapitalen/subregels/toelichting, 7
+  eenheid en paginavoet) en twee regelafstanden (`LH`). Een groepsregel
+  (onderdeel met subregels) toont alleen het totaal, geen streepjes in
+  aantal en prijs; een toelichting gelijk aan de omschrijving vervalt
+  (`subDescriptionFor`), en `projectInvoiceSpec` zet de partnernaam niet
+  meer onder een kostenpost die al zo heet.
+- **Leverdatum als bereik** (`src/lib/eventDateRange.ts`, met tests):
+  "16 t/m 18 okt. 2026", "30 okt. t/m 1 nov. 2026" of "16, 18 en 20 okt.
+  2026"; ook in het factuurvoorbeeld op het scherm.
+- Test `invoicePdfRenderer.test.ts` rendert een voorbeeldfactuur met de
+  lettertypen van schijf en controleert dat Inter is ingesloten; met
+  `INVOICE_PDF_OUT=<pad>` schrijft hij de PDF weg om te bekijken.
