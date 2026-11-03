@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Expand,
   ExternalLink,
   FileText,
   Inbox,
@@ -36,6 +37,8 @@ import {
 import { Pill } from "@/components/system";
 import { EmailAttachments } from "@/components/admin/EmailAttachments";
 import { EmailLogDetailDialog } from "@/components/admin/EmailLogDetailDialog";
+import { EmailMessageDialog } from "./EmailMessageDialog";
+import { formatEmailBodyText } from "@/lib/emailBodyText";
 import { SendProjectEmailSheet } from "@/components/admin/SendProjectEmailSheet";
 import type { ProjectCommunication } from "@/types/projectCommunication";
 import { emailTypeLabel, emailStatusLabel } from "@/lib/emailTypeLabels";
@@ -45,7 +48,6 @@ import {
   ORIGIN_LABEL,
   ORIGIN_TONE,
   statusTone,
-  stripHtml,
   type EmailItem,
   type ThreadGroup,
 } from "@/lib/emailThreads";
@@ -87,6 +89,10 @@ export function EmailThreadView({
 }: EmailThreadViewProps) {
   const navigate = useNavigate();
   const [detailComm, setDetailComm] = useState<ProjectCommunication | null>(null);
+  /** bericht dat op volle grootte openstaat */
+  const [openMessage, setOpenMessage] = useState<EmailItem | null>(null);
+  /** het bericht waarop de composer antwoordt; leeg = de laatste inkomende mail */
+  const [replyTarget, setReplyTarget] = useState<EmailItem | null>(null);
   const [expandedBundles, setExpandedBundles] = useState<Set<string>>(() => new Set());
   const threadScrollRef = useRef<HTMLDivElement>(null);
 
@@ -161,19 +167,31 @@ export function EmailThreadView({
       return next;
     });
 
-  // Composer: antwoord aan de laatste inkomende afzender, met Re:-onderwerp.
+  // Composer: antwoord op één gekozen bericht, of anders aan de laatste
+  // inkomende afzender; altijd met Re:-onderwerp.
   const lastInbound = [...group.items].reverse().find((e) => e.origin === "inbound") ?? null;
-  const replySubject = lastInbound?.subject ?? group.items[group.items.length - 1]?.subject ?? null;
-  const recipients = lastInbound?.contact_email
+  const replyTo = replyTarget ?? lastInbound;
+  const replySubject = replyTo?.subject ?? group.items[group.items.length - 1]?.subject ?? null;
+  const roleOf = (e: EmailItem | null) => (e ? senderRole(e.contact_email, group.customerEmail, group.partnerEmails) : null);
+  const recipients = replyTo?.contact_email
     ? [
         {
-          label: lastInbound.contact_name || lastInbound.contact_email,
-          email: lastInbound.contact_email,
-          name: lastInbound.contact_name || lastInbound.contact_email,
-          type: "customer" as const,
+          label: replyTo.contact_name || replyTo.contact_email,
+          email: replyTo.contact_email,
+          name: replyTo.contact_name || replyTo.contact_email,
+          type: roleOf(replyTo) === "partner" ? ("partner" as const) : ("customer" as const),
         },
       ]
     : [];
+
+  const startReply = (target: EmailItem | null) => {
+    setReplyTarget(target);
+    onReplyOpenChange(true);
+  };
+  const handleReplyOpenChange = (open: boolean) => {
+    if (!open) setReplyTarget(null);
+    onReplyOpenChange(open);
+  };
 
   const first = group.items[0];
   const reference = first?.request_ref ?? first?.accommodation_ref ?? null;
@@ -369,10 +387,20 @@ export function EmailThreadView({
                         </div>
                       </div>
                       <div className="text-sm whitespace-pre-wrap text-foreground/90 max-h-96 overflow-y-auto">
-                        {stripHtml(email.content)}
+                        {formatEmailBodyText(email.content)}
                       </div>
                       {email.source === "communication" && <EmailAttachments metadata={email.metadata} />}
-                      <div className="flex items-center gap-1 mt-2">
+                      <div className="flex items-center gap-1 mt-2 flex-wrap">
+                        {email.contact_email && (
+                          <Button variant="ghost" size="sm" onClick={() => startReply(email)}>
+                            <Reply className="h-3.5 w-3.5 mr-1" /> Beantwoorden
+                          </Button>
+                        )}
+                        {email.source === "communication" && (
+                          <Button variant="ghost" size="sm" onClick={() => setOpenMessage(email)}>
+                            <Expand className="h-3.5 w-3.5 mr-1" /> Open bericht
+                          </Button>
+                        )}
                         {unanswered && (
                           <Button variant="ghost" size="sm" onClick={() => onSetAnswered(email, true)}>
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Markeer als beantwoord
@@ -397,7 +425,7 @@ export function EmailThreadView({
             </div>
 
       <div className="border-t bg-card px-3 py-2 flex flex-wrap items-center gap-2">
-        <Button onClick={() => onReplyOpenChange(true)}>
+        <Button onClick={() => startReply(null)}>
           <Reply className="h-4 w-4 mr-1" /> Beantwoorden
         </Button>
         {group.unread > 0 && (
@@ -423,16 +451,28 @@ export function EmailThreadView({
 
       <SendProjectEmailSheet
         open={replyOpen}
-        onOpenChange={onReplyOpenChange}
+        onOpenChange={handleReplyOpenChange}
         requestId={group.kind === "program" ? group.id ?? undefined : undefined}
         accommodationId={group.kind === "accommodation" ? group.id ?? undefined : undefined}
         recipients={recipients}
-        defaultSelectedEmails={lastInbound?.contact_email ? [lastInbound.contact_email] : undefined}
+        defaultSelectedEmails={replyTo?.contact_email ? [replyTo.contact_email] : undefined}
         defaultSubject={replySubject ? (replySubject.toLowerCase().startsWith("re:") ? replySubject : `Re: ${replySubject}`) : undefined}
         onEmailSent={() => {
-          // Een verstuurd antwoord handelt het gesprek af.
-          onSetThreadAnswered(group, true);
+          // Een antwoord op één bericht handelt dat bericht af; een algemeen
+          // antwoord het hele gesprek.
+          if (replyTarget && replyTarget.source === "communication") onSetAnswered(replyTarget, true);
+          else onSetThreadAnswered(group, true);
         }}
+      />
+
+      <EmailMessageDialog
+        open={!!openMessage}
+        onOpenChange={(o) => {
+          if (!o) setOpenMessage(null);
+        }}
+        item={openMessage}
+        role={roleOf(openMessage)}
+        onReply={(target) => startReply(target)}
       />
 
       <EmailLogDetailDialog

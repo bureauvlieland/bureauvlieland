@@ -624,7 +624,13 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
                   <FormField label="Andere prijs (incl. btw)" htmlFor="quotedPriceAlt" help="Alleen als de prijs afwijkt." leading={<Euro />}>
                     <Input type="text" inputMode="decimal" placeholder="0,00" value={quotedPrice} onChange={(e) => setQuotedPrice(e.target.value)} />
                   </FormField>
-                  <FormField label="Toelichting voor de klant" htmlFor="statusNote" required error={noteError}>
+                  <FormField
+                    label="Toelichting voor de klant"
+                    htmlFor="statusNote"
+                    required
+                    error={noteError}
+                    help={`${request.customer_company || request.customer_name} leest dit in het portaal en in de mail; Bureau Vlieland leest mee.`}
+                  >
                     <Textarea
                       placeholder="Bijvoorbeeld: om 10:00 zit de vorige groep er nog; 14:00 past beter."
                       value={statusNote}

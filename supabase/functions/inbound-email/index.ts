@@ -777,6 +777,8 @@ Deno.serve(async (req) => {
       audience,
       subject: subject || null,
       content: truncatedContent,
+      // De opgemaakte versie, voor het berichtvenster in het Berichtencentrum.
+      html_body: (htmlContent || "").substring(0, 100000) || null,
       contact_name: contactName || null,
       contact_email: contactEmail || null,
       communication_date: new Date().toISOString(),

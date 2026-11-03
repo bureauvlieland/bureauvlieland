@@ -4155,6 +4155,7 @@ export type Database = {
           content: string
           created_at: string | null
           direction: string
+          html_body: string | null
           id: string
           logged_at: string | null
           logged_by: string | null
@@ -4176,6 +4177,7 @@ export type Database = {
           content: string
           created_at?: string | null
           direction?: string
+          html_body?: string | null
           id?: string
           logged_at?: string | null
           logged_by?: string | null
@@ -4197,6 +4199,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           direction?: string
+          html_body?: string | null
           id?: string
           logged_at?: string | null
           logged_by?: string | null
