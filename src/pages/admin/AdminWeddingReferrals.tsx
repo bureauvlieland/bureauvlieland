@@ -23,6 +23,8 @@ import {
 import {
   INVOICE_STATUSES,
   INVOICE_STATUS_LABEL,
+  REFERRAL_KINDS,
+  REFERRAL_KIND_LABEL,
   REFERRAL_STATUSES,
   REFERRAL_STATUS_LABEL,
   buildControlList,
@@ -31,6 +33,7 @@ import {
   formatWeddingDate,
   isDueForAnonymization,
   partnerConfirmation,
+  referralKindOf,
   seasonOf,
   summarizeBySeason,
   toIsoDate,
@@ -39,11 +42,13 @@ import {
 } from "@/lib/weddingReferrals";
 
 /**
- * Operationeel → Bruiloften (docs/plan-bruiloftsdoorverwijzingen.md, fase 1).
- * Bureau Vlieland voert geen bruiloften meer uit; aanvragen gaan naar een
- * partner en per geboekte bruiloft ontvangt het bureau een vaste vergoeding.
- * Hier staan de doorverwijzingen, de samenvatting per partner per seizoen,
- * de controlelijst voor na het seizoen en de staffel.
+ * Operationeel → Doorverwijzingen (docs/plan-bruiloftsdoorverwijzingen.md, fase 1;
+ * route /admin/bruiloften). Bureau Vlieland voert geen bruiloften meer uit;
+ * aanvragen gaan naar een partner en per geboekte bruiloft ontvangt het bureau
+ * een vaste vergoeding. Sinds november 2026 ook voor andere evenementen die
+ * het bureau naar een partner doorzet (soort "Evenement"). Hier staan de
+ * doorverwijzingen, de samenvatting per partner per seizoen, de controlelijst
+ * voor na het seizoen en de staffel.
  */
 const ALLE = "alle";
 
@@ -73,6 +78,7 @@ const AdminWeddingReferrals = () => {
   const { data: schedules = [] } = useWeddingFeeSchedules();
   const { data: partners = [] } = useWeddingReferralPartners();
 
+  const [soortFilter, setSoortFilter] = useState(ALLE);
   const [partnerFilter, setPartnerFilter] = useState(ALLE);
   const [statusFilter, setStatusFilter] = useState(ALLE);
   const [invoiceFilter, setInvoiceFilter] = useState(ALLE);
@@ -92,12 +98,13 @@ const AdminWeddingReferrals = () => {
     () =>
       rows.filter(
         (r) =>
+          (soortFilter === ALLE || referralKindOf(r) === soortFilter) &&
           (partnerFilter === ALLE || r.partner_id === partnerFilter) &&
           (statusFilter === ALLE || r.status === statusFilter) &&
           (invoiceFilter === ALLE || r.invoice_status === invoiceFilter) &&
           (seizoenFilter === ALLE || String(seasonOf(r)) === seizoenFilter),
       ),
-    [rows, partnerFilter, statusFilter, invoiceFilter, seizoenFilter],
+    [rows, soortFilter, partnerFilter, statusFilter, invoiceFilter, seizoenFilter],
   );
 
   const samenvatting = useMemo(() => summarizeBySeason(rows, partnerNaam), [rows, partnerNaam]);
@@ -120,22 +127,22 @@ const AdminWeddingReferrals = () => {
       return;
     }
     const naam = partnerNaam[controlePartner] ?? controlePartner;
-    downloadCsv(controlListCsv(controlelijst, naam), `controlelijst-bruiloften-${naam.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${today}.csv`);
+    downloadCsv(controlListCsv(controlelijst, naam), `controlelijst-doorverwijzingen-${naam.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${today}.csv`);
     toast.success("Controlelijst gedownload");
   };
 
   return (
     <AdminLayout>
       <Helmet>
-        <title>Bruiloften – Admin</title>
+        <title>Doorverwijzingen – Admin</title>
       </Helmet>
       <div className="p-6 space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Bruiloften</h1>
+            <h1 className="text-2xl font-bold text-foreground">Doorverwijzingen</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Doorverwezen bruiloftsaanvragen en de doorverwijsvergoeding per geboekte bruiloft. Alleen partners met de instelling "ontvangt
-              bruiloftsdoorverwijzingen" zijn te kiezen.
+              Bruiloften en andere evenementen die naar een partner zijn doorverwezen, met de doorverwijsvergoeding per boeking. Alleen partners met de
+              instelling "ontvangt doorverwijzingen" zijn te kiezen.
             </p>
           </div>
           <Button onClick={openNieuw}>
@@ -166,6 +173,19 @@ const AdminWeddingReferrals = () => {
                 <CardTitle className="text-base">Alle doorverwijzingen</CardTitle>
                 <CardDescription>Klik op een regel om te bewerken. Zonder boeking vervalt een doorverwijzing 18 maanden na de datum doorverwezen.</CardDescription>
                 <div className="flex flex-wrap gap-2 pt-2">
+                  <Select value={soortFilter} onValueChange={setSoortFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Soort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALLE}>Alle soorten</SelectItem>
+                      {REFERRAL_KINDS.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {REFERRAL_KIND_LABEL[k]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={partnerFilter} onValueChange={setPartnerFilter}>
                     <SelectTrigger className="w-[190px]">
                       <SelectValue placeholder="Partner" />
@@ -233,10 +253,10 @@ const AdminWeddingReferrals = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[180px]">Bruidspaar</TableHead>
+                        <TableHead className="min-w-[180px]">Klant</TableHead>
                         <TableHead>Partner</TableHead>
                         <TableHead>Doorverwezen</TableHead>
-                        <TableHead>Trouwdatum</TableHead>
+                        <TableHead>Datum</TableHead>
                         <TableHead className="text-right">Gasten</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Vergoeding</TableHead>
@@ -247,7 +267,10 @@ const AdminWeddingReferrals = () => {
                       {zichtbaar.map((r) => (
                         <TableRow key={r.id} className="cursor-pointer" onClick={() => openBewerken(r)}>
                           <TableCell>
-                            <div className="font-medium">{r.couple_names}</div>
+                            <div className="flex flex-wrap items-center gap-2 font-medium">
+                              {r.couple_names}
+                              {referralKindOf(r) === "event" && <Badge variant="outline">Evenement</Badge>}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               {r.anonymized_at ? "Geanonimiseerd" : (r.couple_email ?? "")}
                               {r.request_id && (
@@ -311,7 +334,7 @@ const AdminWeddingReferrals = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Per partner per seizoen</CardTitle>
-                <CardDescription>Seizoen = jaar van de (verwachte) trouwdatum. Bedragen excl. btw, alleen van geboekte bruiloften.</CardDescription>
+                <CardDescription>Seizoen = jaar van de (verwachte) datum van de bruiloft of het evenement. Bedragen excl. btw, alleen van boekingen.</CardDescription>
               </CardHeader>
               <CardContent>
                 {samenvatting.length === 0 ? (
@@ -368,7 +391,7 @@ const AdminWeddingReferrals = () => {
                 <div className="space-y-1.5">
                   <CardTitle className="text-base">Controlelijst</CardTitle>
                   <CardDescription>
-                    Doorverwijzingen waarvan de (verwachte) trouwdatum verstreken is en de status nog "doorverwezen" is. Na het seizoen ter bevestiging naar de
+                    Doorverwijzingen waarvan de (verwachte) datum verstreken is en de status nog "doorverwezen" is. Na het seizoen ter bevestiging naar de
                     partner: geboekt, niet doorgegaan, of nog open.
                   </CardDescription>
                 </div>
@@ -401,9 +424,9 @@ const AdminWeddingReferrals = () => {
                     <TableHeader>
                       <TableRow>
                         {!controlePartner && <TableHead>Partner</TableHead>}
-                        <TableHead>Bruidspaar</TableHead>
+                        <TableHead>Klant</TableHead>
                         <TableHead>Doorverwezen</TableHead>
-                        <TableHead>Verwachte trouwdatum</TableHead>
+                        <TableHead>Verwachte datum</TableHead>
                         <TableHead className="text-right">Geschat</TableHead>
                         <TableHead>Vervalt</TableHead>
                       </TableRow>
@@ -413,7 +436,10 @@ const AdminWeddingReferrals = () => {
                         <TableRow key={r.id} className="cursor-pointer" onClick={() => openBewerken(r)}>
                           {!controlePartner && <TableCell>{partnerNaam[r.partner_id] ?? r.partner_id}</TableCell>}
                           <TableCell>
-                            <div className="font-medium">{r.couple_names}</div>
+                            <div className="flex flex-wrap items-center gap-2 font-medium">
+                              {r.couple_names}
+                              {referralKindOf(r) === "event" && <Badge variant="outline">Evenement</Badge>}
+                            </div>
                             <div className="text-xs text-muted-foreground">{r.couple_email ?? ""}</div>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{kort(r.referred_at)}</TableCell>

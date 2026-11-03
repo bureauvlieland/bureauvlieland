@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { AlertTriangle, Heart, Loader2, RefreshCw, Send } from "lucide-react";
+import { AlertTriangle, Heart, Loader2, PartyPopper, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,15 +13,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { referralEmailFor, useWeddingReferralPartners, WEDDING_REFERRALS_KEY } from "@/hooks/useWeddingReferrals";
-import { couplePrenames, REFERRAL_STATUS_LABEL, toIsoDate, type ReferralStatus } from "@/lib/weddingReferrals";
+import {
+  couplePrenames,
+  REFERRAL_KIND_LABEL,
+  REFERRAL_KINDS,
+  REFERRAL_STATUS_LABEL,
+  subjectWord,
+  toIsoDate,
+  type ReferralKind,
+  type ReferralStatus,
+} from "@/lib/weddingReferrals";
 import { useAgreementPartners, usePartnerAgreementAcceptances, usePartnerAgreements } from "@/hooks/usePartnerAgreements";
 import { weddingAgreementAccepted } from "@/lib/partnerAgreements";
 
 /**
  * "Doorverwijzen naar…" (docs/plan-bruiloftsdoorverwijzingen.md, fase 2):
- * kies een partner, controleer de standaardmail aan het bruidspaar (partner
- * in cc) en verstuur. De edge function send-wedding-referral verstuurt,
- * logt, maakt de doorverwijzing aan en zet een sales-inboxmail op verwerkt.
+ * kies de soort (bruiloft of ander evenement) en een partner, controleer de
+ * standaardmail aan de klant (partner in cc) en verstuur. De edge function
+ * send-wedding-referral verstuurt, logt, maakt de doorverwijzing aan en zet
+ * een sales-inboxmail op verwerkt. Per soort gelden eigen sjablonen
+ * (wedding_referral_* of event_referral_*).
  */
 export interface WeddingReferralPrefill {
   coupleNames: string;
@@ -40,19 +51,26 @@ interface Props {
   prefill: WeddingReferralPrefill;
   requestId?: string | null;
   salesInboxId?: string | null;
+  /** Soort waarmee het dialoog opent; de admin kan hem in het dialoog nog omzetten. */
+  kind?: ReferralKind;
   onSent?: (referralId: string) => void;
 }
 
-const TEMPLATE_ID = "wedding_referral_customer";
+/** Het sjabloon voor de mail aan de klant, per soort (bewerkbaar bij Email Templates). */
+const TEMPLATE_ID: Record<ReferralKind, string> = {
+  wedding: "wedding_referral_customer",
+  event: "event_referral_customer",
+};
 
 const datumLabel = (iso: string, precision: "day" | "month") =>
   precision === "month" ? format(parseISO(iso), "MMMM yyyy", { locale: nl }) : format(parseISO(iso), "d MMMM yyyy", { locale: nl });
 
-export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, salesInboxId, onSent }: Props) {
+export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, salesInboxId, kind: initialKind = "wedding", onSent }: Props) {
   const queryClient = useQueryClient();
   const { data: partners = [] } = useWeddingReferralPartners();
   const kiesbaar = useMemo(() => partners.filter((p) => p.receives_wedding_referrals && p.is_active), [partners]);
 
+  const [kind, setKind] = useState<ReferralKind>(initialKind);
   const [partnerId, setPartnerId] = useState("");
   const [coupleNames, setCoupleNames] = useState("");
   const [coupleEmail, setCoupleEmail] = useState("");
@@ -71,6 +89,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
   useEffect(() => {
     if (!open) return;
+    setKind(initialKind);
     setPartnerId(kiesbaar.length === 1 ? kiesbaar[0].id : "");
     setCoupleNames(prefill.coupleNames);
     setCoupleEmail(prefill.coupleEmail);
@@ -89,6 +108,9 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
   }, [open]);
 
   const partner = kiesbaar.find((p) => p.id === partnerId) ?? null;
+  // "het bruidspaar" of "de klant", voor de labels en teksten in dit dialoog.
+  const wie = subjectWord(kind);
+  const Wie = wie.charAt(0).toUpperCase() + wie.slice(1);
 
   // Heeft de partner de doorverwijsregeling geaccepteerd? Waarschuwing, geen blokkade.
   const { data: afspraken = [] } = usePartnerAgreements();
@@ -132,13 +154,16 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
     if (tekstAangepast && !force) return;
     setLaadt(true);
     try {
+      const datum = expectedIso ? datumLabel(expectedIso, precision) : "";
       const { data, error } = await supabase.functions.invoke<{ subject: string; body: string; error?: string }>("render-email-template", {
         body: {
-          templateId: TEMPLATE_ID,
+          templateId: TEMPLATE_ID[kind],
           requestId: requestId ?? undefined,
           variables: {
-            voornaam: couplePrenames(coupleNames) || "bruidspaar",
-            trouwdatum: expectedIso ? datumLabel(expectedIso, precision) : "",
+            voornaam: couplePrenames(coupleNames) || (kind === "wedding" ? "bruidspaar" : coupleNames.trim() || "gast"),
+            // Het bruiloftsjabloon kent {{trouwdatum}}, het evenementsjabloon {{datum}}.
+            trouwdatum: datum,
+            datum,
             partner_naam: partner.name,
             partner_email: referralEmailFor(partner),
             aantal_gasten: estimatedGuests.trim() || "",
@@ -158,15 +183,21 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
   };
 
   // Voorzet laden zodra de partner gekozen is; een aangepaste tekst blijft staan.
+  // Bij een andere soort hoort een ander sjabloon: wisselen van soort laadt de voorzet opnieuw.
   useEffect(() => {
     if (!open || !partner) return;
     void laadTemplate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, partnerId]);
+  }, [open, partnerId, kind]);
+
+  const wisselSoort = (v: string) => {
+    setKind(v as ReferralKind);
+    setTekstAangepast(false);
+  };
 
   const verstuur = async () => {
     if (!partner) return toast.error("Kies een partner.");
-    if (!coupleNames.trim()) return toast.error("Vul de namen van het bruidspaar in.");
+    if (!coupleNames.trim()) return toast.error(kind === "wedding" ? "Vul de namen van het bruidspaar in." : "Vul de naam van de klant in.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(coupleEmail.trim())) return toast.error("Vul een geldig e-mailadres in.");
     if (!subject.trim() || !body.trim()) return toast.error("Onderwerp en tekst zijn verplicht.");
     setVerstuurt(true);
@@ -183,6 +214,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
         "send-wedding-referral",
         {
           body: {
+            kind,
             partnerId: partner.id,
             coupleNames: coupleNames.trim(),
             coupleEmail: coupleEmail.trim(),
@@ -213,7 +245,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
       });
       if (data.partnerMail === "failed" || data.partnerMail === "suppressed") {
         toast.warning(`De mail aan ${partner.name} is niet verstuurd`, {
-          description: `${data.partnerMailError ?? "Onbekende fout."} De doorverwijzing staat wel onder Bruiloften; stuur de partner de gegevens zelf door.`,
+          description: `${data.partnerMailError ?? "Onbekende fout."} De doorverwijzing staat wel onder Doorverwijzingen; stuur de partner de gegevens zelf door.`,
           duration: 15000,
         });
       }
@@ -231,20 +263,42 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5" aria-hidden="true" />
+            {kind === "wedding" ? <Heart className="h-5 w-5" aria-hidden="true" /> : <PartyPopper className="h-5 w-5" aria-hidden="true" />}
             Doorverwijzen naar…
           </DialogTitle>
           <DialogDescription>
-            Het bruidspaar krijgt de mail, de partner staat in cc. Op hetzelfde moment krijgt de partner een eigen mail met alle gegevens van het
-            bruidspaar en een link om te melden dat ze al bekend waren. Na verzenden staat de doorverwijzing onder{" "}
+            {Wie} krijgt de mail, de partner staat in cc. Op hetzelfde moment krijgt de partner een eigen mail met alle gegevens van {wie} en een
+            link om te melden dat {kind === "wedding" ? "ze" : "die"} al bekend {kind === "wedding" ? "waren" : "was"}. Na verzenden staat de
+            doorverwijzing onder{" "}
             <Link to="/admin/bruiloften" className="underline underline-offset-2">
-              Bruiloften
+              Doorverwijzingen
             </Link>
-            . De standaardtekst beheer je bij Email Templates.
+            . De standaardtekst per soort beheer je bij Email Templates.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Soort aanvraag *</Label>
+            <Select value={kind} onValueChange={wisselSoort}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REFERRAL_KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {REFERRAL_KIND_LABEL[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {kind === "wedding"
+                ? "Bruiloft: de mails spreken over het bruidspaar en de trouwdatum."
+                : "Evenement: een andere aanvraag (feest, diner, bedrijfsuitje) die een partner beter kan oppakken; de mails hebben een eigen tekst."}
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>Partner *</Label>
             <Select value={partnerId} onValueChange={setPartnerId}>
@@ -259,7 +313,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
                 ))}
               </SelectContent>
             </Select>
-            {kiesbaar.length === 0 && <p className="text-xs text-muted-foreground">Geen enkele actieve partner heeft "Ontvangt bruiloftsdoorverwijzingen" aan.</p>}
+            {kiesbaar.length === 0 && <p className="text-xs text-muted-foreground">Geen enkele actieve partner heeft "Ontvangt doorverwijzingen" aan.</p>}
             {partner && <p className="text-xs text-muted-foreground">Cc: {referralEmailFor(partner)}</p>}
             {partner && regeling && regeling.state !== "accepted" && (
               <p className="flex items-start gap-2 text-xs text-amber-900">
@@ -272,8 +326,8 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="wrd-namen">Bruidspaar *</Label>
-              <Input id="wrd-namen" value={coupleNames} onChange={(e) => setCoupleNames(e.target.value)} placeholder="Anna & Bram" />
+              <Label htmlFor="wrd-namen">{kind === "wedding" ? "Bruidspaar" : "Naam klant"} *</Label>
+              <Input id="wrd-namen" value={coupleNames} onChange={(e) => setCoupleNames(e.target.value)} placeholder={kind === "wedding" ? "Anna & Bram" : "Jan Jansen"} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="wrd-email">E-mail *</Label>
@@ -300,7 +354,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="wrd-eerder-contact">Eerder contact volgens het bruidspaar</Label>
+            <Label htmlFor="wrd-eerder-contact">Eerder contact volgens {wie}</Label>
             <Input
               id="wrd-eerder-contact"
               value={priorContactNote}
@@ -311,7 +365,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
           <div className="grid gap-3 sm:grid-cols-[auto_1fr_auto]">
             <div className="space-y-2">
-              <Label>Verwachte trouwdatum</Label>
+              <Label>{kind === "wedding" ? "Verwachte trouwdatum" : "Gewenste datum"}</Label>
               <Select value={precision} onValueChange={(v) => setPrecision(v as "day" | "month")}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue />
@@ -338,7 +392,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="wrd-onderwerp">Mail aan het bruidspaar</Label>
+              <Label htmlFor="wrd-onderwerp">Mail aan {wie}</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => laadTemplate(true)} disabled={!partner || laadt}>
                 <RefreshCw className={`mr-1 h-3 w-3 ${laadt ? "animate-spin" : ""}`} aria-hidden="true" />
                 Standaardtekst opnieuw laden
@@ -361,7 +415,7 @@ export function WeddingReferralDialog({ open, onOpenChange, prefill, requestId, 
 
           <div className="space-y-2">
             <Label htmlFor="wrd-notities">Interne notities bij de doorverwijzing</Label>
-            <Textarea id="wrd-notities" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Niet zichtbaar voor het bruidspaar of de partner" />
+            <Textarea id="wrd-notities" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={`Niet zichtbaar voor ${wie} of de partner`} />
           </div>
         </div>
 

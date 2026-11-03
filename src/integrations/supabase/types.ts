@@ -4908,6 +4908,7 @@ export type Database = {
           partner_id: string
           prior_contact_note: string
           referral_email_log_id: string | null
+          referral_kind: string
           referred_at: string
           request_id: string | null
           requested_at: string
@@ -4951,6 +4952,7 @@ export type Database = {
           partner_id: string
           prior_contact_note?: string
           referral_email_log_id?: string | null
+          referral_kind?: string
           referred_at: string
           request_id?: string | null
           requested_at: string
@@ -4994,6 +4996,7 @@ export type Database = {
           partner_id?: string
           prior_contact_note?: string
           referral_email_log_id?: string | null
+          referral_kind?: string
           referred_at?: string
           request_id?: string | null
           requested_at?: string

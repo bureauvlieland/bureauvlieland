@@ -209,7 +209,7 @@ export default function AdminSalesInbox() {
                           size="sm"
                           variant="outline"
                           onClick={() => setReferring(item)}
-                          title="Bruiloft: doorverwijzen naar een partner"
+                          title="Bruiloft of evenement: doorverwijzen naar een partner"
                         >
                           <Heart className="h-3 w-3 mr-1" /> Doorverwijzen naar…
                         </Button>

@@ -8,6 +8,11 @@
 // doorverwijzing aangemaakt met beide verzonden mails als vastlegging, en een
 // sales-inboxmail op "verwerkt" gezet.
 //
+// Sinds november 2026 ook voor evenementen die geen bruiloft zijn (`kind:
+// "event"`, docs → Evenementen doorverwijzen): dezelfde flow en dezelfde
+// tabel, maar met de sjablonen event_referral_customer en
+// event_referral_partner, en `referral_kind = 'event'` op de doorverwijzing.
+//
 // Alleen partners met receives_wedding_referrals zijn toegestaan. Het
 // doorverwijsadres van de partner is het aparte adres, anders het contactadres,
 // anders het loginadres. In testmodus (preview) gaan beide mails naar het
@@ -43,7 +48,25 @@ const json = (status: number, body: unknown) =>
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 
+export const REFERRAL_KINDS = ["wedding", "event"] as const;
+export type ReferralKind = (typeof REFERRAL_KINDS)[number];
+
+/** Hoe de soort in notities en logregels heet. */
+export const REFERRAL_KIND_LABEL: Record<ReferralKind, string> = { wedding: "bruiloft", event: "evenement" };
+
+/** Hoe we de klant noemen in logregels: bruidspaar of klant. */
+export const subjectWord = (kind: ReferralKind): string => (kind === "wedding" ? "bruidspaar" : "klant");
+
+/** De twee sjablonen (klant met partner in cc, en de eigen partnermail) per soort. */
+export function templateIdsFor(kind: ReferralKind): { customer: string; partner: string } {
+  return kind === "event"
+    ? { customer: TemplateIds.EVENT_REFERRAL_CUSTOMER, partner: TemplateIds.EVENT_REFERRAL_PARTNER }
+    : { customer: TemplateIds.WEDDING_REFERRAL_CUSTOMER, partner: TemplateIds.WEDDING_REFERRAL_PARTNER };
+}
+
 export const BodySchema = z.object({
+  /** Bruiloft (standaard) of een ander evenement; bepaalt de sjablonen en referral_kind. */
+  kind: z.enum(REFERRAL_KINDS).default("wedding"),
   partnerId: z.string().trim().min(1).max(100),
   coupleNames: z.string().trim().min(1).max(200),
   coupleEmail: z.string().trim().email().max(255),
@@ -186,13 +209,18 @@ export interface SourceContext {
   overnachtingen: string;
 }
 
-/** Waarden voor het partnersjabloon; alles is al ontsmet of een veilige link. */
+/**
+ * Waarden voor het partnersjabloon; alles is al ontsmet of een veilige link.
+ * `trouwdatum` (bruiloftsjabloon) en `datum` (evenementsjabloon) zijn dezelfde
+ * waarde; beide sjablonen krijgen alle variabelen.
+ */
 export interface PartnerMailVars {
   partner_contactpersoon: string;
   naam_klant: string;
   email_klant: string;
   telefoon_klant: string;
   trouwdatum: string;
+  datum: string;
   aantal_gasten: string;
   overnachtingen: string;
   aanvraagtekst: string;
@@ -204,15 +232,14 @@ export interface PartnerMailVars {
 export interface PartnerSubjectVars {
   naam_klant: string;
   trouwdatum: string;
+  datum: string;
 }
 
 const eenRegel = (t: string) => t.replace(/\s+/g, " ").trim();
 
 export function buildPartnerSubjectVars(input: ReferralInput): PartnerSubjectVars {
-  return {
-    naam_klant: eenRegel(input.coupleNames),
-    trouwdatum: input.expectedWeddingDate ? formatWeddingDateNL(input.expectedWeddingDate, input.expectedWeddingPrecision) : "",
-  };
+  const datum = input.expectedWeddingDate ? formatWeddingDateNL(input.expectedWeddingDate, input.expectedWeddingPrecision) : "";
+  return { naam_klant: eenRegel(input.coupleNames), trouwdatum: datum, datum };
 }
 
 export function buildPartnerMailVars(args: {
@@ -223,12 +250,14 @@ export function buildPartnerMailVars(args: {
   referredAt: string;
 }): PartnerMailVars {
   const { input, partner, source, token, referredAt } = args;
+  const datum = input.expectedWeddingDate ? formatWeddingDateNL(input.expectedWeddingDate, input.expectedWeddingPrecision) : "";
   return {
     partner_contactpersoon: sanitizeHtml(partnerGreeting(partner)),
     naam_klant: sanitizeHtml(input.coupleNames),
     email_klant: sanitizeHtml(input.coupleEmail),
     telefoon_klant: sanitizeHtml(input.couplePhone?.trim() ?? ""),
-    trouwdatum: input.expectedWeddingDate ? formatWeddingDateNL(input.expectedWeddingDate, input.expectedWeddingPrecision) : "",
+    trouwdatum: datum,
+    datum,
     aantal_gasten: input.estimatedGuests ? String(input.estimatedGuests) : "",
     overnachtingen: sanitizeHtml(source.overnachtingen),
     aanvraagtekst: textToTemplateHtml(source.requestText),
@@ -287,8 +316,11 @@ export interface HandlerContext {
   send: (message: MailjetMessage, idempotencyKey: string) => Promise<SendMailjetResult>;
   log: (entry: EmailLogEntry) => Promise<void>;
   wrap: (innerHtml: string) => Promise<string>;
-  /** Rendert het partnersjabloon (onderwerp en bericht in huisstijl), of null als het sjabloon ontbreekt of uit staat. */
-  renderPartnerTemplate: (vars: PartnerMailVars, subjectVars: PartnerSubjectVars) => Promise<{ subject: string; body: string } | null>;
+  /**
+   * Rendert het partnersjabloon van de soort (onderwerp en bericht in huisstijl),
+   * of null als het sjabloon ontbreekt of uit staat.
+   */
+  renderPartnerTemplate: (vars: PartnerMailVars, subjectVars: PartnerSubjectVars, kind: ReferralKind) => Promise<{ subject: string; body: string } | null>;
   /** Een nieuw, niet te raden token voor de "al bekend"-link. */
   newToken: () => string;
 }
@@ -366,8 +398,10 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
   if (!partner) return { status: 404, body: { error: "Partner niet gevonden" } };
   const p = partner as ReferralPartner;
   if (!p.receives_wedding_referrals) {
-    return { status: 400, body: { error: `${p.name} ontvangt geen bruiloftsdoorverwijzingen. Zet dat aan op de partnerpagina.` } };
+    return { status: 400, body: { error: `${p.name} ontvangt geen doorverwijzingen. Zet "Ontvangt doorverwijzingen" aan op de partnerpagina.` } };
   }
+  const sjablonen = templateIdsFor(input.kind);
+  const actorKlant = `admin → ${subjectWord(input.kind)} (doorverwijzing, partner in cc)`;
 
   const bron = await loadSource(input, ctx.db);
   if (bron.ok === false) return bron.result;
@@ -388,7 +422,7 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
   const result = await ctx.send(message, idempotencyKey);
   if (!result.ok) {
     await ctx.log({
-      email_type: TemplateIds.WEDDING_REFERRAL_CUSTOMER,
+      email_type: sjablonen.customer,
       subject: message.Subject,
       recipient_email: message.To[0].Email,
       recipient_name: input.coupleNames,
@@ -397,7 +431,7 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
       status: "failed",
       error_message: result.error,
       sent_by: `admin:${ctx.userId}`,
-      metadata: { template_name: TemplateIds.WEDDING_REFERRAL_CUSTOMER, actor: "admin → bruidspaar (doorverwijzing, partner in cc)", cc },
+      metadata: { template_name: sjablonen.customer, actor: actorKlant, cc },
     });
     return { status: 502, body: { error: `Mail niet verstuurd: ${result.error}` } };
   }
@@ -407,7 +441,7 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
   }
 
   await ctx.log({
-    email_type: TemplateIds.WEDDING_REFERRAL_CUSTOMER,
+    email_type: sjablonen.customer,
     subject: message.Subject,
     recipient_email: message.To[0].Email,
     recipient_name: input.coupleNames,
@@ -418,8 +452,8 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
     sent_by: `admin:${ctx.userId}`,
     idempotency_key: idempotencyKey,
     metadata: {
-      template_name: TemplateIds.WEDDING_REFERRAL_CUSTOMER,
-      actor: "admin → bruidspaar (doorverwijzing, partner in cc)",
+      template_name: sjablonen.customer,
+      actor: actorKlant,
       cc,
       partner_name: p.name,
       test_mode: testMode || undefined,
@@ -463,6 +497,7 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
   const { data: referral, error: referralError } = await ctx.db
     .from("wedding_referrals")
     .insert({
+      referral_kind: input.kind,
       couple_names: input.coupleNames,
       couple_email: input.coupleEmail,
       couple_phone: input.couplePhone?.trim() || null,
@@ -493,7 +528,7 @@ export async function handleWeddingReferral(input: ReferralInput, ctx: HandlerCo
     const { data: inbox } = await ctx.db.from("sales_inbox").select("id, notes").eq("id", input.salesInboxId).maybeSingle();
     if (inbox) {
       const bestaand = (inbox as { notes: string | null }).notes?.trim();
-      const regel = `Doorverwezen naar ${p.name} op ${referredAt} (bruiloft).`;
+      const regel = `Doorverwezen naar ${p.name} op ${referredAt} (${REFERRAL_KIND_LABEL[input.kind]}).`;
       await ctx.db
         .from("sales_inbox")
         .update({
@@ -560,10 +595,11 @@ async function sendPartnerMail(args: {
 }): Promise<{ status: PartnerMailStatus; error?: string; logId: string | null }> {
   const { ctx, input, partner, source, token, referredAt, referralId } = args;
 
+  const sjabloon = templateIdsFor(input.kind).partner;
   const vars = buildPartnerMailVars({ input, partner, source, token, referredAt });
-  const gerenderd = await ctx.renderPartnerTemplate(vars, buildPartnerSubjectVars(input));
+  const gerenderd = await ctx.renderPartnerTemplate(vars, buildPartnerSubjectVars(input), input.kind);
   if (!gerenderd) {
-    return { status: "failed", error: `Het sjabloon ${TemplateIds.WEDDING_REFERRAL_PARTNER} ontbreekt of staat uit.`, logId: null };
+    return { status: "failed", error: `Het sjabloon ${sjabloon} ontbreekt of staat uit.`, logId: null };
   }
 
   const { message, to, testMode } = buildPartnerMessage({
@@ -575,8 +611,8 @@ async function sendPartnerMail(args: {
   });
   const idempotencyKey = `wedding-referral-partner-${input.coupleEmail.trim().toLowerCase()}-${partner.id}`;
   const metadata = {
-    template_name: TemplateIds.WEDDING_REFERRAL_PARTNER,
-    actor: "admin → partner (nieuwe bruiloftsaanvraag)",
+    template_name: sjabloon,
+    actor: `admin → partner (nieuwe ${input.kind === "wedding" ? "bruiloftsaanvraag" : "aanvraag evenement"})`,
     referral_id: referralId,
     partner_name: partner.name,
     test_mode: testMode || undefined,
@@ -585,7 +621,7 @@ async function sendPartnerMail(args: {
   const result = await ctx.send(message, idempotencyKey);
   if (!result.ok) {
     await ctx.log({
-      email_type: TemplateIds.WEDDING_REFERRAL_PARTNER,
+      email_type: sjabloon,
       subject: message.Subject,
       recipient_email: to,
       recipient_name: partner.name,
@@ -607,7 +643,7 @@ async function sendPartnerMail(args: {
   }
 
   await ctx.log({
-    email_type: TemplateIds.WEDDING_REFERRAL_PARTNER,
+    email_type: sjabloon,
     subject: message.Subject,
     recipient_email: to,
     recipient_name: partner.name,
@@ -662,23 +698,42 @@ export async function handler(req: Request): Promise<Response> {
       send: (message, idempotencyKey) => sendMailjet({ messages: [message], source: "send-wedding-referral", idempotencyKey }),
       log: logEmail,
       wrap: (inner) => wrapEmailHtml(inner, supabase),
-      renderPartnerTemplate: (v, onderwerp) =>
-        getRenderedTemplate(
-          TemplateIds.WEDDING_REFERRAL_PARTNER,
-          {
-            partner_contactpersoon: v.partner_contactpersoon,
-            naam_klant: v.naam_klant,
-            email_klant: v.email_klant,
-            telefoon_klant: v.telefoon_klant,
-            trouwdatum: v.trouwdatum,
-            aantal_gasten: v.aantal_gasten,
-            overnachtingen: v.overnachtingen,
-            aanvraagtekst: v.aanvraagtekst,
-            uiterlijk_datum: v.uiterlijk_datum,
-            al_bekend_link: v.al_bekend_link,
-          },
-          { naam_klant: onderwerp.naam_klant, trouwdatum: onderwerp.trouwdatum },
-        ),
+      // Twee uitgeschreven aanroepen: de test emailTemplateVariables.test.ts leest
+      // per sjabloon statisch af welke variabelen worden aangeleverd.
+      renderPartnerTemplate: (v, onderwerp, kind) =>
+        kind === "event"
+          ? getRenderedTemplate(
+              TemplateIds.EVENT_REFERRAL_PARTNER,
+              {
+                partner_contactpersoon: v.partner_contactpersoon,
+                naam_klant: v.naam_klant,
+                email_klant: v.email_klant,
+                telefoon_klant: v.telefoon_klant,
+                datum: v.datum,
+                aantal_gasten: v.aantal_gasten,
+                overnachtingen: v.overnachtingen,
+                aanvraagtekst: v.aanvraagtekst,
+                uiterlijk_datum: v.uiterlijk_datum,
+                al_bekend_link: v.al_bekend_link,
+              },
+              { naam_klant: onderwerp.naam_klant, datum: onderwerp.datum },
+            )
+          : getRenderedTemplate(
+              TemplateIds.WEDDING_REFERRAL_PARTNER,
+              {
+                partner_contactpersoon: v.partner_contactpersoon,
+                naam_klant: v.naam_klant,
+                email_klant: v.email_klant,
+                telefoon_klant: v.telefoon_klant,
+                trouwdatum: v.trouwdatum,
+                aantal_gasten: v.aantal_gasten,
+                overnachtingen: v.overnachtingen,
+                aanvraagtekst: v.aanvraagtekst,
+                uiterlijk_datum: v.uiterlijk_datum,
+                al_bekend_link: v.al_bekend_link,
+              },
+              { naam_klant: onderwerp.naam_klant, trouwdatum: onderwerp.trouwdatum },
+            ),
       newToken: () => crypto.randomUUID().replaceAll("-", ""),
     });
     return json(result.status, result.body);

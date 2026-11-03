@@ -1761,7 +1761,7 @@ const AdminRequestDetail = () => {
                         )}
                         {request.status !== "cancelled" && (
                           <DropdownMenuItem onClick={() => setWeddingReferralOpen(true)}>
-                            <Heart className="h-4 w-4 mr-2 text-pink-600" /> Doorverwijzen naar… (bruiloft)
+                            <Heart className="h-4 w-4 mr-2 text-pink-600" /> Doorverwijzen naar partner…
                           </DropdownMenuItem>
                         )}
                         {request.status !== "cancelled" && (
@@ -3771,7 +3771,7 @@ const AdminRequestDetail = () => {
           onCreated={fetchRequestData}
         />
       )}
-      {/* Bruiloft doorverwijzen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md, fase 2) */}
+      {/* Bruiloft of evenement doorverwijzen naar een partner (docs/plan-bruiloftsdoorverwijzingen.md, fase 2 en Evenementen) */}
       {request && (
         <WeddingReferralDialog
           open={weddingReferralOpen}
