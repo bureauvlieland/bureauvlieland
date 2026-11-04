@@ -34,8 +34,9 @@ interface AdminQuotePriceEditorProps {
   /** True wanneer de partner het item heeft bevestigd (status confirmed/accepted).
    *  In dat geval geldt de admin-schatting als door de partner geaccepteerde prijs. */
   partnerConfirmed?: boolean;
-  /** Wanneer aanwezig én er een mismatch is tussen `quoted_price` en `override × people × days`,
-   *  toont de popover een actieknop "Behoud p.p.-prijs, pas totaal aan & informeer partner". */
+  /** Wanneer aanwezig én er een mismatch is tussen `quoted_price` en de override-berekening
+   *  (override × people × days, of de override zelf bij een totaalprijs), toont de popover
+   *  een actieknop om `quoted_price` gelijk te trekken en de partner te informeren. */
   onSyncTotalToOverride?: (newTotal: number) => Promise<void>;
 }
 
@@ -251,9 +252,15 @@ export const AdminQuotePriceEditor = ({
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
                   <strong>Inconsistente prijs.</strong> De partner heeft {formatPrice(originalPrice)} bevestigd,
-                  maar de berekening ({formatPrice(overridePrice)}
-                  {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
-                  = {formatPrice(overrideTotal)}. Meestal komt dit doordat het aantal gasten is gewijzigd.
+                  {priceType === "total" ? (
+                    <> maar de aangepaste totaalprijs is {formatPrice(overrideTotal)}.</>
+                  ) : (
+                    <>
+                      {" "}maar de berekening ({formatPrice(overridePrice)}
+                      {priceType === "per_person_per_day" ? ` × ${numberOfPeople}p × ${numberOfDays}d` : ` × ${numberOfPeople}p`})
+                      = {formatPrice(overrideTotal)}. Meestal komt dit doordat het aantal gasten is gewijzigd.
+                    </>
+                  )}
                 </div>
               </div>
               {onSyncTotalToOverride && (
@@ -262,7 +269,7 @@ export const AdminQuotePriceEditor = ({
                   size="sm"
                   variant="outline"
                   disabled={isSaving}
-                  className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                  className="w-full h-auto min-h-8 py-1.5 whitespace-normal text-left border-destructive/30 text-destructive hover:bg-destructive/10"
                   onClick={async () => {
                     setIsSaving(true);
                     try {
@@ -273,7 +280,9 @@ export const AdminQuotePriceEditor = ({
                     }
                   }}
                 >
-                  Behoud {formatPrice(overridePrice)} {priceType === "per_person_per_day" ? "p.p.p.d." : "p.p."} → pas totaal aan naar {formatPrice(overrideTotal)} & informeer partner
+                  {priceType === "total"
+                    ? `Zet totaal op ${formatPrice(overrideTotal)} & informeer partner`
+                    : `Behoud ${formatPrice(overridePrice)} ${priceType === "per_person_per_day" ? "p.p.p.d." : "p.p."}: totaal wordt ${formatPrice(overrideTotal)}, partner wordt geïnformeerd`}
                 </Button>
               )}
             </div>

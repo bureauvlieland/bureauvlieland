@@ -2734,7 +2734,18 @@ const AdminRequestDetail = () => {
                                                   fetchRequestData({ silent: true });
                                                 } catch (err) {
                                                   console.error(err);
-                                                  toast.error("Aanpassen mislukt — probeer opnieuw");
+                                                  // Bij een non-2xx zit de echte server-melding in de
+                                                  // response-body van de FunctionsHttpError.
+                                                  let serverMsg: string | undefined;
+                                                  const ctx = (err as { context?: { json?: () => Promise<{ error?: string }> } } | null)?.context;
+                                                  if (ctx?.json) {
+                                                    try {
+                                                      serverMsg = (await ctx.json())?.error;
+                                                    } catch {
+                                                      /* body niet leesbaar — val terug op generieke melding */
+                                                    }
+                                                  }
+                                                  toast.error(serverMsg ? `Aanpassen mislukt: ${serverMsg}` : "Aanpassen mislukt — probeer opnieuw");
                                                 }
                                               }}
                                             />

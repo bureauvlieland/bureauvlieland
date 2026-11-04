@@ -98,11 +98,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // Bij p.p.-items is het nieuwe totaal override × gasten (× dagen); bij een
+    // totaalprijs ís de override het nieuwe totaal. Andere prijstypes kennen we niet.
     const isPerPerson =
       item.price_type === "per_person" || item.price_type === "per_person_per_day";
-    if (!isPerPerson) {
+    const isTotal = item.price_type === "total";
+    if (!isPerPerson && !isTotal) {
       return new Response(
-        JSON.stringify({ error: "Alleen p.p.-items kunnen automatisch herberekend worden" }),
+        JSON.stringify({ error: `Onbekend prijstype "${item.price_type}" — totaal kan niet herberekend worden` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -123,7 +126,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       1,
     );
     const unitPrice = Number(item.admin_price_override);
-    const newTotal = unitPrice * effectivePeople * (isPerDay ? numberOfDays : 1);
+    const newTotal = isTotal
+      ? unitPrice
+      : unitPrice * effectivePeople * (isPerDay ? numberOfDays : 1);
     const oldTotal = Number(item.quoted_price ?? 0);
 
     // Update item server-side. We zetten quoted_price = newTotal, en synchroniseren
@@ -184,23 +189,38 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ? `<p style="margin: 8px 0 0; color: #475569;"><em>Toelichting Bureau Vlieland: ${sanitizeHtml(note.trim())}</em></p>`
         : "";
 
+    // Twee varianten: bij een p.p.-prijs is de aanleiding een gewijzigd aantal
+    // gasten; bij een totaalprijs is het totaal zelf gecorrigeerd.
+    const heading = isTotal
+      ? "Totaalprijs bijgewerkt"
+      : "Aantal gasten gewijzigd — totaal bijgewerkt";
+    const intro = isTotal
+      ? `De totaalprijs voor onderstaand onderdeel is in ons systeem bijgewerkt.
+          Je eerdere bevestiging stond op ${formatEur(oldTotal)}; het afgesproken
+          totaal is nu <strong>${formatEur(newTotal)}</strong>. Klopt dit niet met
+          jouw administratie? Laat het ons dan even weten.`
+      : `Het aantal gasten voor onderstaand onderdeel is door de klant aangepast.
+          De met jou afgesproken <strong>prijs per persoon blijft staan</strong>;
+          alleen het totaal beweegt mee met het nieuwe aantal. Je hoeft hier verder
+          niets voor te doen — we informeren je puur ter info.`;
+    const detailRows = isTotal
+      ? ""
+      : `<p style="margin: 0 0 8px;"><strong>Nieuw aantal gasten:</strong> ${effectivePeople}</p>
+          <p style="margin: 0 0 8px;"><strong>Afgesproken prijs:</strong> ${formatEur(unitPrice)} ${isPerDay ? "p.p.p.d." : "p.p."}</p>`;
+
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
         <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-          Aantal gasten gewijzigd — totaal bijgewerkt
+          ${heading}
         </h2>
         <p>Hoi ${sanitizeHtml(partner?.name || item.provider_name)},</p>
         <p>
-          Het aantal gasten voor onderstaand onderdeel is door de klant aangepast.
-          De met jou afgesproken <strong>prijs per persoon blijft staan</strong>;
-          alleen het totaal beweegt mee met het nieuwe aantal. Je hoeft hier verder
-          niets voor te doen — we informeren je puur ter info.
+          ${intro}
         </p>
         <div style="background: #f0f9ff; padding: 20px; border-left: 4px solid #0284c7; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 0 0 8px;"><strong>Onderdeel:</strong> ${sanitizeHtml(item.block_name)}</p>
           ${dates ? `<p style="margin: 0 0 8px;"><strong>Datum(s):</strong> ${dates}</p>` : ""}
-          <p style="margin: 0 0 8px;"><strong>Nieuw aantal gasten:</strong> ${effectivePeople}</p>
-          <p style="margin: 0 0 8px;"><strong>Afgesproken prijs:</strong> ${formatEur(unitPrice)} ${isPerDay ? "p.p.p.d." : "p.p."}</p>
+          ${detailRows}
           <p style="margin: 0 0 8px;"><strong>Nieuw totaal:</strong> ${formatEur(newTotal)} <span style="color: #64748b;">(was ${formatEur(oldTotal)})</span></p>
           ${noteHtml}
         </div>
@@ -217,7 +237,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       </div>
     `;
 
-    const subject = `${subjectPrefix}Aantal gasten gewijzigd — ${item.block_name}${ref ? ` (${ref})` : ""}`;
+    const subject = `${subjectPrefix}${heading} — ${item.block_name}${ref ? ` (${ref})` : ""}`;
 
     try {
       await sendEmailViaMailjet([
@@ -242,9 +262,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
         status: "sent",
         sent_by: "admin",
         metadata: {
-          template_name: "partner_headcount_change",
-          actor: "admin → partner (aantalwijziging)",
-          reason: "headcount_change",
+          template_name: isTotal ? "partner_total_price_correction" : "partner_headcount_change",
+          actor: isTotal ? "admin → partner (totaalprijs gecorrigeerd)" : "admin → partner (aantalwijziging)",
+          reason: isTotal ? "total_price_correction" : "headcount_change",
           unit_price: unitPrice,
           old_total: oldTotal,
           new_total: newTotal,
