@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Send, Loader2, AlertTriangle, Info, Eye, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -373,7 +372,7 @@ export function PublishChangesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
         <DialogHeader>
           <DialogTitle>Wijzigingen publiceren & notificeren</DialogTitle>
           <DialogDescription>
@@ -382,12 +381,12 @@ export function PublishChangesDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <div>
             <Label className="text-sm font-medium">
               {pendingItems.length} wijziging{pendingItems.length !== 1 ? "en" : ""}
             </Label>
-            <ScrollArea className="mt-2 max-h-64 rounded-md border">
+            <div className="mt-2 max-h-64 overflow-y-auto rounded-md border">
               <div className="divide-y">
                 {pendingItems.map((it) => {
                   const rows = diffRows(it);
@@ -441,7 +440,7 @@ export function PublishChangesDialog({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           </div>
 
           {warnings.length > 0 && (
