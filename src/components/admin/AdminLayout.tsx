@@ -94,11 +94,15 @@ const useOpenTicketsCount = () => {
   return useQuery({
     queryKey: ["admin-open-tickets-count"],
     queryFn: async () => {
-      const { TICKET_BLOCK_IDS, TICKET_EXCLUDED_REQUEST_STATUSES } = await import("@/lib/ticketItems");
-      // Mirrors isOpenTicketRow(): only customer-approved items in live projects.
-      const { count, error } = await supabase
+      const { TICKET_BLOCK_IDS, TICKET_EXCLUDED_REQUEST_STATUSES, isOpenTicketRow, getTicketDate } =
+        await import("@/lib/ticketItems");
+      // Server-side voorselectie; de definitieve telling loopt via isOpenTicketRow()
+      // zodat ook de reisdatum meetelt (verlopen tickets zijn geen open actie meer).
+      const { data, error } = await supabase
         .from("program_request_items")
-        .select("id, program_requests!inner(status)", { count: "exact", head: true })
+        .select(
+          "id, block_id, status, day_index, booking_reference, booking_document_path, customer_approved_at, program_requests!inner(status, selected_dates)"
+        )
         .in("block_id", TICKET_BLOCK_IDS as unknown as string[])
         .is("booking_reference", null)
         .is("booking_document_path", null)
@@ -106,7 +110,22 @@ const useOpenTicketsCount = () => {
         .not("customer_approved_at", "is", null)
         .not("program_requests.status", "in", `(${TICKET_EXCLUDED_REQUEST_STATUSES.join(",")})`);
       if (error) throw error;
-      return count || 0;
+      type Row = {
+        block_id: string | null;
+        status: string | null;
+        day_index: number | null;
+        booking_reference: string | null;
+        booking_document_path: string | null;
+        customer_approved_at: string | null;
+        program_requests: { status: string | null; selected_dates: string[] | null } | null;
+      };
+      return ((data ?? []) as unknown as Row[]).filter((r) =>
+        isOpenTicketRow({
+          ...r,
+          request_status: r.program_requests?.status ?? null,
+          ticketDate: getTicketDate(r, r.program_requests?.selected_dates ?? null),
+        })
+      ).length;
     },
     refetchInterval: 60000,
   });
