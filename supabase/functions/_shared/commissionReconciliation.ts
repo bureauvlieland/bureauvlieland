@@ -473,10 +473,95 @@ export function worklistInvoiceCoverage(rows: ReconRow[]): Map<string, number> {
   for (const row of rows) {
     if (row.commissionExempt || row.commissionPercentage <= 0) continue;
     for (const inv of row.purchaseInvoices ?? []) {
-      covered.set(inv.id, (covered.get(inv.id) ?? 0) + inv.amountExclVat);
+      // Een verzamelfactuur is per project opgesplitst in virtuele facturen
+      // (`<id>::<request_id>`); de dekking hoort bij de echte factuur.
+      const id = inv.id.split("::")[0];
+      covered.set(id, (covered.get(id) ?? 0) + inv.amountExclVat);
     }
   }
   return covered;
+}
+
+/**
+ * Per inkoopfactuur het bedrag ex btw dat bewust níet is doorbelast
+ * (`charge_status = 'skipped'`, bv. toeristenbelasting). Dat deel hoort niet
+ * in de commissiegrondslag en mag dus ook niet als "ontbreekt in de
+ * werklijst" worden aangemerkt.
+ */
+export function skippedAmountByInvoice(
+  lines: Pick<ReconInvoiceLineInput, "invoice_id" | "charge_status" | "amount_excl_vat">[],
+): Map<string, number> {
+  const skipped = new Map<string, number>();
+  for (const line of lines) {
+    if (line.charge_status !== "skipped") continue;
+    skipped.set(line.invoice_id, (skipped.get(line.invoice_id) ?? 0) + (toNumber(line.amount_excl_vat) ?? 0));
+  }
+  return skipped;
+}
+
+export interface WorklistCoverageGap {
+  invoiceId: string;
+  invoiceNumber: string | null;
+  partnerName: string;
+  /** Factuurbedrag ex btw minus het bewust niet-doorbelaste deel. */
+  expected: number;
+  inWorklist: number;
+  gap: number;
+}
+
+export interface WorklistCoverageResult {
+  /** Som van wat per factuur in de werklijst had moeten terugkomen. */
+  expected: number;
+  /** Som van de gaten (kan negatief zijn bij overdekking). */
+  missing: number;
+  gaps: WorklistCoverageGap[];
+}
+
+/**
+ * Vergelijkt per inkoopfactuur het verwachte bedrag met wat de werklijst
+ * dekt. Het verwachte bedrag is het factuurbedrag ex btw zonder regels die
+ * bewust niet zijn doorbelast (toeristenbelasting): die staan terecht buiten
+ * de grondslag. Verschillen onder 5 cent zijn afronding.
+ */
+export function worklistCoverageGaps(input: {
+  invoices: Array<Pick<ReconInvoiceInput, "id" | "partner_id" | "invoice_number" | "amount_excl_vat">>;
+  covered: Map<string, number>;
+  skippedByInvoice?: Map<string, number>;
+  partnerName?: (partnerId: string | null) => string | undefined;
+}): WorklistCoverageResult {
+  const result: WorklistCoverageResult = { expected: 0, missing: 0, gaps: [] };
+  for (const inv of input.invoices) {
+    const amount = toNumber(inv.amount_excl_vat) ?? 0;
+    const skipped = input.skippedByInvoice?.get(inv.id) ?? 0;
+    const expected = round2(amount - skipped);
+    const inWorklist = input.covered.get(inv.id) ?? 0;
+    result.expected += expected;
+    const gap = expected - inWorklist;
+    if (Math.abs(gap) < 0.05) continue;
+    result.missing += gap;
+    result.gaps.push({
+      invoiceId: inv.id,
+      invoiceNumber: inv.invoice_number ?? null,
+      partnerName: input.partnerName?.(inv.partner_id) ?? inv.partner_id ?? "onbekende partner",
+      expected,
+      inWorklist,
+      gap,
+    });
+  }
+  result.expected = round2(result.expected);
+  result.missing = round2(result.missing);
+  return result;
+}
+
+export function describeWorklistCoverageGap(gap: WorklistCoverageGap): string {
+  const number = gap.invoiceNumber ?? "zonder nummer";
+  if (gap.inWorklist === 0) {
+    return `${number} (${gap.partnerName}, € ${gap.expected.toFixed(2)}, ontbreekt volledig)`;
+  }
+  if (gap.gap < 0) {
+    return `${number} (${gap.partnerName}, € ${(-gap.gap).toFixed(2)} méér in werklijst dan € ${gap.expected.toFixed(2)})`;
+  }
+  return `${number} (${gap.partnerName}, € ${gap.gap.toFixed(2)} van € ${gap.expected.toFixed(2)} niet in werklijst)`;
 }
 
 export function invoiceKey(partnerId: string | null | undefined, invoiceNumber: string | null | undefined): string {
