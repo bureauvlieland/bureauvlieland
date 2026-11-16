@@ -5,7 +5,10 @@ import {
   getTicketKindLabel,
   getTicketDate,
   getTicketStatus,
+  getTicketStatusLabel,
+  isExpiredTicketDate,
   isOpenTicketRow,
+  todayIso,
   FERRY_BLOCK_IDS,
   BIKE_BLOCK_IDS,
 } from "@/lib/ticketItems";
@@ -63,6 +66,45 @@ describe("ticketItems", () => {
     expect(getTicketStatus({ booking_reference: null, booking_document_path: "/x.pdf" })).toBe("booked");
     expect(getTicketStatus({ booking_reference: null, booking_document_path: null })).toBe("open");
   });
+
+  describe("verlopen tickets (reisdatum voorbij zonder boeking)", () => {
+    const today = "2026-11-16";
+    const unbooked = { booking_reference: null, booking_document_path: null };
+
+    it("isExpiredTicketDate: alleen datums vóór vandaag", () => {
+      expect(isExpiredTicketDate("2026-11-15", today)).toBe(true);
+      expect(isExpiredTicketDate("2026-11-16", today)).toBe(false);
+      expect(isExpiredTicketDate("2026-11-17", today)).toBe(false);
+      expect(isExpiredTicketDate(null, today)).toBe(false);
+      expect(isExpiredTicketDate(undefined, today)).toBe(false);
+    });
+
+    it("onbeboekt ticket in het verleden is 'expired', vandaag/toekomst 'open'", () => {
+      expect(getTicketStatus(unbooked, "2026-04-09", today)).toBe("expired");
+      expect(getTicketStatus(unbooked, "2026-11-16", today)).toBe("open");
+      expect(getTicketStatus(unbooked, "2027-01-01", today)).toBe("open");
+      expect(getTicketStatus(unbooked, null, today)).toBe("open");
+    });
+
+    it("een geboekt ticket in het verleden blijft 'booked'", () => {
+      expect(getTicketStatus({ booking_reference: "R1", booking_document_path: null }, "2026-04-09", today)).toBe("booked");
+    });
+
+    it("zonder reisdatum verandert het oude gedrag niet", () => {
+      expect(getTicketStatus(unbooked)).toBe("open");
+    });
+
+    it("getTicketStatusLabel", () => {
+      expect(getTicketStatusLabel("open")).toBe("Open");
+      expect(getTicketStatusLabel("booked")).toBe("Geboekt");
+      expect(getTicketStatusLabel("expired")).toBe("Verlopen");
+    });
+
+    it("todayIso gebruikt de lokale datum", () => {
+      expect(todayIso(new Date(2026, 10, 16, 23, 30))).toBe("2026-11-16");
+      expect(todayIso(new Date(2026, 0, 5, 0, 10))).toBe("2026-01-05");
+    });
+  });
 });
 
 describe("isOpenTicketRow (badge == pagina)", () => {
@@ -99,6 +141,18 @@ describe("isOpenTicketRow (badge == pagina)", () => {
 
   it("negeert niet-ticket blokken", () => {
     expect(isOpenTicketRow({ ...base, block_id: "diner-zeezicht" })).toBe(false);
+  });
+
+  it("telt een onbeboekt ticket met reisdatum in het verleden niet mee (verlopen)", () => {
+    const today = "2026-11-16";
+    expect(isOpenTicketRow({ ...base, ticketDate: "2026-11-15" }, today)).toBe(false);
+    expect(isOpenTicketRow({ ...base, ticketDate: "2026-11-16" }, today)).toBe(true);
+    expect(isOpenTicketRow({ ...base, ticketDate: "2026-12-01" }, today)).toBe(true);
+  });
+
+  it("zonder bekende reisdatum blijft het ticket open", () => {
+    expect(isOpenTicketRow({ ...base, ticketDate: null }, "2026-11-16")).toBe(true);
+    expect(isOpenTicketRow(base)).toBe(true);
   });
 
   it("herkent e-bike verhuur als fietshuur-ticket", () => {

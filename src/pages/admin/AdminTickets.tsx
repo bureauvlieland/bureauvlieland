@@ -44,6 +44,10 @@ import {
   getTicketKindLabel,
   getTicketDate,
   getTicketStatus,
+  getTicketStatusLabel,
+  isExpiredTicketDate,
+  todayIso,
+  type TicketStatus,
 } from "@/lib/ticketItems";
 import { cn } from "@/lib/utils";
 import { SendTicketEmailDialog } from "@/components/admin/tickets/SendTicketEmailDialog";
@@ -77,7 +81,7 @@ interface TicketRow {
   ticketDate: string | null;
 }
 
-type StatusFilter = "all" | "open" | "booked";
+type StatusFilter = "all" | TicketStatus;
 type KindFilter = "all" | "ferry" | "bike";
 
 const formatNL = (d: string | null) => {
@@ -154,22 +158,26 @@ export default function AdminTickets() {
     [rows]
   );
 
-  const pendingCustomerCount = useMemo(
-    () => (rows || []).filter((r) => !r.customer_approved_at).length,
-    [rows]
-  );
+  // Items die nog op klantakkoord wachten, maar alleen zolang de reisdatum
+  // nog niet voorbij is: daarna valt er niets meer te boeken of te regelen.
+  const pendingCustomerCount = useMemo(() => {
+    const today = todayIso();
+    return (rows || []).filter(
+      (r) => !r.customer_approved_at && !isExpiredTicketDate(r.ticketDate, today)
+    ).length;
+  }, [rows]);
 
   const filtered = useMemo(() => {
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const today = todayIso();
     return approvedRows
       .filter((r) => {
         // Period
-        if (period === "upcoming" && r.ticketDate && r.ticketDate < todayIso) return false;
-        if (period === "archive" && r.ticketDate && r.ticketDate >= todayIso) return false;
+        if (period === "upcoming" && r.ticketDate && r.ticketDate < today) return false;
+        if (period === "archive" && r.ticketDate && r.ticketDate >= today) return false;
         // Kind
         if (kind !== "all" && getTicketKind(r) !== kind) return false;
         // Status
-        if (status !== "all" && getTicketStatus(r) !== status) return false;
+        if (status !== "all" && getTicketStatus(r, r.ticketDate, today) !== status) return false;
         // Search
         if (search.trim()) {
           const q = search.toLowerCase();
@@ -207,10 +215,17 @@ export default function AdminTickets() {
       });
   }, [approvedRows, period, kind, status, search]);
 
-  const openCount = useMemo(
-    () => approvedRows.filter((r) => getTicketStatus(r) === "open").length,
-    [approvedRows]
-  );
+  const { openCount, expiredCount } = useMemo(() => {
+    const today = todayIso();
+    let open = 0;
+    let expired = 0;
+    for (const r of approvedRows) {
+      const s = getTicketStatus(r, r.ticketDate, today);
+      if (s === "open") open++;
+      else if (s === "expired") expired++;
+    }
+    return { openCount: open, expiredCount: expired };
+  }, [approvedRows]);
 
   const updateBooking = async (id: string, field: "booking_reference", value: string) => {
     const { error } = await supabase
@@ -379,6 +394,7 @@ export default function AdminTickets() {
               <TabsTrigger value="all">Alle statussen</TabsTrigger>
               <TabsTrigger value="open">Open</TabsTrigger>
               <TabsTrigger value="booked">Geboekt</TabsTrigger>
+              <TabsTrigger value="expired">Verlopen</TabsTrigger>
             </TabsList>
           </Tabs>
           <Select value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
@@ -390,6 +406,14 @@ export default function AdminTickets() {
             </SelectContent>
           </Select>
         </div>
+
+        {expiredCount > 0 && status !== "expired" && (
+          <p className="text-xs text-slate-500">
+            {expiredCount} {expiredCount === 1 ? "ticket is" : "tickets zijn"} verlopen: de reisdatum is voorbij zonder
+            boekingsnummer of PDF. {expiredCount === 1 ? "Het telt" : "Ze tellen"} niet meer als open en
+            {expiredCount === 1 ? " staat" : " staan"} onder <em>Archief</em> met status <em>Verlopen</em>.
+          </p>
+        )}
 
         {isLoading ? (
           <div className="space-y-2">
@@ -422,7 +446,7 @@ export default function AdminTickets() {
                     prev &&
                     row.booking_group_id &&
                     prev.booking_group_id === row.booking_group_id;
-                  const tStatus = getTicketStatus(row);
+                  const tStatus = getTicketStatus(row, row.ticketDate);
                   const tKind = getTicketKind(row);
                   return (
                     <TableRow
@@ -484,11 +508,20 @@ export default function AdminTickets() {
                         <PdfCell row={row} onUpload={uploadPdf} onRemove={removePdf} onDownload={downloadPdf} />
                       </TableCell>
                       <TableCell>
-                        {tStatus === "booked" ? (
-                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Geboekt</Badge>
-                        ) : (
-                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Open</Badge>
-                        )}
+                        <Badge
+                          className={cn(
+                            tStatus === "booked" && "bg-emerald-100 text-emerald-700 hover:bg-emerald-100",
+                            tStatus === "expired" && "bg-slate-100 text-slate-500 hover:bg-slate-100",
+                            tStatus === "open" && "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                          )}
+                          title={
+                            tStatus === "expired"
+                              ? "Reisdatum voorbij zonder boeking; telt niet meer als open ticket"
+                              : undefined
+                          }
+                        >
+                          {getTicketStatusLabel(tStatus)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">

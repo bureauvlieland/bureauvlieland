@@ -56,10 +56,42 @@ export function getTicketDate(
   return selectedDates[idx] ?? selectedDates[0] ?? null;
 }
 
-export type TicketStatus = "open" | "booked";
+export type TicketStatus = "open" | "booked" | "expired";
 
-export function getTicketStatus(item: Pick<ProgramRequestItem, "booking_reference" | "booking_document_path">): TicketStatus {
-  return item.booking_reference || item.booking_document_path ? "booked" : "open";
+/** Vandaag als YYYY-MM-DD in de lokale tijdzone (niet UTC). */
+export function todayIso(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Een ticket zonder boeking waarvan de reisdatum voorbij is, valt niet meer
+ * te regelen. Zo'n ticket is "verlopen": het blijft in het archief zichtbaar,
+ * maar telt nergens meer als openstaande actie.
+ */
+export function isExpiredTicketDate(
+  ticketDate: string | null | undefined,
+  today: string = todayIso(),
+): boolean {
+  return !!ticketDate && ticketDate < today;
+}
+
+export function getTicketStatus(
+  item: Pick<ProgramRequestItem, "booking_reference" | "booking_document_path">,
+  ticketDate?: string | null,
+  today: string = todayIso(),
+): TicketStatus {
+  if (item.booking_reference || item.booking_document_path) return "booked";
+  if (isExpiredTicketDate(ticketDate, today)) return "expired";
+  return "open";
+}
+
+export function getTicketStatusLabel(status: TicketStatus): string {
+  if (status === "booked") return "Geboekt";
+  if (status === "expired") return "Verlopen";
+  return "Open";
 }
 
 /**
@@ -75,22 +107,29 @@ export const TICKET_EXCLUDED_REQUEST_STATUSES = ["cancelled", "deleted"] as cons
  * - no booking_reference and no booking_document_path yet
  * - customer already approved the item (before approval we may not book)
  * - parent project not cancelled/deleted
+ * - the travel date (ticketDate, if known) is not in the past: a ticket that
+ *   was never booked for a day that has passed is "verlopen", not open
  *
  * Both the sidebar badge and the tickets page use this so the counts can never
  * drift apart again.
  */
-export function isOpenTicketRow(row: {
-  block_id?: string | null;
-  status?: string | null;
-  booking_reference?: string | null;
-  booking_document_path?: string | null;
-  customer_approved_at?: string | null;
-  request_status?: string | null;
-}): boolean {
+export function isOpenTicketRow(
+  row: {
+    block_id?: string | null;
+    status?: string | null;
+    booking_reference?: string | null;
+    booking_document_path?: string | null;
+    customer_approved_at?: string | null;
+    request_status?: string | null;
+    ticketDate?: string | null;
+  },
+  today: string = todayIso(),
+): boolean {
   if (!isTicketItem(row)) return false;
   if (row.status === "cancelled") return false;
   if (row.booking_reference || row.booking_document_path) return false;
   if (!row.customer_approved_at) return false;
+  if (isExpiredTicketDate(row.ticketDate, today)) return false;
   if (
     row.request_status &&
     (TICKET_EXCLUDED_REQUEST_STATUSES as readonly string[]).includes(row.request_status)
