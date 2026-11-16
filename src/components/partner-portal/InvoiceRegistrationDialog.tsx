@@ -185,7 +185,9 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
       if (uploadError) throw new Error("De pdf kon niet worden geüpload.");
 
       if (target.kind === "item") {
-        // De functie verwacht het bedrag excl. btw en berekent btw en commissie zelf.
+        // De functie verwacht het bedrag excl. btw en berekent btw en commissie
+        // zelf. Het tarief gaat mee: zonder tarief nam de functie 21% en werd
+        // een 9%-factuur (hier met 9% teruggerekend) te hoog opgeslagen.
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register-partner-invoice`, {
           method: "POST",
           headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
@@ -193,6 +195,7 @@ export const InvoiceRegistrationDialog = ({ target, onClose, partnerToken, commi
             partnerToken,
             itemId: target.item.id,
             invoicedAmount: amountExcl,
+            vatRate,
             invoicedNumber: invoiceNumber.trim(),
             invoicedDate: invoiceDate,
             notes: notes.trim() || undefined,
