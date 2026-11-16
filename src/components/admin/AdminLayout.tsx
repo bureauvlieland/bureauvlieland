@@ -113,7 +113,7 @@ const useOpenTicketsCount = () => {
       type Row = {
         block_id: string | null;
         status: string | null;
-        day_index: number | null;
+        day_index: number;
         booking_reference: string | null;
         booking_document_path: string | null;
         customer_approved_at: string | null;
