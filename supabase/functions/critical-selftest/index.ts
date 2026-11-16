@@ -33,6 +33,9 @@ import { getCommissionRate } from "../_shared/commissionRates.ts";
 import {
   buildReconciliationRows,
   COMMISSION_FREE_PARTNER_IDS,
+  describeWorklistCoverageGap,
+  skippedAmountByInvoice,
+  worklistCoverageGaps,
   worklistInvoiceCoverage,
 } from "../_shared/commissionReconciliation.ts";
 
@@ -470,7 +473,7 @@ Deno.serve(async (req) => {
         "commission_worklist_coverage",
         "Commissiewerklijst dekt alle inkoopfacturen",
         "warning",
-        "Open de genoemde facturen onder Inkoopfacturen: elk hangt aan een onderdeel dat geen werklijstregel oplevert (geannuleerd, bureau-regel, ander project) of is maar deels gealloceerd. Koppel opnieuw, vul de allocatie aan, of markeer commissievrij met reden.",
+        "Open de genoemde facturen onder Inkoopfacturen: elk hangt aan een onderdeel dat geen werklijstregel oplevert (geannuleerd, bureau-regel, ander project) of is maar deels verdeeld. Koppel opnieuw, verdeel het restant via Doorbelasten (toeristenbelasting als 'niet doorbelasten'), of markeer commissievrij met reden.",
         async () => {
           const inputs = await loadReconciliationInputs(admin);
           const rows = buildReconciliationRows({
@@ -494,24 +497,27 @@ Deno.serve(async (req) => {
             .filter((i) => !COMMISSION_FREE_PARTNER_IDS.has(i.partner_id ?? ""))
             .filter((i) => getCommissionRate(partnerById.get(i.partner_id ?? ""), "activity") > 0);
 
-          let raw = 0;
-          let missing = 0;
-          const gaps: string[] = [];
-          for (const inv of relevant) {
-            const amount = Number(inv.amount_excl_vat) || 0;
-            const inWorklist = covered.get(inv.id) ?? 0;
-            raw += amount;
-            const gap = amount - inWorklist;
-            if (Math.abs(gap) < 0.05) continue;
-            missing += gap;
-            const partner = partnerById.get(inv.partner_id ?? "")?.name ?? inv.partner_id ?? "onbekende partner";
-            const number = inv.invoice_number ?? "zonder nummer";
-            gaps.push(
-              inWorklist === 0
-                ? `${number} (${partner}, € ${amount.toFixed(2)}, ontbreekt volledig)`
-                : `${number} (${partner}, € ${gap.toFixed(2)} van € ${amount.toFixed(2)} niet in werklijst)`,
-            );
-          }
+          // Regels die bewust niet zijn doorbelast (toeristenbelasting) staan
+          // terecht buiten de grondslag; die tellen niet als gat.
+          const relevantIds = relevant.map((i) => i.id);
+          const { data: skippedLines, error: linesError } = relevantIds.length
+            ? await admin
+              .from("purchase_invoice_lines")
+              .select("invoice_id, charge_status, amount_excl_vat")
+              .eq("charge_status", "skipped")
+              .in("invoice_id", relevantIds)
+            : { data: [], error: null };
+          if (linesError) throw new Error(linesError.message);
+
+          const coverage = worklistCoverageGaps({
+            invoices: relevant,
+            covered,
+            skippedByInvoice: skippedAmountByInvoice(skippedLines ?? []),
+            partnerName: (id) => partnerById.get(id ?? "")?.name,
+          });
+          const raw = coverage.expected;
+          const missing = coverage.missing;
+          const gaps = coverage.gaps.map(describeWorklistCoverageGap);
 
           const tolerance = Math.max(5, raw * 0.01);
           if (Math.abs(missing) > tolerance) {

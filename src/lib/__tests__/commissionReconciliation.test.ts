@@ -7,6 +7,9 @@ import {
   invoiceKey,
   isRowlessItem,
   worklistInvoiceCoverage,
+  worklistCoverageGaps,
+  skippedAmountByInvoice,
+  describeWorklistCoverageGap,
   isBillableRow,
   isExpectedRow,
   isUnknownBaseRow,
@@ -276,6 +279,78 @@ describe("worklistInvoiceCoverage", () => {
     const covered = worklistInvoiceCoverage(rows);
     expect(covered.has("inv-1")).toBe(false);
     expect(covered.has("inv-2")).toBe(false);
+  });
+
+  it("telt een opgesplitste verzamelfactuur op onder de echte factuur-id", () => {
+    const rows = buildReconciliationRows({
+      items: [],
+      invoices: splitCollectiveInvoices(
+        [invoice({ id: "inv-1", request_id: null, amount_excl_vat: 1000 })],
+        [
+          { invoice_id: "inv-1", request_id: "req-1", item_id: null, charge_status: "charged", amount_excl_vat: 600 },
+          { invoice_id: "inv-1", request_id: "req-2", item_id: null, charge_status: "charged", amount_excl_vat: 300 },
+          { invoice_id: "inv-1", request_id: "req-1", item_id: null, charge_status: "skipped", amount_excl_vat: 100 },
+        ],
+      ),
+      projects,
+      partners,
+    });
+    const covered = worklistInvoiceCoverage(rows);
+    expect(covered.get("inv-1")).toBe(900);
+  });
+});
+
+describe("worklistCoverageGaps", () => {
+  const partnerName = (id: string | null) => partners.find((p) => p.id === id)?.name;
+
+  it("rekent bewust niet-doorbelaste regels (toeristenbelasting) niet als gat", () => {
+    // Stortemelk 26013731: € 5751,09 waarvan € 704,34 toeristenbelasting is
+    // overgeslagen; de werklijst dekt de € 5046,75 aan doorbelaste regels.
+    const result = worklistCoverageGaps({
+      invoices: [invoice({ id: "inv-1", invoice_number: "26013731", amount_excl_vat: 5751.09 })],
+      covered: new Map([["inv-1", 5046.75]]),
+      skippedByInvoice: skippedAmountByInvoice([
+        { invoice_id: "inv-1", charge_status: "skipped", amount_excl_vat: 704.34 },
+        { invoice_id: "inv-1", charge_status: "charged", amount_excl_vat: 3871.38 },
+      ]),
+      partnerName,
+    });
+    expect(result.expected).toBe(5046.75);
+    expect(result.missing).toBe(0);
+    expect(result.gaps).toHaveLength(0);
+  });
+
+  it("meldt een deels verdeelde factuur met het ontbrekende bedrag", () => {
+    // Zeezicht 202602844: € 3313,63 op de factuur, € 3044,58 verdeeld.
+    const result = worklistCoverageGaps({
+      invoices: [invoice({ id: "inv-1", invoice_number: "202602844", amount_excl_vat: 3313.63 })],
+      covered: new Map([["inv-1", 3044.58]]),
+      partnerName,
+    });
+    expect(result.missing).toBeCloseTo(269.05, 2);
+    expect(result.gaps).toHaveLength(1);
+    expect(describeWorklistCoverageGap(result.gaps[0])).toBe(
+      "202602844 (Trattoria Oliva, € 269.05 van € 3313.63 niet in werklijst)",
+    );
+  });
+
+  it("meldt een factuur die nergens terugkomt als volledig ontbrekend", () => {
+    const result = worklistCoverageGaps({
+      invoices: [invoice({ id: "inv-1", invoice_number: "9", amount_excl_vat: 250 })],
+      covered: new Map(),
+      partnerName,
+    });
+    expect(result.missing).toBe(250);
+    expect(describeWorklistCoverageGap(result.gaps[0])).toBe("9 (Trattoria Oliva, € 250.00, ontbreekt volledig)");
+  });
+
+  it("negeert afrondingsverschillen onder 5 cent", () => {
+    const result = worklistCoverageGaps({
+      invoices: [invoice({ id: "inv-1", amount_excl_vat: 100 })],
+      covered: new Map([["inv-1", 99.97]]),
+    });
+    expect(result.gaps).toHaveLength(0);
+    expect(result.missing).toBe(0);
   });
 });
 
