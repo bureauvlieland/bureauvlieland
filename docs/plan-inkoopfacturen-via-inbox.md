@@ -50,8 +50,9 @@ de edge function valt terug op het tarief van het onderdeel, nooit meer blind
 op 21% (`supabase/functions/_shared/vatRate.ts`, met tests). Migratie
 `20261116120000_correctie-btw-portaalfacturen.sql` zet de drie facturen, hun
 allocaties en de commissie op de onderdelen terug naar het bedrag incl. 9%
-en zet het te veel betaalde bedrag in de omschrijving. De batches blijven
-zoals ze zijn; de € 179,49 wordt met de partners verrekend.
+en zet het te veel betaalde bedrag in de omschrijving. De drie pdf's zijn
+nagekeken: € 300, € 425 en € 270, alle incl. 9%. De batches blijven zoals ze
+zijn; de € 179,49 wordt met de partners verrekend.
 
 ## 2. De vijf routes van nu
 

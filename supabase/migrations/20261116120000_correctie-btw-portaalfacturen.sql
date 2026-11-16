@@ -19,11 +19,11 @@
 --
 --   T-261029  Zuiver Traiteur   pdf € 300,00 incl. 9%   betaald € 402,97   te veel € 102,97
 --             (partner voerde € 363,00 in; daarbovenop de btw-fout)
---   T-261030  Zuiver Traiteur   invoer € 425,00 incl.   betaald € 471,79   te veel €  46,79
---   2026-04   Vlieland Yoga     invoer € 270,00 incl.   betaald € 299,73   te veel €  29,73
+--   T-261030  Zuiver Traiteur   pdf € 425,00 incl. 9%   betaald € 471,79   te veel €  46,79
+--   2026-04   Vlieland Yoga     pdf € 270,00 incl. 9%   betaald € 299,73   te veel €  29,73
 --
--- Voor T-261030 en 2026-04 is het ingevoerde bedrag teruggezet; de pdf is niet
--- opnieuw nagekeken. Wijkt de pdf af, dan corrigeer je de factuur in de admin.
+-- Alle drie de pdf's zijn op 16 november nagekeken; de bedragen hieronder zijn
+-- de totalen die op de pdf staan. Daarom wordt ook pdf_total_incl_vat gevuld.
 --
 -- protect_partner_purchase_invoice_fields weigert bedragwijzigingen zonder
 -- admin- of service-context, en een migratie heeft die niet (auth.uid() is
@@ -66,6 +66,7 @@ BEGIN
          vat_rate = 9,
          vat_amount = v_vat,
          amount_incl_vat = _new_incl,
+         pdf_total_incl_vat = _new_incl,
          description = COALESCE(description, '') || ' | ' || _note,
          updated_at = now()
    WHERE id = _invoice_id;
@@ -91,11 +92,11 @@ SELECT pg_temp.correct_portal_invoice(
 );
 SELECT pg_temp.correct_portal_invoice(
   'bb5119f2-b198-473d-8e2d-c11034eb685b', 471.79, 425.00,
-  'Correctie 16-11-2026: btw-fout portaal (was € 471,79 bij 21%), ingevoerd € 425,00 incl. 9%; € 46,79 te veel betaald in BATCH-2610-0001, te verrekenen'
+  'Correctie 16-11-2026: btw-fout portaal (was € 471,79 bij 21%), pdf is € 425,00 incl. 9%; € 46,79 te veel betaald in BATCH-2610-0001, te verrekenen'
 );
 SELECT pg_temp.correct_portal_invoice(
   '4b0d1521-7072-42f8-a782-b565488d21b8', 299.73, 270.00,
-  'Correctie 16-11-2026: btw-fout portaal (was € 299,73 bij 21%), ingevoerd € 270,00 incl. 9%; € 29,73 te veel betaald, te verrekenen'
+  'Correctie 16-11-2026: btw-fout portaal (was € 299,73 bij 21%), pdf is € 270,00 incl. 9%; € 29,73 te veel betaald, te verrekenen'
 );
 
 DROP FUNCTION pg_temp.correct_portal_invoice(uuid, numeric, numeric, text);
