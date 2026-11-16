@@ -12,6 +12,7 @@ import {
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { isValidBilledTo, normalizeBilledTo } from "../_shared/invoiceBilledTo.ts";
+import { parseVatRate, resolveVatRate } from "../_shared/vatRate.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -102,17 +103,19 @@ Deno.serve(async (req) => {
     const isViaEmail = viaEmail === true;
 
     // Normalize to items[] array. Legacy single-item callers still supported.
-    const itemsList: Array<{ itemId: string; amount: number; vatRate: number }> =
+    // Het btw-tarief komt van de client; ontbreekt het, dan geldt het tarief
+    // van het onderdeel zelf (zie hieronder), nooit blind 21%.
+    const itemsList: Array<{ itemId: string; amount: number; vatRate: number | null }> =
       Array.isArray(items) && items.length > 0
         ? items
             .filter((x: any) => x && x.itemId && Number(x.amount) > 0)
             .map((x: any) => ({
               itemId: String(x.itemId),
               amount: Number(x.amount),
-              vatRate: x.vatRate !== undefined && x.vatRate !== null ? Number(x.vatRate) : 21,
+              vatRate: parseVatRate(x.vatRate),
             }))
         : itemId && Number(invoicedAmount) > 0
-          ? [{ itemId: String(itemId), amount: Number(invoicedAmount), vatRate: 21 }]
+          ? [{ itemId: String(itemId), amount: Number(invoicedAmount), vatRate: parseVatRate(reqBody.vatRate) }]
           : [];
 
     if (!partnerToken || !invoicedNumber || !invoicedDate || itemsList.length === 0) {
@@ -257,14 +260,16 @@ Deno.serve(async (req) => {
     };
 
     // Build allocations + totals. VAT rate comes per item from the client
-    // (derived from the building block); default to 21% for safety.
+    // (derived from the building block). Without it: the item's own rate.
+    // Een vast 21% maakte van een 9%-factuur (lunch) een te hoog bedrag:
+    // de dialoog rekende incl→excl met 9% en deze functie telde er 21% bij.
     const infoByItem = new Map(itemsList.map((x) => [x.itemId, x]));
     let totalExcl = 0;
     let totalVat = 0;
     const allocations = dbItems.map((it: any, idx: number) => {
       const info = infoByItem.get(it.id);
       const amt = Number(info?.amount || 0);
-      const rate = Number(info?.vatRate ?? 21);
+      const rate = resolveVatRate(info?.vatRate, it.vat_rate);
       const vatAmt = +(amt * (rate / 100)).toFixed(2);
       totalExcl += amt;
       totalVat += vatAmt;
