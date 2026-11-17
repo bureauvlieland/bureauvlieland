@@ -142,17 +142,35 @@ const COST_WORDS = /\b(borg|servicekosten|bezorg|bezorging|fooi|schade|administr
 
 const isCostItem = (item: MatchableItem) => item.dayIndex === -1;
 
-/** Score per onderdeel voor één regel; alleen onderdelen van dezelfde partner tellen. */
+/** Onderdelen van een andere partner waarvan de naam de factuurpartner noemt. */
+function itemsNamingPartner(invoice: MatchableInvoice, items: MatchableItem[]): MatchableItem[] {
+  const partnerWords = keywords(invoice.partnerName ?? "");
+  if (partnerWords.size === 0) return [];
+  return items.filter((it) => {
+    if (!ACTIVE(it) || isCostItem(it)) return false;
+    const itemWords = keywords(it.name);
+    return [...partnerWords].every((w) => itemWords.has(w));
+  });
+}
+
+/** Score per onderdeel voor één regel; onderdelen van dezelfde partner tellen, anders onderdelen die de partner noemen. */
 export function scoreLine(
   line: MatchableLine,
   invoice: MatchableInvoice,
   invoiceLines: MatchableLine[],
   items: MatchableItem[],
 ): ItemCandidate[] {
-  const partnerItems = items.filter(
+  const ownItems = items.filter(
     (it) => ACTIVE(it) && !isCostItem(it) && invoice.partnerId != null && it.providerId === invoice.partnerId,
   );
+  // Heeft de partner zelf geen onderdeel, dan tellen onderdelen van een
+  // andere partner mee waarvan de naam deze partner noemt ("Pizza & Borrel
+  // bij Café Boven" bij een factuur van Café Boven): de uitvoering is
+  // uitbesteed, de factuur komt van de locatie.
+  const namedItems = ownItems.length > 0 ? [] : itemsNamingPartner(invoice, items);
+  const partnerItems = ownItems.length > 0 ? ownItems : namedItems;
   if (partnerItems.length === 0) return [];
+  const named = new Set(namedItems.map((it) => it.id));
 
   const invoiceTotal = invoiceLines.reduce((s, l) => s + l.amountInclVat, 0);
   // Bijkomende kosten (borg, reserveringskosten, …) liften niet mee op
@@ -166,7 +184,10 @@ export function scoreLine(
     let score = 0;
     const reasons: string[] = [];
 
-    if (partnerItems.length === 1) {
+    if (named.has(item.id)) {
+      score += 50;
+      reasons.push(`onderdeelnaam noemt “${invoice.partnerName?.trim()}”`);
+    } else if (partnerItems.length === 1) {
       score += 40;
       reasons.push("enige onderdeel van deze partner");
     }

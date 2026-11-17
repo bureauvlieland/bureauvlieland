@@ -100,6 +100,9 @@ const STATUS_LABEL: Record<string, { label: string; tone: "neutral" | "success" 
   legacy: { label: "Verdeeld vóór het werkblad", tone: "neutral" },
 };
 
+/** Een oude verdeling die nooit tot een klantregel leidde: de offerteprijs staat nog. */
+const UNCHARGED_LEGACY: { label: string; tone: "warning" } = { label: "Verdeeld, nog niet doorbelast", tone: "warning" };
+
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
 
@@ -170,7 +173,7 @@ export const ChargeWorksheetCard = ({
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<Record<string, boolean>>({});
-  const [showProcessed, setShowProcessed] = useState(false);
+  const [showProcessed, setShowProcessed] = useState<boolean | null>(null);
   const [costNames, setCostNames] = useState<Record<string, string>>({});
   const [togglingItem, setTogglingItem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -226,6 +229,19 @@ export const ChargeWorksheetCard = ({
 
   const openLines = useMemo(() => (lines ?? []).filter((l) => l.charge_status === "open"), [lines]);
   const processedLines = useMemo(() => (lines ?? []).filter((l) => l.charge_status !== "open"), [lines]);
+  // Zonder open regels staat de verwerkte lijst open: daar zit "Wijzig".
+  const processedOpen = showProcessed ?? openLines.length === 0;
+
+  /** Staat deze inkoopregel als klantregel op het onderdeel waar hij aan hangt? */
+  const hasBillingLine = (line: PurchaseInvoiceLineRow): boolean =>
+    !!line.item_id && (linesByItem[line.item_id] ?? []).some((b) => b.purchase_invoice_line_id === line.id);
+
+  // Regels van vóór het werkblad (of "Orderregels aanmaken" uit een
+  // partnerverdeling) hebben een bestemming maar geen klantregel: de klant
+  // betaalt nog de offerteprijs. Die verdienen een duidelijke oproep.
+  const unchargedLegacy = (lines ?? []).filter(
+    (l) => l.charge_status === "legacy" && !l.lodging_quote_id && !!l.item_id && itemById.has(l.item_id) && !hasBillingLine(l),
+  );
 
   // Voorstellen worden het concept zodra de regels binnen zijn. Een regel die
   // al een onderdeel meekreeg (verzamelfactuur: boekingsreferentie), een zeker
@@ -359,7 +375,10 @@ export const ChargeWorksheetCard = ({
         .eq("id", item.id);
       if (error) throw error;
       const linked = (lines ?? []).filter(
-        (l) => l.item_id === item.id && (l.charge_status === "charged" || l.charge_status === "kept_quote"),
+        (l) =>
+          l.item_id === item.id &&
+          !l.lodging_quote_id &&
+          (l.charge_status === "charged" || l.charge_status === "kept_quote" || l.charge_status === "legacy"),
       );
       if (linked.length > 0) {
         await apply.mutateAsync(linked.map((l) => ({ line_id: l.id, action: "item" as const, item_id: item.id })));
@@ -377,6 +396,48 @@ export const ChargeWorksheetCard = ({
     setDrafts((prev) => ({ ...prev, [lineId]: draft }));
     setChecked((prev) => ({ ...prev, [lineId]: true }));
   };
+
+  /**
+   * Vanuit het programma: deze inkoopregels op dit onderdeel zetten. Open
+   * regels worden aangevinkt, verwerkte regels gaan in de wijzigstand; het
+   * besluit staat daarna klaar in "Bevestig".
+   */
+  const linkLinesToItem = (lineIds: string[], itemId: string) => {
+    const open = new Set(openLines.map((l) => l.id));
+    setDrafts((prev) => {
+      const next = { ...prev };
+      for (const id of lineIds) next[id] = { kind: "item", itemId };
+      return next;
+    });
+    setChecked((prev) => {
+      const next = { ...prev };
+      for (const id of lineIds) if (open.has(id)) next[id] = true;
+      return next;
+    });
+    setEditing((prev) => {
+      const next = { ...prev };
+      for (const id of lineIds) if (!open.has(id)) next[id] = true;
+      return next;
+    });
+    setShowProcessed(true);
+  };
+
+  /** Is deze regel (na bevestigen) op dit onderdeel bestemd? */
+  const isPendingFor = (line: PurchaseInvoiceLineRow, itemId: string): boolean => {
+    const d = drafts[line.id];
+    if (!d || d.kind !== "item" || d.itemId !== itemId) return false;
+    return line.charge_status === "open" ? !!checked[line.id] : !!editing[line.id];
+  };
+
+  /** Inkoopregels die je vanuit het programma op dit onderdeel kunt zetten. */
+  const linkableLinesFor = (itemId: string): PurchaseInvoiceLineRow[] =>
+    (lines ?? []).filter((l) => {
+      if (l.lodging_quote_id) return false;
+      if (isPendingFor(l, itemId)) return false;
+      // Staat er al op (en wordt niet weggehaald): niets te kiezen.
+      if (l.item_id === itemId && l.charge_status !== "open" && !editing[l.id] && (hasBillingLine(l) || l.charge_status === "kept_quote")) return false;
+      return true;
+    });
 
   const selectValueFor = (draft: Draft | undefined): string => {
     if (!draft) return "";
@@ -542,7 +603,8 @@ export const ChargeWorksheetCard = ({
       ? "al aan dit onderdeel gekoppeld bij het verdelen"
       : reasonText(match);
     const isEditing = mode === "open" || editing[line.id];
-    const status = STATUS_LABEL[line.charge_status] ?? STATUS_LABEL.open;
+    const uncharged = line.charge_status === "legacy" && unchargedLegacy.some((l) => l.id === line.id);
+    const status = uncharged ? UNCHARGED_LEGACY : (STATUS_LABEL[line.charge_status] ?? STATUS_LABEL.open);
     const onLodging = !!line.lodging_quote_id;
     return (
       <div
@@ -582,7 +644,10 @@ export const ChargeWorksheetCard = ({
               )}
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">{processedLabel(line)}</p>
+            <p className="text-xs text-muted-foreground">
+              {processedLabel(line)}
+              {uncharged && " · de klant betaalt nog de offerteprijs"}
+            </p>
           )}
         </div>
         <div className="text-right">
@@ -720,10 +785,50 @@ export const ChargeWorksheetCard = ({
                 </Notice>
               )}
 
+              {unchargedLegacy.some((l) => !editing[l.id]) && (
+                <Notice tone="warning" title="Verdeeld, maar nog niet op de klantfactuur">
+                  <p className="text-xs">
+                    Deze regels kregen bij het registreren al een onderdeel, maar er staat geen klantregel: de klant betaalt
+                    nog de offerteprijs. Kies &ldquo;Doorbelasten&rdquo; om het factuurbedrag in de plaats te zetten.
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {unchargedLegacy.filter((l) => !editing[l.id]).map((l) => {
+                      const target = l.item_id ? itemById.get(l.item_id) : undefined;
+                      const inv = invoiceById.get(l.invoice_id);
+                      return (
+                        <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="min-w-0">
+                            <span className="font-medium">{inv?.partner?.name ?? inv?.partner_id}</span>
+                            {" · "}{l.description || "Regel"} · {formatCurrency(Number(l.amount_incl_vat))}
+                            {target && (
+                              <span className="text-muted-foreground">
+                                {" → "}{isCostItem(target) ? "Kostenpost" : `Dag ${target.day_index + 1}`}: {target.block_name}
+                              </span>
+                            )}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => l.item_id && linkLinesToItem([l.id], l.item_id)}
+                          >
+                            Doorbelasten
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Notice>
+              )}
+
               {openLines.length === 0 ? (
                 <EmptyState
                   title="Alle inkoopregels zijn verwerkt"
-                  description="Nieuwe inkoopfacturen verschijnen hier zodra ze zijn geregistreerd."
+                  description={
+                    processedLines.length > 0
+                      ? "Wil je een regel toch op een ander onderdeel? Kies hieronder “Wijzig”, of rechts bij het onderdeel “Inkoopregel koppelen”."
+                      : "Nieuwe inkoopfacturen verschijnen hier zodra ze zijn geregistreerd."
+                  }
                 />
               ) : (
                 <div className="space-y-4">
@@ -736,12 +841,12 @@ export const ChargeWorksheetCard = ({
                   <button
                     type="button"
                     className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowProcessed((v) => !v)}
+                    onClick={() => setShowProcessed(!processedOpen)}
                   >
-                    {showProcessed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    {processedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                     Verwerkt ({processedLines.length})
                   </button>
-                  {showProcessed && (
+                  {processedOpen && (
                     <div className="space-y-4">
                       {groupByInvoice(processedLines).map(({ invoice, groupLines }) => renderInvoiceGroup(invoice, groupLines, "processed"))}
                     </div>
@@ -776,7 +881,17 @@ export const ChargeWorksheetCard = ({
                   const actualIncl = actual && actual.length > 0 ? sumIncl(actual) : null;
                   const quoted = item.quoted_price != null ? Number(item.quoted_price) : null;
                   const diff = actualIncl != null && quoted != null ? actualIncl - quoted : null;
-                  const linkedOpen = openLines.filter((l) => drafts[l.id]?.kind === "item" && (drafts[l.id] as { itemId: string }).itemId === item.id).length;
+                  // Wat er na bevestigen op dit onderdeel staat: regels die
+                  // erbij komen min regels die (in de wijzigstand) weggaan.
+                  const incoming = (lines ?? []).filter((l) => isPendingFor(l, item.id));
+                  const leaving = (lines ?? []).filter(
+                    (l) => l.item_id === item.id && l.charge_status !== "open" && editing[l.id] && hasBillingLine(l) && !isPendingFor(l, item.id),
+                  );
+                  const incomingIncl = incoming.reduce((s, l) => s + Number(l.amount_incl_vat), 0);
+                  const leavingIncl = leaving.reduce((s, l) => s + Number(l.amount_incl_vat), 0);
+                  const projected = incoming.length + leaving.length > 0 ? (actualIncl ?? 0) + incomingIncl - leavingIncl : null;
+                  const linkable = linkableLinesFor(item.id);
+                  const linkableGroups = groupByInvoice(linkable);
                   return (
                     <div key={item.id} className="rounded-md border px-3 py-2 text-sm space-y-1">
                       <div className="flex items-start justify-between gap-2">
@@ -809,8 +924,48 @@ export const ChargeWorksheetCard = ({
                           />
                           Offerteprijs houden
                         </label>
-                        {linkedOpen > 0 && <Pill tone="info">{linkedOpen} {linkedOpen === 1 ? "regel" : "regels"} voorgesteld</Pill>}
+                        {projected != null && (
+                          <Pill tone="info">
+                            {incoming.length > 0 && leaving.length === 0 && item.keep_quoted_price
+                              ? `${incoming.length} ${incoming.length === 1 ? "regel" : "regels"} gekoppeld, offerte blijft`
+                              : `na bevestigen ${projected > 0.005 ? formatCurrency(projected) : "—"}`}
+                          </Pill>
+                        )}
                       </div>
+                      {linkableGroups.length > 0 && (
+                        <Select value="" onValueChange={(v) => {
+                          if (v.startsWith("inv:")) {
+                            const invoiceId = v.slice(4);
+                            linkLinesToItem(linkable.filter((l) => l.invoice_id === invoiceId).map((l) => l.id), item.id);
+                          } else if (v.startsWith("line:")) {
+                            linkLinesToItem([v.slice(5)], item.id);
+                          }
+                        }}>
+                          <SelectTrigger className="h-7 text-xs text-muted-foreground" aria-label={`Inkoopregel koppelen aan ${item.block_name}`}>
+                            <SelectValue placeholder="Inkoopregel koppelen…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {linkableGroups.map(({ invoice, groupLines }) => (
+                              <SelectGroup key={invoice.id}>
+                                <SelectLabel>{invoice.partner?.name ?? invoice.partner_id} · factuur {invoice.invoice_number}</SelectLabel>
+                                {groupLines.length > 1 && (
+                                  <SelectItem value={`inv:${invoice.id}`}>
+                                    Hele factuur · {formatCurrency(groupLines.reduce((s, l) => s + Number(l.amount_incl_vat), 0))}
+                                  </SelectItem>
+                                )}
+                                {groupLines.map((l) => (
+                                  <SelectItem key={l.id} value={`line:${l.id}`}>
+                                    {l.description || "Regel"} · {formatCurrency(Number(l.amount_incl_vat))}
+                                    {l.item_id && l.item_id !== item.id && itemById.get(l.item_id)
+                                      ? ` (nu: ${itemById.get(l.item_id)!.block_name})`
+                                      : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   );
                 })}
