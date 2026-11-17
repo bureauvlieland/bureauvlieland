@@ -217,7 +217,7 @@ export const PartnerAccommodationRequestCard = ({ request, quote, onOpen, partne
         )}
         {status.key === "selected" && (
           <Notice tone="success" title="De klant heeft uw offerte gekozen">
-            <p>Bureau Vlieland factureert de klant. Na het verblijf stuurt u uw factuur naar {PURCHASE_INVOICE_INBOX} of registreert u hem onder Facturatie; het bureau verrekent de commissie.</p>
+            <p>Bureau Vlieland factureert de klant. Na het verblijf mailt u de pdf van uw factuur naar {PURCHASE_INVOICE_INBOX}, met ons referentienummer erop; het bureau verrekent de commissie.</p>
           </Notice>
         )}
         {(status.key === "not_selected" || status.key === "declined" || status.key === "cancelled") && <p className="text-sm text-muted-foreground">{status.hint}</p>}

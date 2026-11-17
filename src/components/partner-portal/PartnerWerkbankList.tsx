@@ -46,7 +46,7 @@ const BUCKET_META: Record<Bucket, { label: string; description: string; icon: Re
   },
   invoice: {
     label: "Factureren",
-    description: "Uitgevoerd: registreer uw factuur, of sluit het onderdeel als er geen factuur volgt.",
+    description: "Uitgevoerd: mail de pdf van uw factuur, of sluit het onderdeel als er geen factuur volgt.",
     icon: <Receipt className="h-4 w-4" aria-hidden="true" />,
   },
 };

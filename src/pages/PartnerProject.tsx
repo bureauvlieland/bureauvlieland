@@ -32,6 +32,10 @@ import { canPartnerCloseProject, selectClosableProjectItems } from "@/lib/partne
 import { reportError } from "@/lib/errorReporting";
 import { isPartnerInvoicingReleased } from "@/lib/partnerInvoicing";
 import { formatEuro } from "@/lib/formatEuro";
+import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
+import { usePartnerInvoiceRoute } from "@/hooks/usePartnerInvoiceRoute";
+import { buildInvoiceMailto, invoiceMailInputForItems } from "@/lib/partnerInvoiceMail";
+import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 
 
 type Mode = "activities" | "accommodation";
@@ -52,6 +56,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
   const partnerId = partner.id;
   const partnerName = partner.name;
   const partnerEmail = partner.email;
+  const invoiceRoute = usePartnerInvoiceRoute();
   // "Terug" gaat naar waar u vandaan kwam (werkbank of projecten, met filters), anders naar de werkbank.
   const backTo = (location.state as { from?: string } | null)?.from ?? `/partner/werkbank${urlSuffix}`;
 
@@ -250,6 +255,9 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
     const isCancelledProject = !!req.cancelled_at || req.status === "cancelled";
     const customerLabel = isConceptProject ? "Aanvraag in voorbereiding" : req.customer_company || req.customer_name;
     const isBureauCentral = req.invoicing_mode === "bureau_central";
+    // Eén factuur per project: de mailknop op elk onderdeel noemt alle te factureren onderdelen.
+    const invoiceableItems = projectItems.filter((i) => canPartnerInvoiceItem(i, i.program_requests));
+    const invoiceMailHref = invoiceRoute === "mail" && invoiceableItems.length > 0 ? buildInvoiceMailto(invoiceMailInputForItems(partnerName, invoiceableItems)) : null;
 
     // Dezelfde dagindeling als de klant: één tijdlijn met dagkoppen en een dagbalk.
     const dayCount = Math.max(sorted.length, 1);
@@ -292,6 +300,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
             setSelectedItem(item);
             setShowInvoiceDialog(true);
           }}
+          invoiceMailHref={invoiceMailHref}
           onStatusUpdate={(status, note, qPrice, qNotes) => postItemStatus(item.id, status, note, qPrice, qNotes)}
         />
       ));
@@ -433,6 +442,7 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
             setShowSheet(false);
             setShowInvoiceDialog(true);
           }}
+          invoiceMailHref={invoiceMailHref}
           commissionPercentage={data?.partner.commission_percentage ?? 0}
         />
 
@@ -517,6 +527,8 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
     created_at: req.created_at,
     linked_program_id: req.linked_program_id ?? null,
     invoicingMode: req.invoicing_mode ?? null,
+    reference_number: req.reference_number ?? null,
+    accommodation_billed_directly: req.accommodation_billed_directly === true,
     quote: {
       id: accommodationQuote.id,
       status: accommodationQuote.status,
@@ -616,7 +628,9 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
                     <p>
                       {accommodationQuote.invoiced_number
                         ? `Factuur ${accommodationQuote.invoiced_number} is geregistreerd.`
-                        : "Na het verblijf registreert u uw factuur met de pdf; Bureau Vlieland verrekent de commissie."}
+                        : invoiceRoute === "mail"
+                          ? `Na het verblijf mailt u de pdf van uw factuur naar ${PURCHASE_INVOICE_INBOX}, met ons referentienummer erop; Bureau Vlieland verrekent de commissie.`
+                          : "Na het verblijf registreert u uw factuur met de pdf; Bureau Vlieland verrekent de commissie."}
                     </p>
                   </Notice>
                 )}

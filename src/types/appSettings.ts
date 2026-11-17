@@ -41,6 +41,8 @@ export interface AppSettingsMap {
   default_accommodation_commission: number;
   request_expiry_days: number;
   customer_portal_enabled: boolean;
+  /** Noodrem: de oude registratiedialogen in het partnerportaal weer tonen (plan-inkoopfacturen-via-inbox.md). */
+  partner_invoice_registration_enabled: boolean;
   reminder_days_partner_quote: number;
   reminder_days_customer_quote: number;
   reminder_days_customer_request: number;

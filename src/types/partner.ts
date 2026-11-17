@@ -1,4 +1,5 @@
 // Partner types for the partner portal
+import type { PartnerInvoiceMailRow, PartnerPurchaseInvoiceRow } from "@/lib/partnerInvoiceStatus";
 
 export interface Partner {
   id: string;
@@ -208,6 +209,10 @@ export interface PartnerDashboardData {
     count: number;
     amountInclVat: number;
   };
+  /** Inkoopfacturen van deze partner (laatste half jaar), voor de status per project op "Nog te factureren". */
+  purchaseInvoices?: PartnerPurchaseInvoiceRow[];
+  /** Mails van deze partner in de inkoop-inbox (laatste half jaar), met de referentienummers die erin staan. */
+  invoiceMails?: PartnerInvoiceMailRow[];
 }
 
 export interface PartnerAccommodationQuote {
@@ -265,6 +270,8 @@ export interface PartnerAccommodationQuote {
     special_requests: string | null;
     status: string;
     created_at: string;
+    /** Ons referentienummer van de logiesaanvraag (op de factuur van de partner). */
+    reference_number?: string | null;
     linked_program_id?: string | null;
     invoicing_mode?: string | null;
     /** Uit het gekoppelde programma: logies van onze factuur gehaald, de accommodatie rekent rechtstreeks met de gast af. */
