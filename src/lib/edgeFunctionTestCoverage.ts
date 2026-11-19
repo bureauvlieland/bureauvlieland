@@ -189,6 +189,7 @@ const REGISTRY: Row[] = [
   { name: "get-customer-program", category: "utility", critical: false },
   { name: "get-ferry-departures", category: "utility", critical: false },
   { name: "get-partner-dashboard", category: "utility", critical: false },
+  { name: "get-partner-project-log", category: "utility", critical: false },
   { name: "get-program-draft", category: "utility", critical: false },
   { name: "save-program-draft", category: "utility", critical: false },
   { name: "chat-visitor-thread", category: "utility", critical: false },
