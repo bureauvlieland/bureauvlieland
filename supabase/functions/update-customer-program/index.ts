@@ -36,6 +36,12 @@ interface PendingChange {
   dayIndex?: number;
   preferredTime?: string | null;
   notes?: string;
+  /**
+   * Gezet door deze functie, niet door de klant: het onderdeel stond al
+   * bevestigd of met een voorstel en is door deze wijziging teruggezet naar
+   * "reactie gevraagd". De partnermail noemt dan het eerdere voorstel.
+   */
+  previousResponse?: { time: string | null; price: number | null };
 }
 
 interface ProgramDetailsUpdate {
@@ -1779,7 +1785,20 @@ Deno.serve(async (req) => {
             })
             .eq("id", item.id);
         } else {
-          // For other changes, reset to pending and update fields
+          // For other changes, reset to pending and update fields. Had de
+          // partner al gereageerd (uit de database, niet uit de request), dan
+          // onthouden we het eerdere voorstel voor de partnermail.
+          const { data: current } = await supabase
+            .from("program_request_items")
+            .select("status, proposed_time, confirmed_time, quoted_price")
+            .eq("id", item.id)
+            .maybeSingle();
+          if (current && ["confirmed", "alternative", "accepted"].includes(current.status)) {
+            change.previousResponse = {
+              time: current.confirmed_time ?? current.proposed_time ?? null,
+              price: current.quoted_price ?? null,
+            };
+          }
           await supabase
             .from("program_request_items")
             .update({
@@ -1821,12 +1840,22 @@ Deno.serve(async (req) => {
       }, {} as Record<string, { providerName: string; email: string; changes: PendingChange[] }>);
 
       // Send emails to affected providers
+      const formatPreviousResponse = (prev: NonNullable<PendingChange["previousResponse"]>): string | null => {
+        const parts: string[] = [];
+        if (prev.time) parts.push(sanitizeHtml(String(prev.time).slice(0, 5)));
+        if (prev.price != null) parts.push(`€ ${Number(prev.price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        return parts.length > 0 ? parts.join(", ") : null;
+      };
       for (const provider of Object.values(changesByProvider)) {
         const changesHtml = provider.changes
           .map((change) => {
             let detail = `<strong>${sanitizeHtml(change.itemName)}</strong>: ${changeTypeLabels[change.type]}`;
             if (change.oldValue && change.newValue) {
               detail += ` (${sanitizeHtml(change.oldValue)} → ${sanitizeHtml(change.newValue)})`;
+            }
+            if (change.previousResponse) {
+              const prev = formatPreviousResponse(change.previousResponse);
+              detail += `<br><span style="color: #92400e;">${prev ? `Uw eerdere voorstel (${prev}) vervalt. ` : "Uw eerdere reactie vervalt. "}Graag opnieuw reageren in het partnerportaal.</span>`;
             }
             return `<li>${detail}</li>`;
           })

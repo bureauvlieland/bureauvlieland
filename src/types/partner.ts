@@ -1,5 +1,6 @@
 // Partner types for the partner portal
 import type { PartnerInvoiceMailRow, PartnerPurchaseInvoiceRow } from "@/lib/partnerInvoiceStatus";
+import type { PartnerItemChange } from "@/lib/partnerItemChanges";
 
 export interface Partner {
   id: string;
@@ -69,6 +70,8 @@ export interface PartnerItem {
   customer_counter_time: string | null;
   customer_counter_note: string | null;
   customer_counter_at: string | null;
+  /** Wijzigingen van klant of bureau ná de laatste partnerreactie (lib/partnerItemChanges). */
+  changes_since_response?: PartnerItemChange[];
   // Sibling items on same request (for conflict detection)
   sibling_items?: {
     id: string;
