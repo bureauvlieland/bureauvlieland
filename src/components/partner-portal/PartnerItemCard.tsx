@@ -34,7 +34,9 @@ interface PartnerItemCardProps {
 
 export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, invoiceMailHref, onStatusUpdate, showDate = false }: PartnerItemCardProps) => {
   const [busy, setBusy] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Wensen en toelichtingen staan standaard open: de partner moet ze lezen
+  // voordat hij reageert. Inklappen kan met "Minder".
+  const [detailsOpen, setDetailsOpen] = useState(true);
 
   const request = item.program_requests;
   const dates = (request.selected_dates || []) as string[];
