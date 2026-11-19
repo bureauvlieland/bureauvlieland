@@ -7,6 +7,7 @@ import {
   describeQuoteValidity,
   diffInDays,
   firstProgramDate,
+  isProposalExpired,
   isQuoteExpired,
   isQuoteValidUntilDateDisabled,
   startOfDay,
@@ -133,5 +134,23 @@ describe("quoteValidity – datepicker-grenzen", () => {
   it("laat morgen toe als de aankomst al bijna is", () => {
     const arrival = addDaysLocal(today, 1);
     expect(isQuoteValidUntilDateDisabled(addDaysLocal(today, 1), { arrivalDate: arrival, today })).toBe(false);
+  });
+});
+
+describe("isProposalExpired", () => {
+  const today = new Date("2026-11-19T10:00:00");
+
+  it("is verlopen als de offerte nog op akkoord wacht en de datum voorbij is", () => {
+    expect(isProposalExpired("offerte_verstuurd", "2026-11-16", today)).toBe(true);
+  });
+
+  it("telt de einddag zelf nog als geldig", () => {
+    expect(isProposalExpired("offerte_verstuurd", "2026-11-19", today)).toBe(false);
+  });
+
+  it("is nooit verlopen buiten de voorstelfase of zonder datum", () => {
+    expect(isProposalExpired("akkoord_ontvangen", "2026-11-16", today)).toBe(false);
+    expect(isProposalExpired("concept", "2026-11-16", today)).toBe(false);
+    expect(isProposalExpired("offerte_verstuurd", null, today)).toBe(false);
   });
 });

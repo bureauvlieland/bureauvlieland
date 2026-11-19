@@ -1401,6 +1401,65 @@ Deno.serve(async (req) => {
     }
 
     // =============================================
+    // CHECK 9b: Quote expired (valid_until in the past, no customer approval)
+    // =============================================
+    // Het klantportaal toont dan "Voorstel verlopen"; zonder deze taak zag de
+    // admin daar niets van terug zodra de T-3-taak (check 9) was afgevinkt.
+    const todayStr = new Date().toISOString().split("T")[0];
+    const { data: expiredPrograms, error: expiredError } = await supabase
+      .from("program_requests")
+      .select("id, customer_name, customer_company, quote_valid_until")
+      .eq("status", "active")
+      .eq("quote_status", "offerte_verstuurd")
+      .not("quote_valid_until", "is", null)
+      .lt("quote_valid_until", todayStr);
+
+    if (expiredError) {
+      console.error("Error fetching expired quotes:", expiredError);
+    } else {
+      console.log(`Found ${expiredPrograms?.length || 0} expired quotes awaiting approval`);
+
+      for (const prog of expiredPrograms || []) {
+        if (isPaused(prog.id)) { totalSkipped++; continue; }
+        const { data: existingTodo } = await supabase
+          .from("admin_todos")
+          .select("id")
+          .eq("auto_type", "quote_expired")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done")
+          .maybeSingle();
+
+        if (existingTodo) {
+          totalSkipped++;
+          continue;
+        }
+
+        // De T-3-taak is hiermee achterhaald: sluiten zodat er één taak overblijft.
+        await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: new Date().toISOString() })
+          .eq("auto_type", "quote_expiring_soon")
+          .eq("auto_entity_id", prog.id)
+          .neq("status", "done");
+
+        const customerLabel = prog.customer_company || prog.customer_name;
+        const { error: todoError } = await supabase
+          .from("admin_todos")
+          .insert({
+            title: `Offerte ${customerLabel} is verlopen — nieuw voorstel of verlengen`,
+            description: `Geldig t/m ${prog.quote_valid_until}, klant heeft nog geen akkoord gegeven. De klant ziet "Voorstel verlopen" in het portaal. Verleng de geldigheid of stuur een nieuw voorstel.`,
+            priority: "high",
+            status: "todo",
+            related_request_id: prog.id,
+            auto_type: "quote_expired",
+            auto_entity_id: prog.id,
+          });
+
+        if (!todoError) totalCreated++;
+      }
+    }
+
+    // =============================================
     // CHECK 10: Customer status email — Phase B
     // (offerte_verstuurd > N dagen, geen klant-akkoord)
     // =============================================

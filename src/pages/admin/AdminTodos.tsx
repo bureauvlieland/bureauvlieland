@@ -227,6 +227,10 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
     linkLabel: "Bekijk offerte",
   },
+  quote_expired: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Nieuw voorstel",
+  },
   customer_counter_proposal: {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
     linkLabel: "Beoordeel",
@@ -894,6 +898,7 @@ const TakenTab = () => {
     switch (todo.auto_type) {
       // Quote expiry deadlines — show the upcoming deadline
       case "quote_expiring_soon":
+      case "quote_expired":
       case "quote_pending_customer":
         if (anchor.quote_valid_until) {
           return { date: anchor.quote_valid_until, label: "Offerte", isDeadline: true };

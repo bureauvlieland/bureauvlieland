@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { isQuoteExpired } from "@/lib/quoteValidity";
 
 interface ProposalHeroCardProps {
   quoteValidUntil?: string | null;
@@ -40,7 +41,7 @@ export const ProposalHeroCard = ({
   partnerItemCount,
 }: ProposalHeroCardProps) => {
   const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
-  const isExpired = validUntil ? validUntil < new Date() : false;
+  const isExpired = isQuoteExpired(quoteValidUntil);
 
   const scrollToProgram = () => {
     document.getElementById("program")?.scrollIntoView({ behavior: "smooth", block: "start" });

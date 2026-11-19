@@ -26,6 +26,7 @@ export type AutoTodoType =
   | "partner_status_update"
   | "forward_accommodation_quote"
   | "quote_expiring_soon"
+  | "quote_expired"
   | "customer_counter_proposal"
   | "customer_aftersales"
   | "customer_review_low"
@@ -206,6 +207,9 @@ export const autoTodoTitles = {
   quote_expiring_soon: (customerName: string, daysLeft: number) =>
     `Offerte ${customerName} verloopt over ${daysLeft} dagen`,
 
+  quote_expired: (customerName: string) =>
+    `Offerte ${customerName} is verlopen — nieuw voorstel of verlengen`,
+
   customer_counter_proposal: (customerName: string, activityName: string) =>
     `Tegenvoorstel: ${customerName} voor "${activityName}" — beoordelen`,
 };
@@ -340,6 +344,11 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
   },
   quote_expiring_soon: {
     label: "Offerte verloopt",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
+  },
+  quote_expired: {
+    label: "Offerte verlopen",
     color: "text-red-700",
     bgColor: "bg-red-100",
   },

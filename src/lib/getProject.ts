@@ -9,6 +9,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { isProposalExpired } from "@/lib/quoteValidity";
 import {
   getItemSendCounts,
   getProjectPipelineStage,
@@ -51,6 +52,7 @@ type ProgramRow = Pick<
   | "selected_dates"
   | "status"
   | "quote_status"
+  | "quote_valid_until"
   | "terms_accepted_at"
   | "completion_status"
   | "cancelled_at"
@@ -97,6 +99,10 @@ export interface ProjectSummary {
   numberOfPeople: number;
   /** Rauwe offertefase (`program_requests.quote_status`) — nodig voor itemstatus-labels. */
   quoteStatus: string | null;
+  /** Geldig t/m (`program_requests.quote_valid_until`, yyyy-mm-dd). */
+  quoteValidUntil: string | null;
+  /** Voorstel verstuurd maar geldigheid verstreken zonder akkoord. */
+  proposalExpired: boolean;
   /** Handtekening onder de voorwaarden (`program_requests.terms_accepted_at`). */
   termsAcceptedAt: string | null;
 
@@ -146,7 +152,7 @@ export async function listProjectsForWerkbank(opts: {
     .from("program_requests")
     .select(`
       id, reference_number, customer_name, customer_email, customer_phone, customer_company,
-      number_of_people, selected_dates, status, quote_status, terms_accepted_at,
+      number_of_people, selected_dates, status, quote_status, quote_valid_until, terms_accepted_at,
       completion_status, cancelled_at, updated_at, linked_accommodation_id,
       snoozed_until, snoozed_reason, snoozed_at,
       program_request_items(id, status, skip_partner_notification, customer_approved_at, provider_id, block_type, day_index, item_quote_status, updated_at)
@@ -320,6 +326,8 @@ export async function listProjectsForWerkbank(opts: {
         : [],
       numberOfPeople: p.number_of_people ?? 0,
       quoteStatus: p.quote_status ?? null,
+      quoteValidUntil: p.quote_valid_until ?? null,
+      proposalExpired: isProposalExpired(p.quote_status, p.quote_valid_until),
       termsAcceptedAt: p.terms_accepted_at ?? null,
 
       pipeline: overallPipeline,

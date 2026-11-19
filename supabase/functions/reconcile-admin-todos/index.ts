@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -373,6 +373,18 @@ Deno.serve(async (req) => {
             break;
           }
           if (q.status !== "pending") markClosed(t.id, type);
+          break;
+        }
+        case "quote_expired": {
+          // Klaar zodra de offerte niet meer op akkoord wacht, of de admin de
+          // geldigheid weer in de toekomst heeft gezet (verlengd / nieuw voorstel).
+          if (!req) break;
+          const today = new Date().toISOString().slice(0, 10);
+          const stillExpired =
+            req.quote_status === "offerte_verstuurd" &&
+            !!req.quote_valid_until &&
+            String(req.quote_valid_until).slice(0, 10) < today;
+          if (!stillExpired) markClosed(t.id, type);
           break;
         }
         case "quote_pending_customer": {

@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getDerivedStatus, type DerivedStatus } from "@/lib/projectStatus";
+import { isProposalExpired } from "@/lib/quoteValidity";
 
 export type RowKind = "programma" | "logies" | "combi" | "catering";
 
@@ -31,6 +32,8 @@ export interface OverviewRow {
   quoteStatus?: string | null;
   /** Verloopdatum van de offerte (quote_valid_until). */
   quoteValidUntil?: Date | null;
+  /** Waar als het klantvoorstel nog op akkoord wacht maar de geldigheid verstreken is. */
+  proposalExpired?: boolean;
   /** Doorverwezen naar een partner (bruiloft, docs/plan-bruiloftsdoorverwijzingen.md); alleen voor projecten. */
   referral?: OverviewReferral | null;
 }
@@ -177,6 +180,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
         snoozedUntil: toDate((program as any)?.snoozed_until ?? null),
         quoteStatus: (program as any)?.quote_status ?? null,
         quoteValidUntil: toDate((program as any)?.quote_valid_until ?? null),
+        proposalExpired: isProposalExpired((program as any)?.quote_status, (program as any)?.quote_valid_until),
         referral: program ? referralByRequest.get(program.id) ?? null : null,
       });
 
@@ -247,6 +251,7 @@ export async function fetchProjectsOverview({ logiesView = false }: FetchOptions
       snoozedUntil: toDate((prog as any).snoozed_until ?? null),
       quoteStatus: prog.quote_status ?? null,
       quoteValidUntil: toDate((prog as any).quote_valid_until ?? null),
+      proposalExpired: isProposalExpired(prog.quote_status, (prog as any).quote_valid_until),
       referral: referralByRequest.get(prog.id) ?? null,
     });
 

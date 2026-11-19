@@ -28,6 +28,7 @@ export default function AdminProjectsOverview() {
   const typeFilter = (params.get("type") as RowKind | "all") ?? "all";
   const archive = params.get("archief") === "1";
   const autoOnly = params.get("auto") === "1";
+  const expiredOnly = params.get("verlopen") === "1";
   const referredOnly = params.get("doorverwezen") === "1";
 
   const setParam = (key: string, value: string | null) => {
@@ -60,6 +61,7 @@ export default function AdminProjectsOverview() {
       }
       if (typeFilter !== "all" && r.kind !== typeFilter) return false;
       if (autoOnly && !r.autoClosed) return false;
+      if (expiredOnly && !r.proposalExpired) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const hay = [
@@ -73,10 +75,15 @@ export default function AdminProjectsOverview() {
     });
   };
 
-  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly, referredOnly]);
-  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly, referredOnly]);
+  const visibleProjects = useMemo(() => filterRows(projectRows), [projectRows, archive, typeFilter, search, autoOnly, expiredOnly, referredOnly]);
+  const visibleLogies = useMemo(() => filterRows(logiesRows), [logiesRows, archive, typeFilter, search, autoOnly, expiredOnly, referredOnly]);
   const autoCount = useMemo(
     () => (tab === "logies" ? logiesRows : projectRows)?.filter(r => r.autoClosed).length ?? 0,
+    [tab, projectRows, logiesRows],
+  );
+
+  const expiredCount = useMemo(
+    () => (tab === "logies" ? logiesRows : projectRows)?.filter(r => r.proposalExpired).length ?? 0,
     [tab, projectRows, logiesRows],
   );
 
@@ -183,6 +190,23 @@ export default function AdminProjectsOverview() {
                         autoOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground",
                       )}>
                         {autoCount}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={expiredOnly ? "default" : "outline"}
+                    onClick={() => setParam("verlopen", expiredOnly ? null : "1")}
+                    className={cn("gap-1.5", !expiredOnly && expiredCount > 0 && "border-red-300 text-red-700 hover:bg-red-50")}
+                    title="Voorstellen waarvan de geldigheid is verstreken terwijl de klant nog niet akkoord is"
+                  >
+                    Verlopen voorstel
+                    {expiredCount > 0 && (
+                      <span className={cn(
+                        "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                        expiredOnly ? "bg-primary-foreground/20 text-primary-foreground" : "bg-red-100 text-red-700",
+                      )}>
+                        {expiredCount}
                       </span>
                     )}
                   </Button>

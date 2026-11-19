@@ -85,6 +85,7 @@ export const REMINDER_TYPES_GUARDED_BY_COOLDOWN: ReadonlySet<string> = new Set([
   "customer_status_email_due",
   "customer_status_update_due",
   "quote_expiring_soon",
+  "quote_expired",
   "terms_reminder",
 ]);
 
@@ -118,6 +119,7 @@ export const REFERRAL_PAUSED_AUTO_TYPES: ReadonlySet<string> = new Set([
   "post_execution_invoice_check",
   "quote_expired_partner",
   "quote_expiring_soon",
+  "quote_expired",
   "quote_headcount_pending_partner",
   "quote_pending_customer",
   "quote_pending_partner",
