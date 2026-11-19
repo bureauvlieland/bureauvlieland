@@ -43,6 +43,8 @@ interface PartnerItemSheetProps {
   onClose: () => void;
   onStatusUpdate: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string, proposedTime?: string, proposedDate?: string) => Promise<boolean>;
   onRegisterInvoice: () => void;
+  /** Staat deze link, dan mailt de partner zijn pdf (knop "Factuur mailen") in plaats van te registreren. */
+  invoiceMailHref?: string | null;
   commissionPercentage: number;
 }
 
@@ -59,7 +61,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   workshop: "Workshop",
 };
 
-export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegisterInvoice }: PartnerItemSheetProps) => {
+export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegisterInvoice, invoiceMailHref }: PartnerItemSheetProps) => {
   const { demo } = usePartnerContext();
   const isDemo = Boolean(demo);
   const [responseType, setResponseType] = useState<ResponseType>("confirmed");
@@ -677,7 +679,15 @@ export const PartnerItemSheet = ({ item, isOpen, onClose, onStatusUpdate, onRegi
                   Markeer als uitgevoerd
                 </Button>
               )}
-              {canInvoice && (
+              {canInvoice && invoiceMailHref && (
+                <Button asChild>
+                  <a href={invoiceMailHref}>
+                    <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Factuur mailen
+                  </a>
+                </Button>
+              )}
+              {canInvoice && !invoiceMailHref && (
                 <Button onClick={onRegisterInvoice}>
                   <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
                   Factuur registreren

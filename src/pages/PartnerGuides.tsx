@@ -327,7 +327,7 @@ export const PartnerGuidesContent = () => {
               <Steps
                 items={[
                   <>
-                    Registreer uw factuur onder Facturatie met de pdf, of mail de pdf naar <strong>{PURCHASE_INVOICE_INBOX}</strong>.
+                    Mail de pdf van uw factuur naar <strong>{PURCHASE_INVOICE_INBOX}</strong>, met ons referentienummer erop (knop Factuur mailen onder Facturatie).
                   </>,
                   "Bureau Vlieland factureert de klant en stuurt u een commissiefactuur.",
                 ]}
@@ -350,12 +350,12 @@ export const PartnerGuidesContent = () => {
         },
         {
           id: "registreren",
-          question: "Een factuur registreren",
+          question: "Een factuur sturen",
           answer: (
             <>
-              <Steps items={["Ga naar Facturatie, tabblad Nog te factureren.", "Kies bij het project Factuur registreren; meerdere onderdelen van één project gaan op één verzamelfactuur.", "Vul het factuurnummer, het bedrag incl. btw en de datum in en voeg de pdf toe.", "Heeft u de factuur al gemaild, kies dan Gefactureerd via e-mail."]} />
+              <Steps items={["Ga naar Facturatie, tabblad Nog te factureren.", "Maak één factuur per project, met ons referentienummer (BV-…) erop.", `Kies bij het project Factuur mailen en voeg de pdf toe; de mail gaat naar ${PURCHASE_INVOICE_INBOX}. U hoeft geen bedrag of nummer in te vullen.`, "Bij het project ziet u daarna of de factuur is ontvangen, verwerkt en betaald."]} />
               <Notice tone="info" title="Tip">
-                <p>Vermeld het referentienummer van het project op uw factuur.</p>
+                <p>Mail de factuur als losse pdf-bijlage, niet als tekst in de mail of als foto.</p>
               </Notice>
             </>
           ),

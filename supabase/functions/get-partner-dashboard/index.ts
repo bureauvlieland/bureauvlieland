@@ -440,6 +440,97 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Facturen en inboxmails van deze partner, voor de status per project op
+    // "Nog te factureren" (plan-inkoopfacturen-via-inbox.md, §3.1): de
+    // partner mailt de pdf en ziet hier of hij is ontvangen, verwerkt en
+    // betaald. Mails tellen op afzendadres (partner- of contactadres); het
+    // project herkennen we aan ons referentienummer in onderwerp, tekst of
+    // scan. Alleen het laatste half jaar.
+    const sinceIso = new Date(now.getTime() - 183 * 24 * 60 * 60 * 1000).toISOString();
+    let purchaseInvoices: Array<{
+      id: string;
+      request_ids: string[];
+      invoice_number: string | null;
+      invoice_date: string | null;
+      amount_incl_vat: number | null;
+      status: string;
+      paid_at: string | null;
+      created_at: string;
+    }> = [];
+    let invoiceMails: Array<{
+      id: string;
+      received_at: string;
+      status: string;
+      scan_status: string | null;
+      reference_numbers: string[];
+      processed_invoice_id: string | null;
+    }> = [];
+    try {
+      const { data: invRows } = await supabase
+        .from("partner_purchase_invoices")
+        .select("id, request_id, invoice_number, invoice_date, amount_incl_vat, status, paid_at, created_at")
+        .eq("partner_id", partner.id)
+        .is("refund_pending_at", null)
+        .gte("created_at", sinceIso);
+      const invList = (invRows ?? []) as Array<{ id: string; request_id: string | null; invoice_number: string | null; invoice_date: string | null; amount_incl_vat: number | null; status: string; paid_at: string | null; created_at: string }>;
+      const lineRequestIds = new Map<string, Set<string>>();
+      if (invList.length > 0) {
+        const { data: lineRows } = await supabase
+          .from("purchase_invoice_lines")
+          .select("invoice_id, request_id")
+          .in("invoice_id", invList.map((r) => r.id))
+          .not("request_id", "is", null);
+        for (const l of (lineRows ?? []) as Array<{ invoice_id: string; request_id: string }>) {
+          const set = lineRequestIds.get(l.invoice_id) ?? new Set<string>();
+          set.add(l.request_id);
+          lineRequestIds.set(l.invoice_id, set);
+        }
+      }
+      purchaseInvoices = invList.map((r) => {
+        const ids = lineRequestIds.get(r.id) ?? new Set<string>();
+        if (r.request_id) ids.add(r.request_id);
+        return {
+          id: r.id,
+          request_ids: [...ids],
+          invoice_number: r.invoice_number,
+          invoice_date: r.invoice_date,
+          amount_incl_vat: r.amount_incl_vat == null ? null : Number(r.amount_incl_vat),
+          status: r.status,
+          paid_at: r.paid_at,
+          created_at: r.created_at,
+        };
+      });
+
+      const senderEmails = [partner.email, partner.contact_email]
+        .map((e: string | null) => (e ?? "").trim().toLowerCase())
+        .filter(Boolean);
+      if (senderEmails.length > 0) {
+        const { data: mailRows } = await supabase
+          .from("purchase_invoice_inbox")
+          .select("id, created_at, from_email, subject, body_text, scan_result, scan_status, status, processed_invoice_id")
+          .gte("created_at", sinceIso)
+          .order("created_at", { ascending: false })
+          .limit(200);
+        const refPattern = /\bBV-\d{4}-\d{4}\b/gi;
+        invoiceMails = ((mailRows ?? []) as Array<{ id: string; created_at: string; from_email: string | null; subject: string | null; body_text: string | null; scan_result: unknown; scan_status: string | null; status: string; processed_invoice_id: string | null }>)
+          .filter((m) => senderEmails.includes((m.from_email ?? "").trim().toLowerCase()))
+          .map((m) => {
+            const haystack = [m.subject ?? "", m.body_text ?? "", m.scan_result ? JSON.stringify(m.scan_result) : ""].join("\n");
+            const refs = [...new Set((haystack.match(refPattern) ?? []).map((r) => r.toUpperCase()))];
+            return {
+              id: m.id,
+              received_at: m.created_at,
+              status: m.status,
+              scan_status: m.scan_status,
+              reference_numbers: refs,
+              processed_invoice_id: m.processed_invoice_id,
+            };
+          });
+      }
+    } catch (e) {
+      console.error("invoice status lookup failed:", e);
+    }
+
     // Open commissiefacturen van het bureau aan deze partner (verstuurd of
     // doorgestuurd, nog niet betaald). Partners kunnen commission_invoices
     // niet zelf lezen; dit is de bron voor "commissie open" op het dashboard.
@@ -482,6 +573,8 @@ Deno.serve(async (req) => {
         accommodationQuotes,
         accommodationSummary,
         openCommissionInvoices,
+        purchaseInvoices,
+        invoiceMails,
         previousLastSeenAt,
         changesSinceLastSeen,
       }),

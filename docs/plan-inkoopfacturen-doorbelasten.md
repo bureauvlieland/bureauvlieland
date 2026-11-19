@@ -275,6 +275,30 @@ classificatie. `buildLinesFromScan` noemt zo'n regel "Accommodatie 21%" of
 blijft het "BTW 21%", en een label dat toeristenbelasting noemt wordt
 "Toeristenbelasting".
 
+**Nazorg (17 november 2026), factuur vervangt offerteregel.** Op BV-2606-0004
+moest de factuur van Café Boven (€ 2.000,60) in de plaats komen van
+"Pizza & Borrel … bij Café Boven" (€ 735, op naam van de trattoria) en de
+Fortuna-factuur (€ 507,50) van "Rondleiding Brouwerij Fortuna" (€ 525). Dat
+kon wel, maar was niet te vinden. Drie oorzaken: de matcher kende alleen
+onderdelen van de factuurpartner, dus Café Boven werd een kostenpost; de
+Fortuna-regel kwam via "Orderregels aanmaken" uit de partnerverdeling binnen
+als `legacy` mét onderdeel maar zónder klantregel, en stond daarmee stil
+onder het ingeklapte "Verwerkt (4)" terwijl links "Alle inkoopregels zijn
+verwerkt" stond; en rechts bij het onderdeel ("Werkelijk —") was niets te
+kiezen. Nu: (1) heeft de partner geen eigen onderdeel, dan tellen
+onderdelen mee waarvan de naam de partner noemt (+50, "onderdeelnaam noemt
+“Café Boven”", waarschijnlijk dus niet aangevinkt; test erbij); (2) een
+`legacy`-regel zonder klantregel heet "Verdeeld, nog niet doorbelast" en
+staat links in een waarschuwing met de knop "Doorbelasten"; de schakelaar
+"Offerteprijs houden" neemt zulke regels voortaan ook mee; (3) elk onderdeel
+rechts heeft "Inkoopregel koppelen…" met per factuur "Hele factuur" of losse
+regels (ook regels die nu op een ander onderdeel of een kostenpost staan,
+met "(nu: …)"), en een pill "na bevestigen € …" met wat er dan op het
+onderdeel staat. "Verwerkt" staat open zodra er geen open regels zijn, en de
+lege staat verwijst naar "Wijzig" en "Inkoopregel koppelen". Bevestigen
+loopt ongewijzigd via `apply_purchase_line_charges`; raakt de kostenpost
+Café Boven leeg, dan ruimt die hem op.
+
 ## 1. Hoe het nu werkt
 
 ```

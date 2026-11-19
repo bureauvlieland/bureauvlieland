@@ -25,6 +25,10 @@ import { canPartnerInvoiceItem } from "@/lib/partnerInvoicing";
 import { getPartnerBillableAmount, isPartnerEstimatedAmount } from "@/lib/partnerBillableAmount";
 import { defaultBilledToForProject, isCustomerBilled } from "@/lib/invoiceBilledTo";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
+import { usePartnerInvoiceRoute } from "@/hooks/usePartnerInvoiceRoute";
+import { InvoiceMailButton } from "@/components/partner-portal/InvoiceMailButton";
+import { buildInvoiceMailto, invoiceMailInputForAccommodation, invoiceMailInputForItems } from "@/lib/partnerInvoiceMail";
+import { partnerInvoiceStatusForProject, unmatchedOpenMails } from "@/lib/partnerInvoiceStatus";
 import { formatEuro } from "@/lib/formatEuro";
 
 /**
@@ -76,6 +80,9 @@ const PartnerFinanceContent = () => {
   const [collectiveRequestId, setCollectiveRequestId] = useState<string | null>(null);
   const [collectiveInitialIds, setCollectiveInitialIds] = useState<string[]>([]);
   const [collectiveMode, setCollectiveMode] = useState<"upload" | "email">("upload");
+  // Standaard mailt de partner zijn pdf (plan-inkoopfacturen-via-inbox.md);
+  // de registratiedialogen staan alleen nog achter de noodrem-instelling.
+  const invoiceRoute = usePartnerInvoiceRoute();
   const { getSetting } = useAppSettings();
   const bureauDetails = {
     companyName: getSetting<string>("bureau_company_name", "Bureau Vlieland"),
@@ -206,6 +213,15 @@ const PartnerFinanceContent = () => {
     }, {}),
   );
 
+  const purchaseInvoices = data.purchaseInvoices ?? [];
+  const invoiceMails = data.invoiceMails ?? [];
+  const openUnmatchedMails = unmatchedOpenMails(invoiceMails, projectGroups.map(([, items]) => items[0].program_requests.reference_number));
+  const statusPill = (status: ReturnType<typeof partnerInvoiceStatusForProject>) => (
+    <Pill tone={status.tone} size="sm">
+      {status.label}
+    </Pill>
+  );
+
   const openCollective = (requestId: string, items: PartnerItem[], mode: "upload" | "email") => {
     setCollectiveMode(mode);
     setCollectiveRequestId(requestId);
@@ -259,22 +275,43 @@ const PartnerFinanceContent = () => {
       {activeTab === "to-invoice" && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Per project één factuur; de pdf gaat direct naar de boekhouding.</p>
+            <p className="text-sm text-muted-foreground">{invoiceRoute === "mail" ? "Per project één factuur; mail de pdf en wij doen de rest." : "Per project één factuur; de pdf gaat direct naar de boekhouding."}</p>
             <ExportInvoicesButton items={toBeInvoicedItems} accommodationQuotes={toBeInvoicedAccommodations} variant="to-invoice" />
           </div>
           {toBeInvoicedCount === 0 ? (
             <EmptyState icon={<CheckCircle2 />} title="Alles is gefactureerd" description="Er staat niets meer open om te factureren." />
           ) : (
             <>
-              <Notice tone="info" title="Mailen kan ook">
-                <p>
-                  Stuur uw factuur naar{" "}
-                  <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
-                    {PURCHASE_INVOICE_INBOX}
-                  </a>
-                  . Bureau Vlieland leest de pdf in en koppelt hem aan uw project.
-                </p>
-              </Notice>
+              {invoiceRoute === "mail" ? (
+                <Notice tone="info" title="Mail de pdf van uw factuur">
+                  <p>
+                    Stuur de pdf naar{" "}
+                    <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
+                      {PURCHASE_INVOICE_INBOX}
+                    </a>
+                    , met ons referentienummer (BV-…) erop. U hoeft niets in te vullen: de knop &ldquo;Factuur mailen&rdquo; zet het
+                    nummer en de onderdelen alvast in de mail. Binnen een werkdag ziet u hier dat de factuur is ontvangen.
+                  </p>
+                </Notice>
+              ) : (
+                <Notice tone="info" title="Mailen kan ook">
+                  <p>
+                    Stuur uw factuur naar{" "}
+                    <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
+                      {PURCHASE_INVOICE_INBOX}
+                    </a>
+                    . Bureau Vlieland leest de pdf in en koppelt hem aan uw project.
+                  </p>
+                </Notice>
+              )}
+              {invoiceRoute === "mail" && openUnmatchedMails.length > 0 && (
+                <Notice tone="info" title={openUnmatchedMails.length === 1 ? "Uw mail is ontvangen" : "Uw mails zijn ontvangen"}>
+                  <p>
+                    {openUnmatchedMails.map((m) => format(parseISO(m.received_at), "d MMMM", { locale: nl })).join(", ")}: ontvangen, wordt verwerkt. Zet ons
+                    referentienummer op de factuur, dan ziet u de status bij het project.
+                  </p>
+                </Notice>
+              )}
 
               {projectGroups.map(([requestId, items]) => {
                 const project = items[0].program_requests;
@@ -316,16 +353,23 @@ const PartnerFinanceContent = () => {
                         </li>
                       ))}
                     </ul>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openCollective(requestId, items, "email")} disabled={isDemo}>
-                        <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                        Gefactureerd via e-mail
-                      </Button>
-                      <Button size="sm" onClick={() => openCollective(requestId, items, "upload")} disabled={isDemo}>
-                        <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                        {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
-                      </Button>
-                    </div>
+                    {invoiceRoute === "mail" ? (
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {statusPill(partnerInvoiceStatusForProject({ requestId, referenceNumber: project.reference_number, invoices: purchaseInvoices, mails: invoiceMails }))}
+                        <InvoiceMailButton href={buildInvoiceMailto(invoiceMailInputForItems(data.partner.name, items))} />
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openCollective(requestId, items, "email")} disabled={isDemo}>
+                          <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                          Gefactureerd via e-mail
+                        </Button>
+                        <Button size="sm" onClick={() => openCollective(requestId, items, "upload")} disabled={isDemo}>
+                          <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                          {items.length > 1 ? "Verzamelfactuur registreren" : "Factuur registreren"}
+                        </Button>
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -340,10 +384,14 @@ const PartnerFinanceContent = () => {
                   amountLabel="offertebedrag"
                   note={q.price_total ? <p className="text-xs text-muted-foreground">verwachte commissie {formatEuro(expectedAccommodationCommission(q))}</p> : undefined}
                   actions={
-                    <Button size="sm" onClick={() => setInvoiceTarget(accommodationTarget(q))} disabled={isDemo || !partnerToken}>
-                      <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
-                      Factuur registreren
-                    </Button>
+                    invoiceRoute === "mail" ? (
+                      <InvoiceMailButton href={buildInvoiceMailto(invoiceMailInputForAccommodation(data.partner.name, q))} />
+                    ) : (
+                      <Button size="sm" onClick={() => setInvoiceTarget(accommodationTarget(q))} disabled={isDemo || !partnerToken}>
+                        <Receipt className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                        Factuur registreren
+                      </Button>
+                    )
                   }
                 />
               ))}

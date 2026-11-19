@@ -26,6 +26,40 @@ portaal en de edge function `register-partner-invoice` gaan daarna weg.
 
 Vier fasen, circa 4 bouwdagen. Fase 0 (bugfix en correctie) is vandaag gedaan.
 
+## Voortgang
+
+**Fase 1 (17 november 2026), portaal.** Het partnerportaal vraagt om een
+pdf, niet om cijfers. Op Facturatie, "Nog te factureren", staat per project
+de knop **Factuur mailen** (`InvoiceMailButton`, `buildInvoiceMailto` in
+`src/lib/partnerInvoiceMail.ts`, met tests): een `mailto:` naar de
+inkoop-inbox met onderwerp "Factuur [partner] voor [BV-nummer]" en in de
+tekst referentie, programma met datum, "gericht aan Bureau Vlieland" of
+"betaald door de gast" (uit `defaultBilledToForProject`) en de onderdelen
+met hun prijsopgave. Dezelfde knop staat op de onderdeelkaart, in de
+onderdeelsheet (prop `invoiceMailHref`, één mail per project met alle te
+factureren onderdelen), op de logieskaart en in de logiesofferte-sheet.
+Per project toont het portaal de status uit §3.1
+(`partnerInvoiceStatusForProject` in `src/lib/partnerInvoiceStatus.ts`,
+met tests): "Nog niet ontvangen", "Ontvangen op …, wordt verwerkt",
+"Uw mail van … bevatte geen leesbare pdf", "Verwerkt: factuur …, € …",
+"Betaald op …". De bron is `get-partner-dashboard`, dat nu
+`purchaseInvoices` (facturen van de partner met de projecten van kop en
+regels) en `invoiceMails` (inboxmails van het partner- of contactadres,
+met de BV-nummers uit onderwerp, tekst en scan) meestuurt, laatste half
+jaar. Een open mail zonder herkenbaar nummer staat als "Uw mail is
+ontvangen" boven de lijst.
+
+De registratiedialogen zijn niet weg maar staan achter de instelling
+`partner_invoice_registration_enabled` (migratie `20261117150000`,
+standaard uit, `usePartnerInvoiceRoute`): aan zet de oude knoppen terug
+als noodrem. Teksten mee: handleiding "Een factuur sturen", werkbank
+("mail de pdf van uw factuur"), logieskaart en -sheet, en de
+herinneringsmails T+3 en T+7 (templates in dezelfde migratie, fallback in
+`check-pending-items`): mail de pdf naar de inbox met onze referentie
+erop, knop "Status bekijken in het portaal". Nog niet gedaan uit fase 1:
+niets; fase 2 (afzender herkennen, ontvangstbevestiging, nummer uit het
+onderwerp, directe allocatie bij één onderdeel) volgt.
+
 ## 1. Wat er misging bij T-261029
 
 | Stap | Bedrag | Waar |

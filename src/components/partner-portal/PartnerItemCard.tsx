@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { ArrowLeftRight, Check, ChevronDown, ChevronUp, Clock, FileText, Loader2, MapPin, Play, Users } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, ChevronUp, Clock, FileText, Loader2, Mail, MapPin, Play, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice, Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
@@ -25,12 +25,14 @@ interface PartnerItemCardProps {
   /** Opent de sheet, voor de reactie of de details. */
   onOpen: () => void;
   onRegisterInvoice: () => void;
+  /** Staat deze link, dan mailt de partner zijn pdf (knop "Factuur mailen") in plaats van te registreren. */
+  invoiceMailHref?: string | null;
   /** "Markeer uitgevoerd" en "Akkoord met nieuwe prijs" zijn één klik en blijven op de kaart. */
   onStatusUpdate: (status: string, note?: string, quotedPrice?: number, quotedNotes?: string) => Promise<boolean>;
   showDate?: boolean;
 }
 
-export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdate, showDate = false }: PartnerItemCardProps) => {
+export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, invoiceMailHref, onStatusUpdate, showDate = false }: PartnerItemCardProps) => {
   const [busy, setBusy] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -215,7 +217,15 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, onStatusUpdat
                 Bevestigen
               </Button>
             )}
-            {!canRespond && canInvoice && (
+            {!canRespond && canInvoice && invoiceMailHref && (
+              <Button asChild size="sm">
+                <a href={invoiceMailHref}>
+                  <Mail className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  Factuur mailen
+                </a>
+              </Button>
+            )}
+            {!canRespond && canInvoice && !invoiceMailHref && (
               <Button size="sm" onClick={onRegisterInvoice}>
                 <FileText className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Factuur registreren

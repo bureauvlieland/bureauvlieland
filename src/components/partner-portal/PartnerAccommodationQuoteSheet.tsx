@@ -28,6 +28,9 @@ import { needsHeadcountConfirmation, parseHeadcountProposal, recalculatePricePer
 import { extractEdgeError } from "@/lib/edgeFunctionError";
 import { PURCHASE_INVOICE_INBOX } from "@/lib/bureauContact";
 import { usePartnerContext } from "@/lib/partnerPortalContext";
+import { usePartnerInvoiceRoute } from "@/hooks/usePartnerInvoiceRoute";
+import { InvoiceMailButton } from "./InvoiceMailButton";
+import { buildInvoiceMailto } from "@/lib/partnerInvoiceMail";
 import { SheetSection } from "./SheetSection";
 
 /**
@@ -62,6 +65,8 @@ interface AccommodationRequest {
   created_at: string;
   linked_program_id?: string | null;
   invoicingMode?: string | null;
+  reference_number?: string | null;
+  accommodation_billed_directly?: boolean;
 }
 
 interface BillingDetails {
@@ -168,6 +173,7 @@ export const PartnerAccommodationQuoteSheet = ({
   const { toast } = useToast();
   const { demo } = usePartnerContext();
   const isDemo = Boolean(demo);
+  const invoiceRoute = usePartnerInvoiceRoute();
   const requestBoardPreference = (request as { board_preference?: string | null } | null)?.board_preference ?? null;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
@@ -590,7 +596,7 @@ export const PartnerAccommodationQuoteSheet = ({
                       <a href={`mailto:${PURCHASE_INVOICE_INBOX}`} className="font-medium underline">
                         {PURCHASE_INVOICE_INBOX}
                       </a>
-                      , of u registreert hem hier met de pdf.
+                      {invoiceRoute === "mail" ? ", met ons referentienummer erop. U hoeft niets in te vullen." : ", of u registreert hem hier met de pdf."}
                     </li>
                     <li>Bureau Vlieland factureert de klant{effectiveInvoicingMode === "bureau_central" ? ` en stuurt u een commissiefactuur (${existingQuote?.commission_percentage ?? 10}%)` : " en verrekent de commissie"}.</li>
                   </ol>
@@ -830,7 +836,21 @@ export const PartnerAccommodationQuoteSheet = ({
                   Nieuw aantal bevestigen
                 </Button>
               )}
-              {isSelected && existingQuote && !existingQuote.invoiced_number && !headcountPending && (
+              {isSelected && existingQuote && !existingQuote.invoiced_number && !headcountPending && invoiceRoute === "mail" && (
+                <InvoiceMailButton
+                  size="default"
+                  href={buildInvoiceMailto({
+                    partnerName: partnerName || existingQuote.accommodation_name,
+                    referenceNumber: request.reference_number ?? null,
+                    customerLabel,
+                    dates: [request.arrival_date, request.departure_date],
+                    billedTo: request.accommodation_billed_directly || effectiveInvoicingMode === "partner_direct" ? "customer" : "bureau",
+                    lines: [{ name: existingQuote.accommodation_name, amountInclVat: existingQuote.price_total || null }],
+                    kind: "accommodation",
+                  })}
+                />
+              )}
+              {isSelected && existingQuote && !existingQuote.invoiced_number && !headcountPending && invoiceRoute === "register" && (
                 <Button
                   type="button"
                   disabled={isDemo}

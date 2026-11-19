@@ -144,6 +144,31 @@ describe("voorstellen per regel", () => {
     if (m.proposal.kind === "item") expect(m.proposal.itemId).toBe("b");
   });
 
+  it("stelt een onderdeel voor dat de factuurpartner in zijn naam noemt", () => {
+    // Café Boven stuurt de factuur; het onderdeel staat op naam van de trattoria.
+    const invoice: MatchableInvoice = { ...bolder, id: "inv-cb", partnerId: "cafe-boven", partnerName: "Café Boven", amountInclVat: 2000.6 };
+    const items = [
+      item({ id: "pizza", name: "Pizza & Borrel – “La Dolce Serata” bij Café Boven", providerId: "trattoria-oliva", quotedInclVat: 735 }),
+      item({ id: "fortuna", name: "Rondleiding Brouwerij Fortuna", providerId: "fortuna", quotedInclVat: 525 }),
+    ];
+    const matches = matchPurchaseLines({
+      lines: [
+        line({ id: "l0", invoiceId: "inv-cb", description: "BTW 0%", amountInclVat: 47.5, vatRate: 0 }),
+        line({ id: "l9", invoiceId: "inv-cb", description: "BTW 9%", amountInclVat: 976.35 }),
+      ],
+      invoices: [invoice],
+      items,
+    });
+    for (const m of matches) {
+      expect(m.proposal.kind).toBe("item");
+      if (m.proposal.kind === "item") {
+        expect(m.proposal.itemId).toBe("pizza");
+        expect(m.proposal.confidence).toBe("likely");
+        expect(m.proposal.reasons.join(" ")).toContain("noemt “Café Boven”");
+      }
+    }
+  });
+
   it("stelt een nieuwe kostenpost voor bij een onderdeel van een andere partner", () => {
     const [m] = matchPurchaseLines({
       lines: [line({ id: "l", description: "Bagagevervoer groepstarief", amountInclVat: 765 })],
