@@ -10,7 +10,7 @@
  * blijven de bron voor de bedragen.
  */
 
-import type { ProjectInvoiceSpec, SpecLine, SpecVatGroup } from "@/lib/projectInvoiceSpec";
+import type { ProjectInvoiceSpec, SpecLine, SpecSubLine, SpecVatGroup } from "@/lib/projectInvoiceSpec";
 import { shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 
@@ -64,45 +64,55 @@ const kindForSpecLine = (line: SpecLine): StoredLineKind => {
   }
 };
 
+/** Eén opgeslagen rij voor een specificatieregel (zonder haar subregels). */
+export function storedRowForSpecLine(line: SpecLine, section: string, sortOrder: number): StoredInvoiceLineInput {
+  const quantity = line.quantity > 0 ? line.quantity : 1;
+  return {
+    sort_order: sortOrder,
+    kind: kindForSpecLine(line),
+    section,
+    item_id: line.itemId ?? null,
+    description: line.description,
+    sub_description: line.subDescription ?? null,
+    quantity,
+    quantity_label: line.quantityLabel || null,
+    unit_price_excl_vat: round4(line.amountExclVat / quantity),
+    unit_suffix: line.unitSuffix,
+    vat_rate: line.vatRate,
+    amount_excl_vat: round2(line.amountExclVat),
+    vat_amount: round2(line.vatAmount),
+    amount_incl_vat: round2(line.amountInclVat),
+  };
+}
+
+/** Eén opgeslagen subrij (klantregel) onder een specificatieregel. */
+export function storedRowForSubLine(line: SpecLine, sub: SpecSubLine, section: string, sortOrder: number): StoredInvoiceLineInput {
+  return {
+    sort_order: sortOrder,
+    kind: "sub",
+    section,
+    item_id: line.itemId ?? null,
+    description: sub.description,
+    sub_description: null,
+    quantity: sub.quantity > 0 ? sub.quantity : 1,
+    quantity_label: null,
+    unit_price_excl_vat: round4(sub.unitPriceExclVat),
+    unit_suffix: "",
+    vat_rate: sub.vatRate,
+    amount_excl_vat: round2(sub.amountExclVat),
+    vat_amount: round2(sub.vatAmount),
+    amount_incl_vat: round2(sub.amountInclVat),
+  };
+}
+
 /** Alle regels van de specificatie, in factuurvolgorde (secties). */
 export function specToStoredLines(spec: ProjectInvoiceSpec): StoredInvoiceLineInput[] {
   const rows: StoredInvoiceLineInput[] = [];
   for (const section of spec.sections) {
     for (const line of section.lines) {
-      const quantity = line.quantity > 0 ? line.quantity : 1;
-      rows.push({
-        sort_order: rows.length,
-        kind: kindForSpecLine(line),
-        section: section.label,
-        item_id: line.itemId ?? null,
-        description: line.description,
-        sub_description: line.subDescription ?? null,
-        quantity,
-        quantity_label: line.quantityLabel || null,
-        unit_price_excl_vat: round4(line.amountExclVat / quantity),
-        unit_suffix: line.unitSuffix,
-        vat_rate: line.vatRate,
-        amount_excl_vat: round2(line.amountExclVat),
-        vat_amount: round2(line.vatAmount),
-        amount_incl_vat: round2(line.amountInclVat),
-      });
+      rows.push(storedRowForSpecLine(line, section.label, rows.length));
       for (const sub of line.subLines ?? []) {
-        rows.push({
-          sort_order: rows.length,
-          kind: "sub",
-          section: section.label,
-          item_id: line.itemId ?? null,
-          description: sub.description,
-          sub_description: null,
-          quantity: sub.quantity > 0 ? sub.quantity : 1,
-          quantity_label: null,
-          unit_price_excl_vat: round4(sub.unitPriceExclVat),
-          unit_suffix: "",
-          vat_rate: sub.vatRate,
-          amount_excl_vat: round2(sub.amountExclVat),
-          vat_amount: round2(sub.vatAmount),
-          amount_incl_vat: round2(sub.amountInclVat),
-        });
+        rows.push(storedRowForSubLine(line, sub, section.label, rows.length));
       }
     }
   }
