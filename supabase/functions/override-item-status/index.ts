@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
 
     await supabase.from("program_request_history").insert({
       request_id: item.request_id,
+      item_id,
       action: `Admin override: item "${item.block_name}" handmatig op ${new_status}`,
       actor: "admin",
       actor_name: user.email ?? "Admin",

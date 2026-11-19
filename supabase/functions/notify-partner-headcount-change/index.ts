@@ -148,6 +148,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // Verloop in het partnerportaal: de prijs is herberekend op het nieuwe aantal.
+    const { error: histErr } = await supabase.from("program_request_history").insert({
+      request_id: item.request_id,
+      item_id,
+      action: "price_recalculated",
+      actor: "admin",
+      actor_name: "Bureau Vlieland",
+      old_value: { quoted_price: oldTotal },
+      new_value: { quoted_price: newTotal, people: effectivePeople },
+      notes: note || null,
+    });
+    if (histErr) console.error("history insert failed:", histErr);
+
     // Bureau items hoeven geen partner-mail
     if (isBureauItem(item)) {
       return new Response(

@@ -509,7 +509,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ---------------- Tijdlijn ----------------
     const partnersOk = (results.partners as PartnerResult[]).filter((p) => p.sent).length;
-    if (actor === "admin") await supabase.from("program_request_history").insert({
+    // Het admin-dialoog (EditProjectDetailsDialog) logt de datumwijziging al bij
+    // het opslaan; dan vullen we die regel aan in plaats van een tweede te maken.
+    let recentAdminRowId: string | null = null;
+    if (actor === "admin") {
+      const { data: recent } = await supabase
+        .from("program_request_history")
+        .select("id, new_value")
+        .eq("request_id", program.id)
+        .eq("action", "dates_changed")
+        .eq("actor", "admin")
+        .gt("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const recentDates = (recent?.new_value as { dates?: string[] } | null)?.dates;
+      if (recent && Array.isArray(recentDates) && recentDates.join(",") === newSorted.join(",")) recentAdminRowId = recent.id;
+    }
+    if (actor === "admin" && recentAdminRowId) await supabase.from("program_request_history").update({
+      notes:
+        `Datums gewijzigd door Bureau Vlieland (${oldLabel} → ${newLabel}). ` +
+        `${partnersOk} partner(s) gevraagd opnieuw te bevestigen` +
+        `${reset_customer_approval ? `; klant gevraagd opnieuw akkoord te geven (${results.customer_items_reset} onderdelen)` : ""}.`,
+    }).eq("id", recentAdminRowId);
+    else if (actor === "admin") await supabase.from("program_request_history").insert({
       request_id: program.id,
       action: "dates_changed",
       actor: "admin",

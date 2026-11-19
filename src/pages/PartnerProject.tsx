@@ -9,6 +9,7 @@ import { PartnerLayout } from "@/components/partner-portal/PartnerLayout";
 import { PartnerPage } from "@/components/partner-portal/PartnerPage";
 import { usePartnerPortal } from "@/hooks/usePartnerPortal";
 import { PartnerItemCard } from "@/components/partner-portal/PartnerItemCard";
+import { PartnerProjectLog } from "@/components/partner-portal/PartnerProjectLog";
 import { DayBar, type DayBarDay, type DayStatus } from "@/components/customer-portal/DayBar";
 import { EmptyState, FactList, Notice, Pill } from "@/components/system";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
@@ -381,6 +382,9 @@ const PartnerProjectContent = ({ mode, projectId }: Props) => {
                     renderItems(days[0].items)
                   )}
                   {id && partnerId && !isDemo && <PartnerPostChargesSection partnerId={partnerId} requestId={id} />}
+                  {id && partnerToken && !isDemo && (
+                    <PartnerProjectLog partnerToken={partnerToken} requestId={id} refreshKey={projectItems.map((i) => `${i.id}:${i.version}:${i.status}`).join(",")} />
+                  )}
                 </>
               )}
             </div>

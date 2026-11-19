@@ -232,6 +232,79 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Wijzigingen ná de partnerreactie (kaart: "Gewijzigd sinds uw reactie").
+    // Alleen voor onderdelen die weer open staan terwijl de partner al eerder
+    // reageerde: de klant (program_request_history) of het bureau
+    // (program_change_log, gepubliceerd) heeft dan iets aangepast en het
+    // onderdeel is teruggezet naar pending. Zonder deze lijst ziet de partner
+    // alleen "reactie gevraagd" en zijn oude voorstel, en niet waarom.
+    type ItemChange = { field: string; old_value: unknown; new_value: unknown; changed_at: string; actor: "customer" | "bureau" };
+    const changesByItem: Record<string, ItemChange[]> = {};
+    const respondedAtByItem: Record<string, string> = {};
+    for (const it of activeItems as any[]) {
+      if (it.status !== "pending" && it.status !== "counter_proposed") continue;
+      const stamps = [it.status_updated_at, it.quoted_at].filter((s: unknown): s is string => typeof s === "string" && s.length > 0).sort();
+      const respondedAt = stamps.at(-1);
+      if (respondedAt) respondedAtByItem[it.id] = respondedAt;
+    }
+    const reopenedIds = Object.keys(respondedAtByItem);
+    if (reopenedIds.length > 0) {
+      const historyActionField: Record<string, string> = {
+        time_changed: "time",
+        day_changed: "day",
+        people_changed: "people",
+        notes_changed: "notes",
+        dates_changed: "dates",
+      };
+      const reopenedRequestIds = [...new Set((activeItems as any[]).filter((i) => respondedAtByItem[i.id]).map((i) => i.request_id))];
+      const earliestResponse = Object.values(respondedAtByItem).sort()[0];
+      const push = (itemId: string, change: ItemChange) => {
+        if (change.changed_at <= respondedAtByItem[itemId]) return;
+        (changesByItem[itemId] ||= []).push(change);
+      };
+      try {
+        const { data: historyRows } = await supabase
+          .from("program_request_history")
+          .select("item_id, request_id, action, actor, old_value, new_value, created_at")
+          .in("request_id", reopenedRequestIds)
+          .in("action", Object.keys(historyActionField))
+          .gt("created_at", earliestResponse)
+          .order("created_at", { ascending: false })
+          .limit(200);
+        for (const r of (historyRows || []) as any[]) {
+          const change: ItemChange = {
+            field: historyActionField[r.action],
+            old_value: r.old_value,
+            new_value: r.new_value,
+            changed_at: r.created_at,
+            actor: r.actor === "customer" ? "customer" : "bureau",
+          };
+          if (r.item_id) {
+            if (respondedAtByItem[r.item_id]) push(r.item_id, change);
+          } else if (r.action === "dates_changed") {
+            // Datumwijziging van het hele programma raakt elk open onderdeel erin.
+            for (const it of activeItems as any[]) {
+              if (it.request_id === r.request_id && respondedAtByItem[it.id]) push(it.id, change);
+            }
+          }
+        }
+        const { data: logRows } = await supabase
+          .from("program_change_log")
+          .select("item_id, field, old_value, new_value, published_at")
+          .in("item_id", reopenedIds)
+          .in("field", ["time", "day", "people", "notes"])
+          .not("published_at", "is", null)
+          .gt("published_at", earliestResponse)
+          .order("published_at", { ascending: false })
+          .limit(200);
+        for (const r of (logRows || []) as any[]) {
+          push(r.item_id, { field: r.field, old_value: r.old_value, new_value: r.new_value, changed_at: r.published_at, actor: "bureau" });
+        }
+      } catch (e) {
+        console.error("changes_since_response failed:", e);
+      }
+    }
+
     // Enrich items with building_blocks descriptions so partner sees same omschrijving as customer
     const blockIds = [...new Set(activeItems.map((i: any) => i.block_id).filter(Boolean))];
     let blockDescMap: Record<string, { short_description: string | null; description: string | null }> = {};
@@ -290,6 +363,7 @@ Deno.serve(async (req) => {
         block_description: blockDescMap[item.block_id]?.description ?? null,
         program_requests: programRequests,
         sibling_items: allRequestItems[item.request_id] || [],
+        changes_since_response: changesByItem[item.id] || [],
       };
     });
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
-import { ArrowLeftRight, Check, ChevronDown, ChevronUp, Clock, FileText, Loader2, Mail, MapPin, Play, Users } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, ChevronUp, Clock, FileText, History, Loader2, Mail, MapPin, Play, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice, Pill } from "@/components/system";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { isConfirmOnlyItem, isInformationalItem, partnerBillingNote } from "@/li
 import { getDisplayLineTotal, getNumberOfDays, hasOpenAdminPriceChange, isPerDayItem, isPerPersonItem } from "@/lib/portalPricing";
 import { formatDurationWindow, formatTimeHHmm } from "@/lib/timeUtils";
 import { formatEuro } from "@/lib/formatEuro";
+import { changesSinceResponse, describePartnerItemChange, describePreviousResponse, partnerRespondedAt } from "@/lib/partnerItemChanges";
 
 /**
  * De onderdeelkaart van de partner (partnerportaal fase 2, regel 3: één
@@ -34,7 +35,9 @@ interface PartnerItemCardProps {
 
 export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, invoiceMailHref, onStatusUpdate, showDate = false }: PartnerItemCardProps) => {
   const [busy, setBusy] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  // Wensen en toelichtingen staan standaard open: de partner moet ze lezen
+  // voordat hij reageert. Inklappen kan met "Minder".
+  const [detailsOpen, setDetailsOpen] = useState(true);
 
   const request = item.program_requests;
   const dates = (request.selected_dates || []) as string[];
@@ -62,6 +65,10 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, invoiceMailHr
   const canInvoice = canPartnerInvoiceItem(item, request);
   const awaitingTerms = isAwaitingInvoicingRelease(item, request);
   const canMarkExecuted = effectiveStatus === "accepted" && !!item.quoted_price;
+  // Teruggezet naar "reactie gevraagd" nadat de partner al reageerde: laat
+  // zien wát er sindsdien veranderde en wat het eerdere voorstel was.
+  const changedSinceResponse = isOpenForResponse ? changesSinceResponse(item.changes_since_response, partnerRespondedAt(item)) : [];
+  const previousResponse = changedSinceResponse.length > 0 ? describePreviousResponse(item, formatEuro) : null;
 
   const adminTotal =
     item.admin_price_override != null
@@ -153,6 +160,19 @@ export const PartnerItemCard = ({ item, onOpen, onRegisterInvoice, invoiceMailHr
           )}
 
           {/* Wat er nu van de partner wordt gevraagd */}
+          {changedSinceResponse.length > 0 && (
+            <Notice tone="warning" className="mt-3" title="Gewijzigd sinds uw reactie" icon={<History className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />}>
+              <ul className="list-disc pl-4">
+                {changedSinceResponse.map((c, i) => (
+                  <li key={`${c.changed_at}-${i}`}>
+                    {describePartnerItemChange(c)}
+                    <span className="text-muted-foreground"> · {c.actor === "customer" ? "klant" : "Bureau Vlieland"}, {format(parseISO(c.changed_at), "d MMM", { locale: nl })}</span>
+                  </li>
+                ))}
+              </ul>
+              {previousResponse && <p className="mt-1">{previousResponse}. Reageer opnieuw op de gewijzigde vraag.</p>}
+            </Notice>
+          )}
           {item.status === "counter_proposed" && (
             <Notice
               tone="warning"
