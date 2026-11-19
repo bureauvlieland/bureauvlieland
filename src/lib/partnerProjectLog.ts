@@ -169,8 +169,6 @@ export function describeLogEntry(e: PartnerLogEntry): string {
     }
     case "partner_dismissed":
       return "U hebt dit onderdeel gesloten zonder factuur";
-    case "auto_closed":
-      return str(nv?.status) === "executed" ? "Automatisch op uitgevoerd gezet na afloop" : "Automatisch afgerond na afloop";
     case "purchase_invoice_registered":
       return "Factuur geregistreerd";
     case "purchase_invoice_deleted":

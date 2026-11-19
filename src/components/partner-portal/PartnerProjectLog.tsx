@@ -57,7 +57,7 @@ export const PartnerProjectLog = ({ partnerToken, requestId, entries: preset, re
     <Collapsible open={open} onOpenChange={setOpen}>
       <section className="rounded-lg border bg-card">
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="flex h-auto w-full items-center justify-between rounded-lg px-4 py-3 text-left font-medium" aria-expanded={open}>
+          <Button variant="ghost" className="flex h-auto w-full items-center justify-between px-4 py-3 text-left font-medium" aria-expanded={open}>
             <span className="flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               Verloop

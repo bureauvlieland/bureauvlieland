@@ -77,8 +77,7 @@ describe("aangevulde logging", () => {
   it("vertaalt de nieuwe acties", () => {
     expect(describeLogEntry(entry({ action: "price_recalculated", actor: "admin", new_value: { quoted_price: 600, people: 12 } }))).toBe("Prijs herberekend op het nieuwe aantal (12 pers.): € 600,00");
     expect(describeLogEntry(entry({ action: "partner_dismissed" }))).toBe("U hebt dit onderdeel gesloten zonder factuur");
-    expect(describeLogEntry(entry({ action: "auto_closed", actor: "system", new_value: { status: "executed" } }))).toBe("Automatisch op uitgevoerd gezet na afloop");
     expect(describeLogEntry(entry({ action: 'Admin override: item "X" handmatig op executed', actor: "admin", new_value: { status: "executed" } }))).toBe('Bureau Vlieland heeft de status handmatig op "gemarkeerd als uitgevoerd" gezet');
-    expect(isPartnerVisibleHistoryRow({ item_id: "item-a", action: "auto_closed" }, own)).toBe(true);
+    expect(isPartnerVisibleHistoryRow({ item_id: "item-a", action: "partner_dismissed" }, own)).toBe(true);
   });
 });

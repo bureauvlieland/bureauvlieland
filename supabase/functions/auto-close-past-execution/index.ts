@@ -169,20 +169,6 @@ export async function runAutoClose(
             })
             .in("id", confirmedOrInform.map((r) => r.id));
           if (uErr) result.errors.push({ project_id: "*", error: `execute no-quote items: ${uErr.message}` });
-          else {
-            const { error: hErr } = await supabase.from("program_request_history").insert(
-              confirmedOrInform.map((r) => ({
-                request_id: r.request_id,
-                item_id: r.id,
-                action: "auto_closed",
-                actor: "system",
-                actor_name: "auto-close-past-execution",
-                old_value: { status: r.status },
-                new_value: { status: "executed" },
-              })),
-            );
-            if (hErr) result.errors.push({ project_id: "*", error: `history no-quote executed: ${hErr.message}` });
-          }
         }
         if (unconfirmed.length > 0) {
           const { error: uErr } = await supabase
@@ -253,21 +239,7 @@ export async function runAutoClose(
         })
         .in("id", confirmable.map((i) => i.id));
       if (uErr) result.errors.push({ project_id: "*", error: `update items: ${uErr.message}` });
-        else {
-          result.items_confirmed = confirmable.length;
-          const { error: hErr } = await supabase.from("program_request_history").insert(
-            confirmable.map((i) => ({
-              request_id: i.request_id,
-              item_id: i.id,
-              action: "auto_closed",
-              actor: "system",
-              actor_name: "auto-close-past-execution",
-              old_value: { status: i.status },
-              new_value: { status: "confirmed" },
-            })),
-          );
-          if (hErr) result.errors.push({ project_id: "*", error: `history auto-confirm: ${hErr.message}` });
-        }
+        else result.items_confirmed = confirmable.length;
       }
       if (markOnly.length > 0) {
         const { error: markErr } = await supabase

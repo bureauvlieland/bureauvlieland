@@ -33,7 +33,6 @@ export const PARTNER_ITEM_ACTIONS = [
   "purchase_invoice_deleted",
   "price_recalculated",
   "partner_dismissed",
-  "auto_closed",
 ] as const;
 
 /** Projectbrede acties (zonder item_id) die de partner raken. */
