@@ -41,6 +41,9 @@ import {
 import { buildProjectInvoiceSpec, scaleVatGroups, type ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
 import { chooseStoredLines, totalsFromStoredLines, type StoredInvoiceLine } from "@/lib/bureauInvoiceLines";
 import { specToCategories, storedLinesToCategories, summaryCategory } from "@/lib/invoiceDisplayLines";
+import { useProforma } from "@/hooks/useProforma";
+import { activeProformaLines } from "@/lib/proforma";
+import { Pill } from "@/components/system";
 import { isFeeExcluded } from "@/lib/excludedFees";
 import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
 import { resolveFeeStructure } from "@/lib/feeEngine";
@@ -481,6 +484,18 @@ const AdminInvoicePreview = () => {
     });
   }, [request, items, linesByItem, vatRateMap, accommodationQuote, accommodationNights, accommodationExtras, settings, activeStructure, revisionBillableTotal]);
 
+  // Fase 1 van docs/plan-proforma-factuur.md: bestaat er een proforma, dan
+  // toont het voorbeeld van een nieuwe eindfactuur haar regels in plaats van
+  // de live specificatie. De totalen blijven uit de berekening komen (de
+  // proforma volgt die in fase 1); registreren bevriest nog de specificatie.
+  const proformaState = useProforma({
+    requestId: request?.id,
+    quoteStatus: (request as unknown as { quote_status?: string | null } | null)?.quote_status,
+    spec,
+    specReady: Boolean(request) && !isLoading && !isAppSettingsLoading,
+  });
+  const proformaLines = useMemo(() => activeProformaLines(proformaState.lines), [proformaState.lines]);
+
   const calculateTotals = () => ({
     coordinationFee: spec?.totals.coordinationFee ?? 0,
     touristTax: spec?.totals.touristTax ?? 0,
@@ -695,8 +710,10 @@ const AdminInvoicePreview = () => {
         ),
       ];
     }
+    if (proformaState.proforma && proformaLines.length > 0) return storedLinesToCategories(proformaLines, formatCurrency);
     return spec ? specToCategories(spec, formatCurrency) : [];
   })();
+  const showsProforma = !isExistingInvoiceView && !isSlotMode && Boolean(proformaState.proforma) && proformaLines.length > 0;
 
   // Regels die bij registreren worden bevroren bij de factuur.
   const linesToStore = isExistingInvoiceView
@@ -827,7 +844,10 @@ const AdminInvoicePreview = () => {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">Factuur Maken</h1>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  Factuur Maken
+                  {showsProforma && <Pill tone="info" title="De regels komen uit de proforma van dit project">Proforma</Pill>}
+                </h1>
                 <p className="text-muted-foreground">
                   {request.customer_name} - {request.reference_number}
                 </p>

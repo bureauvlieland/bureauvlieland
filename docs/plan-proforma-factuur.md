@@ -61,6 +61,57 @@ betaalbatch, partnerportaal, incasso en bankmatching blijven ongemoeid.
 
 Circa 9 bouwdagen in vier fasen, eerst op één testproject.
 
+## Voortgang
+
+**Fase 1 (19 november 2026), de proforma bestaat.** Migratie
+`20261119120000_proforma-fase1.sql`: tabellen `project_proformas` (één
+concept per project, `accepted_at`, status `concept` | `registered`) en
+`project_proforma_lines` (dezelfde kolommen als `bureau_invoice_lines` plus
+`origin`, `line_status`, `line_key`, `replaces_line_id`, `hidden_reason`,
+`purchase_invoice_line_id`, `purchase_invoice_id`, `accommodation_quote_id`,
+`fee_key`, `quote_amount_incl_vat`, `accepted_amount_incl_vat`), met een
+grendel die regels van een geregistreerde proforma bevriest.
+
+Afwijking van hoofdstuk 4: de proforma staat in **eigen tabellen**, niet als
+status `concept` op `bureau_invoices`. Alles wat `bureau_invoices` leest
+(voltooiingsstatus, facturatiepagina, bankmatching, Snelstart, dashboard)
+telt elke rij als geregistreerde factuur; een concept ernaast zou op al die
+plekken een filter vragen, een eigen tabel nergens. De regels hebben wel
+precies de vorm van `bureau_invoice_lines`, zodat voorbeeld, PDF en (fase
+3) registreren dezelfde regels gebruiken; registreren kopieert ze dan naar
+`bureau_invoice_lines` en zet `registered_invoice_id`.
+
+`src/lib/proforma.ts` (met tests): `specToProformaLines` bouwt de regels
+uit `projectInvoiceSpec` met herkomst (`quote_item`, `lodging`, `fee`) en
+de sleutel van de specificatieregel (`item:<id>`, `lodging:<id>`,
+`fee:<key>`, subregels `item:<id>:sub:<klantregel-id>`);
+`planProformaSync` is de volg-logica van 3.4: een regel die nog uit de
+offerte komt (niet vervangen, zonder inkoopbron) volgt de specificatie,
+een verdwenen onderdeel wordt verborgen met "Niet meer in de offerte" en
+komt terug als het weer in de offerte staat, een door de gebruiker
+verborgen regel blijft verborgen maar krijgt wel het nieuwe bedrag, een
+vervangen regel blijft eigenaar van zijn sleutel (geen dubbele regel),
+weggevallen fee- en logiesregels verdwijnen. `accepted_amount_incl_vat`
+wordt nooit bijgewerkt. `bureauInvoiceLines.ts` deelt daarvoor nu
+`storedRowForSpecLine` en `storedRowForSubLine`.
+
+`useProforma` laadt het concept, maakt het aan (in fase 1 alleen met de knop
+"Proforma aanmaken" op een project dat akkoord is, `akkoord_ontvangen` of
+`definitief_bevestigd`, zodat eerst één testproject meedoet; de hook kan het
+met `autoCreate` vanzelf doen en dat gaat in fase 2 aan) en schrijft het sync-plan weg zodra de specificatie
+verandert, één keer per unieke specificatie. `ProformaCard` staat bovenaan
+het tabblad Financiën: bevroren op, aantal regels (actief, vervangen,
+verborgen), totaal, en de pill "Gelijk aan berekening" of "Verschil € …".
+Het factuurvoorbeeld toont bij een nieuwe eindfactuur de actieve
+proformaregels (pill "Proforma" in de kop); totalen en de bevroren regels
+bij registreren komen in fase 1 nog uit de specificatie, zodat niets aan
+registreren verandert. Werkblad, overzicht, Overige kosten en de
+regeleditor staan er nog gewoon naast.
+
+Te controleren op het testproject BV-2606-0004: open Financiën, de kaart
+moet "Gelijk aan berekening" tonen; wijzig daarna een offerteprijs en zie
+het totaal meebewegen; open het voorbeeld en vergelijk met de kaart.
+
 ## 1. Hoe het nu werkt
 
 ```

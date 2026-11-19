@@ -4004,6 +4004,193 @@ export type Database = {
           },
         ]
       }
+      project_proforma_lines: {
+        Row: {
+          accepted_amount_incl_vat: number | null
+          accommodation_quote_id: string | null
+          amount_excl_vat: number
+          amount_incl_vat: number
+          created_at: string
+          description: string
+          fee_key: string | null
+          hidden_reason: string | null
+          id: string
+          item_id: string | null
+          kind: string
+          line_key: string | null
+          line_status: string
+          origin: string
+          proforma_id: string
+          purchase_invoice_id: string | null
+          purchase_invoice_line_id: string | null
+          quantity: number
+          quantity_label: string | null
+          quote_amount_incl_vat: number | null
+          replaces_line_id: string | null
+          section: string
+          sort_order: number
+          sub_description: string | null
+          unit_price_excl_vat: number
+          unit_suffix: string
+          updated_at: string
+          vat_amount: number
+          vat_rate: number
+        }
+        Insert: {
+          accepted_amount_incl_vat?: number | null
+          accommodation_quote_id?: string | null
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          fee_key?: string | null
+          hidden_reason?: string | null
+          id?: string
+          item_id?: string | null
+          kind?: string
+          line_key?: string | null
+          line_status?: string
+          origin?: string
+          proforma_id: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_line_id?: string | null
+          quantity?: number
+          quantity_label?: string | null
+          quote_amount_incl_vat?: number | null
+          replaces_line_id?: string | null
+          section?: string
+          sort_order?: number
+          sub_description?: string | null
+          unit_price_excl_vat?: number
+          unit_suffix?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Update: {
+          accepted_amount_incl_vat?: number | null
+          accommodation_quote_id?: string | null
+          amount_excl_vat?: number
+          amount_incl_vat?: number
+          created_at?: string
+          description?: string
+          fee_key?: string | null
+          hidden_reason?: string | null
+          id?: string
+          item_id?: string | null
+          kind?: string
+          line_key?: string | null
+          line_status?: string
+          origin?: string
+          proforma_id?: string
+          purchase_invoice_id?: string | null
+          purchase_invoice_line_id?: string | null
+          quantity?: number
+          quantity_label?: string | null
+          quote_amount_incl_vat?: number | null
+          replaces_line_id?: string | null
+          section?: string
+          sort_order?: number
+          sub_description?: string | null
+          unit_price_excl_vat?: number
+          unit_suffix?: string
+          updated_at?: string
+          vat_amount?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_proforma_lines_accommodation_quote_id_fkey"
+            columns: ["accommodation_quote_id"]
+            isOneToOne: false
+            referencedRelation: "accommodation_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proforma_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "program_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proforma_lines_proforma_id_fkey"
+            columns: ["proforma_id"]
+            isOneToOne: false
+            referencedRelation: "project_proformas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proforma_lines_purchase_invoice_id_fkey"
+            columns: ["purchase_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "partner_purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proforma_lines_purchase_invoice_line_id_fkey"
+            columns: ["purchase_invoice_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoice_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proforma_lines_replaces_line_id_fkey"
+            columns: ["replaces_line_id"]
+            isOneToOne: false
+            referencedRelation: "project_proforma_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_proformas: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          created_by: string | null
+          id: string
+          registered_invoice_id: string | null
+          request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          registered_invoice_id?: string | null
+          request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          registered_invoice_id?: string | null
+          request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_proformas_registered_invoice_id_fkey"
+            columns: ["registered_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "bureau_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_proformas_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "program_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_revision_charges: {
         Row: {
           amount: number

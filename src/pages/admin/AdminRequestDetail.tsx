@@ -164,6 +164,8 @@ import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog"
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { ChargeWorksheetCard } from "@/components/admin/charge/ChargeWorksheetCard";
+import { ProformaCard } from "@/components/admin/ProformaCard";
+import { useProforma } from "@/hooks/useProforma";
 import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
@@ -682,6 +684,15 @@ const AdminRequestDetail = () => {
     () => (invoiceSpec ? scaleVatGroups(invoiceSpec.vatGroups, invoiceSpec.totals.outstanding) : []),
     [invoiceSpec],
   );
+  // Fase 1 van docs/plan-proforma-factuur.md: de proforma volgt de offerte en
+  // loopt parallel aan de berekening. Aanmaken gaat in fase 1 met de knop op
+  // de kaart (besluit 3: eerst één testproject); vanaf fase 2 vanzelf bij akkoord.
+  const proformaState = useProforma({
+    requestId: request?.id,
+    quoteStatus: request?.quote_status,
+    spec: invoiceSpec,
+    specReady: specReady && !billingLinesLoading && !isLoading,
+  });
 
   // Calculate expected partner costs from items (for when no purchase invoices exist yet)
   const expectedPartnerCosts = (() => {
@@ -3222,6 +3233,18 @@ const AdminRequestDetail = () => {
                   </Card>
                 );
               })()}
+
+              <ProformaCard
+                requestId={request.id}
+                proforma={proformaState.proforma}
+                lines={proformaState.lines}
+                spec={invoiceSpec}
+                loading={proformaState.loading}
+                busy={proformaState.busy}
+                isAccepted={proformaState.isAccepted}
+                canCreate={proformaState.canCreate}
+                onCreate={() => void proformaState.create()}
+              />
 
               {/* Doorbelasten: inkoopregels naar onderdelen, kostenposten of niet */}
               <ChargeWorksheetCard
