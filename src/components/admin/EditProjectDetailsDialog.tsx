@@ -126,6 +126,22 @@ export function EditProjectDetailsDialog({
         });
       }
 
+      // Ook de datumwijziging zelf: notify-date-change logt pas bij versturen,
+      // en wie het dialoog sluit zonder te versturen liet voorheen geen spoor na.
+      // Het partnerportaal (verloop) en de klanttijdlijn lezen deze regel.
+      if (!sameDates(initialDates, dateStrings)) {
+        const oldSorted = [...initialDates].sort();
+        await supabase.from("program_request_history").insert({
+          request_id: requestId,
+          action: "dates_changed",
+          actor: "admin",
+          actor_name: "Bureau Vlieland",
+          old_value: { dates: oldSorted },
+          new_value: { dates: dateStrings },
+          notes: `Datums gewijzigd van ${oldSorted.join(", ")} naar ${dateStrings.join(", ")} (admin).`,
+        });
+      }
+
       toast.success("Evenement details bijgewerkt");
       onOpenChange(false);
       onSuccess();
