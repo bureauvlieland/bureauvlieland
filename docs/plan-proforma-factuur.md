@@ -112,6 +112,78 @@ Te controleren op het testproject BV-2606-0004: open Financiën, de kaart
 moet "Gelijk aan berekening" tonen; wijzig daarna een offerteprijs en zie
 het totaal meebewegen; open het voorbeeld en vergelijk met de kaart.
 
+**Fase 2 (19 november 2026), doorbelasten op de proforma.** Migratie
+`20261119150000_proforma-fase2.sql`: `apply_proforma_changes(request_id,
+jsonb)` verwerkt in één transactie de besluiten `replace` (offerteregel of
+logiesregel vervangen door inkoopregels: de regel gaat op `replaced`, per
+inkoopregel komt een regel met `origin = purchase_line`, het onderdeel van
+de vervangen regel en `replaces_line_id`), `add` (inkoopregels als eigen
+regel zonder onderdeel, sectie = partnernaam), `revert` (regel weg, de
+offerteregel komt terug zodra geen enkele regel hem nog vervangt), `hide`
+en `unhide` (met reden), `keep` en `reopen` (inkoopregel laten staan met
+reden, of weer open). De inkoopregel krijgt dezelfde `charge_status` als bij
+het oude werkblad (`charged`, `skipped`, `open`), zodat de commissiewerklijst
+niets merkt; een factuur aan de gast (`billed_to = customer`) wordt
+geweigerd. Daarna bouwt `rebuild_allocations_from_proforma` per geraakte
+factuur de verdeling voor de commissie opnieuw uit de actieve
+proformaregels met een onderdeel (onderdeel × btw); een factuur die de
+proforma nooit raakte en nog een oude verdeling heeft, houdt die.
+
+`src/lib/proformaWorksheet.ts` (met tests): `orderProformaLines` zet
+inkoopregels direct onder de offerteregel die ze vervangen en losse regels
+achteraan; `worksheetPurchaseLines` verdeelt de inkoopregels in open,
+gelaten (ook die van een factuur aan de gast) en op de factuur (via een
+proformaregel of de logiesofferte); `proposeDestinations` laat de bestaande
+matcher (`purchaseLineMatcher`) werken met de offerteregels van de proforma
+als kandidaten en vertaalt naar "vervangt regel …", "als eigen regel" of
+"laat staan"; `itemFigures` geeft per offerteregel Offerte, Inkoop en
+Factuur; `changesFromDestinations` bundelt de keuzes tot besluiten.
+
+`ProformaWorksheetCard` (`src/components/admin/proforma/`) vervangt de
+kaart van fase 1 en, zodra een project een proforma heeft, ook het
+werkblad Doorbelasten, het Financieel Overzicht en de kaart Overige kosten
+op het tabblad Financiën (ze blijven staan voor projecten zonder proforma).
+Boven de factuur in secties, per regel een herkomstpill (Offerte, Logies,
+Automatisch, Inkoop, Handmatig), doorgestreept als hij vervangen is, met
+onder een onderdeelregel "Offerte · Inkoop · Factuur (marge)" zodra er
+inkoop op staat, en een menu: "Vervang door inkoopregel…" (dialoog met de
+open en gelaten inkoopregels, met "na bevestigen op de factuur"),
+"Terugdraaien", "Niet op de factuur" (met reden) en "Terug op de factuur",
+"Omschrijving aanpassen" (inkoop- en handmatige regels) en "Verwijderen"
+(handmatig). Onder de factuur de totalen, geregistreerd en openstaand, en
+"Handmatige regel". Daaronder "Nog niet op de factuur": per inkoopfactuur
+de open regels met het voorstel van de matcher als bestemming (vervangt
+een offerteregel, als eigen regel, laat staan met reden, of kamer/extra bij
+een logiesofferte), zekere voorstellen aangevinkt, één knop "Bevestig (n)".
+Logiesbestemmingen lopen zoals voorheen via `apply-purchase-invoice-to-lodging`;
+de logiesregel op de proforma volgt daarna de offerte. "Gelaten" staat
+ingeklapt met "Weer open". Facturen zonder orderregels houden "Orderregels
+aanmaken".
+
+De proforma leest haar offerteregels uit de specificatie **zonder**
+klantregels (`program_item_billing_lines` horen bij het oude werkblad):
+op het testproject begint de proforma dus met zuivere offerteprijzen en
+wordt het doorbelasten daar opnieuw gedaan. Op een project met proforma
+schrijft de app `invoice_spec_total_incl_vat` uit de proforma (de
+voltooiingsstatus volgt), zijn "Factuur registreren" en "Restant factureren"
+op de kaart, en bevriest registreren de proformaregels
+(`chooseStoredLines` met `fullLines`), ook vanuit het factuurvoorbeeld, dat
+regels, totalen en btw-groepen uit de proforma toont. Daarmee is van fase 3
+het registreren al gedaan; wat nog ontbreekt zijn de facturatiepagina, het
+klantportaal, de marge en het vanzelf aanmaken bij akkoord.
+
+Nog open na fase 2: commissie over een regel die als eigen regel (zonder
+onderdeel) op de proforma staat (de reconciliatie kent alleen regels met
+een onderdeel of het restdeel van een gemengde factuur) en verwijderen of
+opnieuw verwerken van een inkoopfactuur waarvan regels op de proforma staan
+(de `ON DELETE RESTRICT` weigert, maar zonder nette melding).
+
+Te controleren op BV-2606-0004: "Proforma aanmaken"; de Fortuna-regel moet
+"vervangt Rondleiding Brouwerij Fortuna" voorstellen en Café Boven "vervangt
+Pizza & Borrel"; na "Bevestig" staan ze doorgestreept met het nieuwe bedrag
+eronder; "Terugdraaien" zet de offerteregel terug; het voorbeeld toont
+dezelfde regels en hetzelfde totaal.
+
 ## 1. Hoe het nu werkt
 
 ```

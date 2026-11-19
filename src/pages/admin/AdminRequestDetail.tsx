@@ -129,7 +129,7 @@ import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
 import { AdminEditActivitySheet } from "@/components/admin/AdminEditActivitySheet";
-import { useProjectInvoiceSpec, useSyncInvoiceSpecTotal, type SpecRequestRow } from "@/hooks/useProjectInvoiceSpec";
+import { syncInvoiceSpecTotals, useProjectInvoiceSpec, useSyncInvoiceSpecTotal, type SpecRequestRow } from "@/hooks/useProjectInvoiceSpec";
 import { scaleVatGroups, type SpecAccommodationInput } from "@/lib/projectInvoiceSpec";
 import type { BureauInvoice } from "@/types/bureauInvoice";
 import type { CompletionStatus } from "@/types/bureauInvoice";
@@ -164,8 +164,9 @@ import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog"
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
 import { ChargeWorksheetCard } from "@/components/admin/charge/ChargeWorksheetCard";
-import { ProformaCard } from "@/components/admin/ProformaCard";
+import { ProformaWorksheetCard } from "@/components/admin/proforma/ProformaWorksheetCard";
 import { useProforma } from "@/hooks/useProforma";
+import { proformaToStoredLines, totalsFromProformaLines } from "@/lib/proforma";
 import { AdminAddCustomItemSheet } from "@/components/admin/AdminAddCustomItemSheet";
 import { AdminCreateAccommodationSheet } from "@/components/admin/AdminCreateAccommodationSheet";
 import { EditProjectDetailsDialog } from "@/components/admin/EditProjectDetailsDialog";
@@ -353,6 +354,9 @@ const statusIcons: Record<string, React.ReactNode> = {
   alternative: <HelpCircle className="h-4 w-4" />,
   cancelled: <Ban className="h-4 w-4" />,
 };
+
+/** Vaste lege verwijzing, zodat de specificatie zonder klantregels niet elke render opnieuw rekent. */
+const EMPTY_LINES_BY_ITEM: Record<string, never> = {};
 
 const AdminRequestDetail = () => {
   const { id = "" } = useParams<{ id: string }>();
@@ -674,25 +678,50 @@ const AdminRequestDetail = () => {
     accommodation: specAccommodation,
     invoices: bureauInvoices,
   });
+  // Fase 2 van docs/plan-proforma-factuur.md: de proforma is het werkblad.
+  // Haar offerteregels komen uit de specificatie zónder klantregels (die
+  // horen bij het oude werkblad); doorbelasten schrijft proformaregels.
+  // Aanmaken gaat nog met de knop op de kaart (besluit 3: eerst één
+  // testproject). Bestaat de proforma, dan vervangt zij het werkblad, het
+  // overzicht, Overige kosten en de regeleditor, en levert zij het
+  // projecttotaal voor de voltooiingsstatus.
+  const { spec: quoteSpec, isReady: quoteSpecReady } = useProjectInvoiceSpec({
+    request: (request as unknown as SpecRequestRow | null) ?? null,
+    items,
+    linesByItem: EMPTY_LINES_BY_ITEM,
+    blockVatRates: vatRateMap,
+    accommodation: specAccommodation,
+    invoices: bureauInvoices,
+  });
+  const proformaState = useProforma({
+    requestId: request?.id,
+    quoteStatus: request?.quote_status,
+    spec: quoteSpec,
+    specReady: quoteSpecReady && !isLoading,
+  });
+  const hasProforma = !!proformaState.proforma;
+  const proformaTotals = useMemo(() => totalsFromProformaLines(proformaState.lines), [proformaState.lines]);
+  const proformaOutstanding = Math.round((proformaTotals.inclVat - (invoiceSpec?.totals.invoiced ?? 0)) * 100) / 100;
   useSyncInvoiceSpecTotal(
     request?.id,
     invoiceSpec,
     (request as unknown as SpecRequestRow | null)?.invoice_spec_total_incl_vat,
-    specReady && !billingLinesLoading && !isLoading,
+    specReady && !billingLinesLoading && !isLoading && !hasProforma,
   );
-  const outstandingVatGroups = useMemo(
-    () => (invoiceSpec ? scaleVatGroups(invoiceSpec.vatGroups, invoiceSpec.totals.outstanding) : []),
-    [invoiceSpec],
-  );
-  // Fase 1 van docs/plan-proforma-factuur.md: de proforma volgt de offerte en
-  // loopt parallel aan de berekening. Aanmaken gaat in fase 1 met de knop op
-  // de kaart (besluit 3: eerst één testproject); vanaf fase 2 vanzelf bij akkoord.
-  const proformaState = useProforma({
-    requestId: request?.id,
-    quoteStatus: request?.quote_status,
-    spec: invoiceSpec,
-    specReady: specReady && !billingLinesLoading && !isLoading,
-  });
+  useEffect(() => {
+    if (!hasProforma || !request?.id || proformaState.loading) return;
+    void syncInvoiceSpecTotals([
+      {
+        requestId: request.id,
+        storedTotal: (request as unknown as SpecRequestRow).invoice_spec_total_incl_vat,
+        computedTotal: proformaTotals.inclVat,
+      },
+    ]);
+  }, [hasProforma, request, proformaState.loading, proformaTotals.inclVat]);
+  const outstandingVatGroups = useMemo(() => {
+    if (hasProforma) return scaleVatGroups(proformaTotals.vatGroups, Math.max(0, proformaOutstanding));
+    return invoiceSpec ? scaleVatGroups(invoiceSpec.vatGroups, invoiceSpec.totals.outstanding) : [];
+  }, [hasProforma, proformaTotals, proformaOutstanding, invoiceSpec]);
 
   // Calculate expected partner costs from items (for when no purchase invoices exist yet)
   const expectedPartnerCosts = (() => {
@@ -1229,7 +1258,7 @@ const AdminRequestDetail = () => {
   };
 
   // Openstaand volgens dezelfde berekening als het Financieel Overzicht.
-  const calculateOutstandingAmount = () => invoiceSpec?.totals.outstanding ?? 0;
+  const calculateOutstandingAmount = () => (hasProforma ? Math.max(0, proformaOutstanding) : invoiceSpec?.totals.outstanding ?? 0);
 
   if (isLoading) {
     return (
@@ -3234,30 +3263,40 @@ const AdminRequestDetail = () => {
                 );
               })()}
 
-              <ProformaCard
+              <ProformaWorksheetCard
                 requestId={request.id}
                 proforma={proformaState.proforma}
                 lines={proformaState.lines}
-                spec={invoiceSpec}
                 loading={proformaState.loading}
                 busy={proformaState.busy}
                 isAccepted={proformaState.isAccepted}
                 canCreate={proformaState.canCreate}
                 onCreate={() => void proformaState.create()}
-              />
-
-              {/* Doorbelasten: inkoopregels naar onderdelen, kostenposten of niet */}
-              <ChargeWorksheetCard
-                requestId={request.id}
+                onChanged={() => {
+                  void proformaState.reload();
+                  fetchRequestData({ silent: true });
+                }}
                 items={items}
                 numberOfPeople={request.number_of_people}
                 selectedDates={(request.selected_dates as string[]) || []}
-                linesByItem={billingLinesByItem}
-                onChanged={() => fetchRequestData({ silent: true })}
+                bureauInvoices={bureauInvoices}
+                onRegisterInvoice={() => setInvoiceDialogOpen(true)}
               />
 
-              {/* Overige kosten section — altijd zichtbaar zodat losse kosten ook op een 'leeg' project toegevoegd kunnen worden */}
-              {(() => {
+              {/* Doorbelasten (oude werkblad): alleen zolang het project geen proforma heeft */}
+              {!hasProforma && (
+                <ChargeWorksheetCard
+                  requestId={request.id}
+                  items={items}
+                  numberOfPeople={request.number_of_people}
+                  selectedDates={(request.selected_dates as string[]) || []}
+                  linesByItem={billingLinesByItem}
+                  onChanged={() => fetchRequestData({ silent: true })}
+                />
+              )}
+
+              {/* Overige kosten (oud): op een project met proforma staan losse kosten op de proforma */}
+              {!hasProforma && (() => {
                 const extraCosts = items.filter((item) => item.day_index === -1);
                 return (
                   <Card>
@@ -3378,7 +3417,7 @@ const AdminRequestDetail = () => {
                   onRefresh={() => fetchRequestData({ silent: true })}
                 />
 
-                {invoiceSpec && (
+                {invoiceSpec && !hasProforma && (
                 <FinancialOverviewCard
                   requestId={request.id}
                   spec={invoiceSpec}
@@ -3664,9 +3703,10 @@ const AdminRequestDetail = () => {
         suggestedAmount={calculateOutstandingAmount()}
         suggestedVatGroups={outstandingVatGroups}
         outstandingAmount={calculateOutstandingAmount()}
-        projectTotal={invoiceSpec?.totals.inclVat}
+        projectTotal={hasProforma ? proformaTotals.inclVat : invoiceSpec?.totals.inclVat}
         alreadyInvoiced={invoiceSpec?.totals.invoiced}
         spec={invoiceSpec}
+        fullLines={hasProforma ? proformaToStoredLines(proformaState.lines) : null}
         onSuccess={fetchRequestData}
       />
 

@@ -159,22 +159,30 @@ export interface ChooseStoredLinesArgs {
   /** Btw-groepen van déze factuur (pro rata bij een deelbedrag). */
   vatGroups: SpecVatGroup[];
   subDescription?: string | null;
+  /** De regels van de proforma (fase 2): dekt de factuur het hele project, dan deze in plaats van de specificatie. */
+  fullLines?: StoredInvoiceLineInput[] | null;
+  /** Projecttotaal als dat niet uit `spec` komt (proforma). */
+  projectTotalInclVat?: number | null;
 }
 
 /**
- * Welke regels bij deze factuur horen: de volledige specificatie als de
- * factuur het hele project dekt, anders de samenvatting per btw-tarief.
+ * Welke regels bij deze factuur horen: de volledige specificatie (of de
+ * proformaregels) als de factuur het hele project dekt, anders de
+ * samenvatting per btw-tarief.
  */
 export function chooseStoredLines(args: ChooseStoredLinesArgs): StoredInvoiceLineInput[] {
   const { spec } = args;
+  const hasFull = args.fullLines != null || spec != null;
+  const projectTotal = args.projectTotalInclVat ?? spec?.totals.inclVat ?? 0;
   const full =
-    spec != null &&
+    hasFull &&
     shouldShowFullSpecification({
       resolvedType: args.invoiceType,
       alreadyInvoicedInclVat: args.alreadyInvoicedInclVat,
       invoiceAmountInclVat: args.amountInclVat,
-      projectTotalInclVat: spec.totals.inclVat,
+      projectTotalInclVat: projectTotal,
     });
+  if (full && args.fullLines) return args.fullLines.map((row, idx) => ({ ...row, sort_order: idx }));
   if (full && spec) return specToStoredLines(spec);
   return summaryStoredLines({
     invoiceType: args.invoiceType,

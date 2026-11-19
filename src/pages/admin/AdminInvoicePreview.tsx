@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { billingCountryLabel } from "@/lib/billingDetails";
 import { useParams, useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
@@ -42,7 +42,8 @@ import { buildProjectInvoiceSpec, scaleVatGroups, type ProjectInvoiceSpec } from
 import { chooseStoredLines, totalsFromStoredLines, type StoredInvoiceLine } from "@/lib/bureauInvoiceLines";
 import { specToCategories, storedLinesToCategories, summaryCategory } from "@/lib/invoiceDisplayLines";
 import { useProforma } from "@/hooks/useProforma";
-import { activeProformaLines } from "@/lib/proforma";
+import { proformaToStoredLines } from "@/lib/proforma";
+import { orderProformaLines } from "@/lib/proformaWorksheet";
 import { Pill } from "@/components/system";
 import { isFeeExcluded } from "@/lib/excludedFees";
 import { usePricingStructures, useRevisionCharges } from "@/hooks/usePricing";
@@ -106,6 +107,9 @@ interface LoadedBureauInvoice {
   invoice_type: InvoiceType | string;
   description: string | null;
 }
+
+/** Vaste lege verwijzing voor de specificatie zonder klantregels (proforma). */
+const EMPTY_LINES_BY_ITEM: Record<string, never> = {};
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -452,7 +456,7 @@ const AdminInvoicePreview = () => {
   };
 
   // De ene berekening van het project (projectInvoiceSpec): regels, btw-groepen, totaal.
-  const spec = useMemo<ProjectInvoiceSpec | null>(() => {
+  const buildSpec = useCallback((lines: typeof linesByItem): ProjectInvoiceSpec | null => {
     if (!request) return null;
     return buildProjectInvoiceSpec({
       request: {
@@ -464,7 +468,7 @@ const AdminInvoicePreview = () => {
         reference_number: request.reference_number,
       },
       items,
-      linesByItem,
+      linesByItem: lines,
       blockVatRates: vatRateMap,
       accommodation: accommodationQuote
         ? {
@@ -482,19 +486,26 @@ const AdminInvoicePreview = () => {
       revisionFeesTotal: revisionBillableTotal,
       bundleExtras: true,
     });
-  }, [request, items, linesByItem, vatRateMap, accommodationQuote, accommodationNights, accommodationExtras, settings, activeStructure, revisionBillableTotal]);
+  }, [request, items, vatRateMap, accommodationQuote, accommodationNights, accommodationExtras, settings, activeStructure, revisionBillableTotal]);
+  const spec = useMemo(() => buildSpec(linesByItem), [buildSpec, linesByItem]);
+  // De offerte zonder klantregels: daaruit volgt de proforma haar offerteregels.
+  const quoteSpec = useMemo(() => buildSpec(EMPTY_LINES_BY_ITEM), [buildSpec]);
 
-  // Fase 1 van docs/plan-proforma-factuur.md: bestaat er een proforma, dan
-  // toont het voorbeeld van een nieuwe eindfactuur haar regels in plaats van
-  // de live specificatie. De totalen blijven uit de berekening komen (de
-  // proforma volgt die in fase 1); registreren bevriest nog de specificatie.
+  // Fase 2 van docs/plan-proforma-factuur.md: bestaat er een proforma, dan
+  // zijn haar actieve regels de factuur: scherm, PDF, totalen en de regels
+  // die bij registreren of versturen worden bevroren.
   const proformaState = useProforma({
     requestId: request?.id,
     quoteStatus: (request as unknown as { quote_status?: string | null } | null)?.quote_status,
-    spec,
+    spec: quoteSpec,
     specReady: Boolean(request) && !isLoading && !isAppSettingsLoading,
   });
-  const proformaLines = useMemo(() => activeProformaLines(proformaState.lines), [proformaState.lines]);
+  const proformaStoredLines = useMemo(
+    () => proformaToStoredLines(orderProformaLines(proformaState.lines)),
+    [proformaState.lines],
+  );
+  const proformaTotals = useMemo(() => totalsFromStoredLines(proformaStoredLines), [proformaStoredLines]);
+  const usesProforma = !!proformaState.proforma && proformaStoredLines.length > 0;
 
   const calculateTotals = () => ({
     coordinationFee: spec?.totals.coordinationFee ?? 0,
@@ -523,7 +534,15 @@ const AdminInvoicePreview = () => {
 
   if (!request) return null;
 
-  const totals = calculateTotals();
+  const totals = usesProforma
+    ? {
+        ...calculateTotals(),
+        totalExclVat: proformaTotals.exclVat,
+        totalVat: proformaTotals.vat,
+        totalInclVat: proformaTotals.inclVat,
+        vatLines: proformaTotals.vatGroups.map((g) => ({ rate: g.rate, exclVat: g.exclVat, vatAmount: g.vatAmount })),
+      }
+    : calculateTotals();
   const viewedInvoiceId = searchParams.get("invoiceId");
   const isExistingInvoiceView = Boolean(
     viewedInvoiceId && loadedInvoice && loadedInvoice.invoice_number === invoiceNumber,
@@ -554,7 +573,11 @@ const AdminInvoicePreview = () => {
     request.billing_country && request.billing_country !== "NL" ? billingCountryLabel(request.billing_country) : null,
   ].filter(Boolean);
 
-  const totalItemCount = spec ? spec.lines.filter((l) => l.kind !== "fee" && l.kind !== "revision").length : 0;
+  const totalItemCount = usesProforma
+    ? proformaStoredLines.filter((l) => l.kind !== "fee" && l.kind !== "revision" && l.kind !== "sub").length
+    : spec
+      ? spec.lines.filter((l) => l.kind !== "fee" && l.kind !== "revision").length
+      : 0;
 
   // ── Slot mode (restantfactuur voor het openstaande bedrag) ───────────────
   // Toon één regel "Slotfactuur project ..." met pro-rata BTW-uitsplitsing,
@@ -710,16 +733,18 @@ const AdminInvoicePreview = () => {
         ),
       ];
     }
-    if (proformaState.proforma && proformaLines.length > 0) return storedLinesToCategories(proformaLines, formatCurrency);
+    if (usesProforma) return storedLinesToCategories(proformaStoredLines, formatCurrency);
     return spec ? specToCategories(spec, formatCurrency) : [];
   })();
-  const showsProforma = !isExistingInvoiceView && !isSlotMode && Boolean(proformaState.proforma) && proformaLines.length > 0;
+  const showsProforma = !isExistingInvoiceView && !isSlotMode && usesProforma;
 
   // Regels die bij registreren worden bevroren bij de factuur.
   const linesToStore = isExistingInvoiceView
     ? []
     : chooseStoredLines({
         spec,
+        fullLines: usesProforma ? proformaStoredLines : null,
+        projectTotalInclVat: usesProforma ? proformaTotals.inclVat : null,
         invoiceType: outgoingInvoiceType,
         invoiceNumber,
         amountInclVat: effectiveTotalInclVat,
