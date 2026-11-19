@@ -107,6 +107,27 @@ export const handler = async (req: Request): Promise<Response> => {
         .eq("request_id", request_id)
         .in("status", ["pending", "confirmed", "accepted", "counter_proposed"])
         .neq("block_type", "self_arranged");
+
+      // Per onderdeel een historieregel, zodat het verloop in het partnerportaal
+      // de annulering toont (project_communications ziet de partner niet).
+      const cancelledRows = (openItems || []).filter(
+        (i: any) => ["pending", "confirmed", "accepted", "counter_proposed"].includes(i.status) && i.block_type !== "self_arranged",
+      );
+      if (cancelledRows.length > 0) {
+        const { error: histErr } = await supabase.from("program_request_history").insert(
+          cancelledRows.map((i: any) => ({
+            request_id,
+            item_id: i.id,
+            action: "cancelled",
+            actor: "admin",
+            actor_name: "Bureau Vlieland",
+            old_value: { status: i.status },
+            new_value: { status: "cancelled" },
+            notes: "Project verwijderd door admin",
+          })),
+        );
+        if (histErr) console.error("history insert failed:", histErr);
+      }
     }
 
 

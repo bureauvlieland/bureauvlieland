@@ -107,6 +107,18 @@ async function handler(req: Request): Promise<Response> {
       return json(500, { error: "Kon project niet sluiten", details: bulkErr.message });
     }
 
+    const { error: histErr } = await supabase.from("program_request_history").insert(
+      closable.map((i) => ({
+        request_id: requestId,
+        item_id: i.id,
+        action: "partner_dismissed",
+        actor: "partner",
+        actor_name: partner.name,
+        notes: reason,
+      })),
+    );
+    if (histErr) console.error("history insert failed:", histErr);
+
     try {
       await supabase.from("project_communications").insert({
         request_id: requestId,
@@ -168,6 +180,16 @@ async function handler(req: Request): Promise<Response> {
     console.error("dismiss update failed:", updErr);
     return json(500, { error: "Kon item niet sluiten", details: updErr.message });
   }
+
+  const { error: histErr } = await supabase.from("program_request_history").insert({
+    request_id: item.request_id,
+    item_id: itemId,
+    action: "partner_dismissed",
+    actor: "partner",
+    actor_name: partner.name,
+    notes: reason,
+  });
+  if (histErr) console.error("history insert failed:", histErr);
 
   // Log naar project-dossier zodat admin het terugziet
   try {
