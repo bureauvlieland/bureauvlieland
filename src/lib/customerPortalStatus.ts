@@ -3,6 +3,7 @@ import type { ProgramRequestItem } from "@/types/programRequest";
 import { getProjectExecutionState, type ProjectExecutionState } from "@/lib/projectExecutionState";
 import { isBureauItem } from "@/lib/bureauItem";
 import { isBillingComplete } from "@/lib/billingDetails";
+import { isQuoteExpired } from "@/lib/quoteValidity";
 
 export interface CustomerPortalProgramLike {
   terms_accepted_at?: string | null;
@@ -261,10 +262,7 @@ export function getCustomerPortalStatus(args: {
     unconfirmedItems.length > 0 &&
     approvalStats.customerActionsCount === 0;
 
-  const proposalExpired =
-    isProposalPhase &&
-    !!program.quote_valid_until &&
-    new Date(program.quote_valid_until).getTime() < Date.now();
+  const proposalExpired = isProposalPhase && isQuoteExpired(program.quote_valid_until);
   const isFinalPhase = program.quote_status === "definitief_bevestigd";
   const canSignNow =
     !termsAccepted &&

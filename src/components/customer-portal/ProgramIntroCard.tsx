@@ -3,10 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Loader2, Clock, AlertTriangle, Sparkles, FileText } from "lucide-react";
+import { CheckCircle, Loader2, Clock, Sparkles, FileText } from "lucide-react";
 import { EmptyCartTips } from "@/components/configurator/EmptyCartTips";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
 
 interface ProgramIntroCardProps {
   programType?: string | null;
@@ -49,9 +47,6 @@ export const ProgramIntroCard = ({
   }
 
 
-  const validUntil = quoteValidUntil ? new Date(quoteValidUntil) : null;
-  const isExpired = validUntil ? validUntil < new Date() : false;
-
   const handleAccept = async () => {
     if (!onAcceptQuoteProposal) return;
     setIsLoading(true);
@@ -87,29 +82,7 @@ export const ProgramIntroCard = ({
     return null;
   }
 
-  // Expired quote
-  if (isAwaitingApproval && isExpired && validUntil) {
-    return (
-      <Card className="border-destructive/30 bg-destructive/5">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium text-destructive">Voorstel verlopen</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Dit voorstel is verlopen op {format(validUntil, "d MMMM yyyy", { locale: nl })}.
-                Neem contact op met Bureau Vlieland voor een nieuw voorstel.
-              </p>
-              <a href="mailto:hallo@bureauvlieland.nl" className="mt-3 inline-block">
-                <Button variant="outline" size="sm">Contact opnemen</Button>
-              </a>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // Verlopen voorstel: ProposalHeroCard toont die melding al; hier niet nogmaals.
   // Quote awaiting approval — handled door ProposalHeroCard.
   if (isAwaitingApproval) {
     return null;

@@ -179,7 +179,7 @@ function Row({ row }: { row: OverviewRow }) {
               );
             })()}
             {row.quoteValidUntil && row.quoteStatus === "offerte_verstuurd" && (() => {
-              const expired = row.quoteValidUntil.getTime() <= Date.now();
+              const expired = !!row.proposalExpired;
               const dateStr = row.quoteValidUntil.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
               return (
                 <Badge

@@ -182,3 +182,16 @@ export function isQuoteValidUntilDateDisabled(
   }
   return false;
 }
+
+/**
+ * Verlopen klantvoorstel: alleen relevant zolang de offerte nog op akkoord
+ * wacht (`offerte_verstuurd`). Na akkoord of annulering telt de datum niet meer.
+ * Eén regel voor klantportaal, werkbank en projectenoverzicht.
+ */
+export function isProposalExpired(
+  quoteStatus: string | null | undefined,
+  validUntil: string | Date | null | undefined,
+  today: Date = new Date(),
+): boolean {
+  return quoteStatus === "offerte_verstuurd" && isQuoteExpired(validUntil, today);
+}

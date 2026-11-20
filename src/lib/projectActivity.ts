@@ -71,6 +71,7 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
   quote_headcount_pending_partner: "awaiting_partner",
   partner_reminder: "awaiting_partner",
   quote_expiring_soon: "awaiting_partner",
+  quote_expired: "awaiting_customer",
   quote_expired_partner: "awaiting_partner",
   accommodation_quote_declined: "awaiting_partner",
 

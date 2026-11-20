@@ -79,7 +79,6 @@ Deno.serve(async (req) => {
 
       } else if (
         type === "quote_pending_partner" ||
-        type === "quote_expiring_soon" ||
         type === "quote_expired_partner"
       ) {
         if (isUuid(eid)) quoteIds.add(eid);
@@ -105,7 +104,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -365,7 +364,6 @@ Deno.serve(async (req) => {
           break;
         }
         case "quote_pending_partner":
-        case "quote_expiring_soon":
         case "quote_expired_partner": {
           const q = eid ? quoteMap.get(eid) : null;
           if (!q) {
@@ -373,6 +371,31 @@ Deno.serve(async (req) => {
             break;
           }
           if (q.status !== "pending") markClosed(t.id, type);
+          break;
+        }
+        case "quote_expiring_soon": {
+          // check-pending-items maakt deze aan met het programma-id (niet een
+          // logiesofferte). Klaar zodra de offerte niet meer op akkoord wacht of
+          // de verloopdatum voorbij is: dan neemt quote_expired het over.
+          if (!req) break;
+          const today = new Date().toISOString().slice(0, 10);
+          const stillRelevant =
+            req.quote_status === "offerte_verstuurd" &&
+            !!req.quote_valid_until &&
+            String(req.quote_valid_until).slice(0, 10) >= today;
+          if (!stillRelevant) markClosed(t.id, type);
+          break;
+        }
+        case "quote_expired": {
+          // Klaar zodra de offerte niet meer op akkoord wacht, of de admin de
+          // geldigheid weer in de toekomst heeft gezet (verlengd / nieuw voorstel).
+          if (!req) break;
+          const today = new Date().toISOString().slice(0, 10);
+          const stillExpired =
+            req.quote_status === "offerte_verstuurd" &&
+            !!req.quote_valid_until &&
+            String(req.quote_valid_until).slice(0, 10) < today;
+          if (!stillExpired) markClosed(t.id, type);
           break;
         }
         case "quote_pending_customer": {

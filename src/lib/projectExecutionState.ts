@@ -101,6 +101,7 @@ export const PRE_EXECUTION_TODO_TYPES: readonly string[] = [
   "quote_headcount_review",
   "quote_pending_customer",
   "quote_expiring_soon",
+  "quote_expired",
   "quote_expired_partner",
   "request_no_response",
   "all_partners_responded",
