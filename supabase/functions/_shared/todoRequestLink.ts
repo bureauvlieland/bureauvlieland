@@ -13,6 +13,7 @@
 export const REQUEST_BOUND_AUTO_TYPES = new Set([
   "request_no_response",
   "quote_pending_customer",
+  "quote_expiring_soon",
   "quote_expired",
   "new_request_received",
   "new_program_request",

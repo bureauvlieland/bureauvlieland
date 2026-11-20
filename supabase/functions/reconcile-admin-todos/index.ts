@@ -79,7 +79,6 @@ Deno.serve(async (req) => {
 
       } else if (
         type === "quote_pending_partner" ||
-        type === "quote_expiring_soon" ||
         type === "quote_expired_partner"
       ) {
         if (isUuid(eid)) quoteIds.add(eid);
@@ -365,7 +364,6 @@ Deno.serve(async (req) => {
           break;
         }
         case "quote_pending_partner":
-        case "quote_expiring_soon":
         case "quote_expired_partner": {
           const q = eid ? quoteMap.get(eid) : null;
           if (!q) {
@@ -373,6 +371,19 @@ Deno.serve(async (req) => {
             break;
           }
           if (q.status !== "pending") markClosed(t.id, type);
+          break;
+        }
+        case "quote_expiring_soon": {
+          // check-pending-items maakt deze aan met het programma-id (niet een
+          // logiesofferte). Klaar zodra de offerte niet meer op akkoord wacht of
+          // de verloopdatum voorbij is: dan neemt quote_expired het over.
+          if (!req) break;
+          const today = new Date().toISOString().slice(0, 10);
+          const stillRelevant =
+            req.quote_status === "offerte_verstuurd" &&
+            !!req.quote_valid_until &&
+            String(req.quote_valid_until).slice(0, 10) >= today;
+          if (!stillRelevant) markClosed(t.id, type);
           break;
         }
         case "quote_expired": {
