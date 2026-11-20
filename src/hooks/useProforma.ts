@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { reportError } from "@/lib/errorReporting";
+import { toast } from "sonner";
+import { planLegacyConversion, type LegacyBillingLine, type LegacyPurchaseLine } from "@/lib/proformaLegacy";
 import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
 import {
   isEmptySyncPlan,
@@ -28,6 +30,111 @@ interface UseProformaArgs {
 }
 
 const toRows = (proformaId: string, inputs: ProformaLineInput[]) => inputs.map((row) => ({ ...row, proforma_id: proformaId }));
+
+export interface CreateProformaResult {
+  proformaId: string;
+  legacy: {
+    converted: number;
+    skipped: Array<{ billingLineId: string; reason: string }>;
+  };
+}
+
+/**
+ * Fase 4: proforma aanmaken uit de verse offerteregels en de klantregels
+ * van het oude werkblad overzetten (`planLegacyConversion`): inkoopregels
+ * vervangen hun offerteregel via `apply_proforma_changes` (met de
+ * commissieverdeling), handmatige klantregels worden handmatige
+ * proformaregels. Overgezette klantregels gaan daarna weg, zodat er één
+ * bron is. Wat niet mee kon, komt terug in `legacy.skipped`.
+ */
+export async function createProformaForRequest(requestId: string, freshLines: ProformaLineInput[]): Promise<CreateProformaResult> {
+  const { data: session } = await supabase.auth.getSession();
+  const { data: head, error } = await supabase
+    .from("project_proformas")
+    .insert({ request_id: requestId, created_by: session.session?.user.id ?? null })
+    .select("*")
+    .single();
+  if (error || !head) throw error ?? new Error("Proforma niet aangemaakt");
+  if (freshLines.length > 0) {
+    const { error: linesError } = await supabase.from("project_proforma_lines").insert(toRows(head.id, freshLines));
+    if (linesError) throw linesError;
+  }
+
+  // Klantregels van het oude werkblad.
+  const { data: items, error: itemsError } = await supabase.from("program_request_items").select("id").eq("request_id", requestId);
+  if (itemsError) throw itemsError;
+  const itemIds = (items ?? []).map((i) => i.id);
+  const empty: CreateProformaResult = { proformaId: head.id, legacy: { converted: 0, skipped: [] } };
+  if (itemIds.length === 0) return empty;
+  const { data: billingRows, error: billingError } = await supabase
+    .from("program_item_billing_lines")
+    .select("*")
+    .in("item_id", itemIds);
+  if (billingError) throw billingError;
+  const billingLines = (billingRows ?? []) as unknown as LegacyBillingLine[];
+  if (billingLines.length === 0) return empty;
+
+  const { data: proformaRows, error: proformaError } = await supabase
+    .from("project_proforma_lines")
+    .select("*")
+    .eq("proforma_id", head.id);
+  if (proformaError) throw proformaError;
+  const purchaseIds = [...new Set(billingLines.map((b) => b.purchase_invoice_line_id).filter((id): id is string => !!id))];
+  let purchaseLines: LegacyPurchaseLine[] = [];
+  if (purchaseIds.length > 0) {
+    const { data: plRows, error: plError } = await supabase
+      .from("purchase_invoice_lines")
+      .select("id, request_id, invoice_id, partner_purchase_invoices!inner(billed_to)")
+      .in("id", purchaseIds);
+    if (plError) throw plError;
+    purchaseLines = (plRows ?? []).map((r) => ({
+      id: r.id,
+      request_id: r.request_id,
+      invoice_id: r.invoice_id,
+      billed_to: (r as unknown as { partner_purchase_invoices?: { billed_to?: string | null } | null }).partner_purchase_invoices?.billed_to ?? null,
+    }));
+  }
+
+  const plan = planLegacyConversion({
+    requestId,
+    proformaLines: (proformaRows ?? []) as unknown as ProformaLine[],
+    billingLines,
+    purchaseLines,
+  });
+  if (plan.changes.length > 0) {
+    const { error: applyError } = await supabase.rpc("apply_proforma_changes", {
+      p_request_id: requestId,
+      p_changes: plan.changes as unknown as Parameters<typeof supabase.rpc>[1] extends infer A ? A extends { p_changes: infer J } ? J : never : never,
+    });
+    if (applyError) throw applyError;
+  }
+  if (plan.manualInserts.length > 0) {
+    const { data: maxRow } = await supabase
+      .from("project_proforma_lines")
+      .select("sort_order")
+      .eq("proforma_id", head.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    let sort = (maxRow?.sort_order ?? 0) + 1;
+    const { error: manualError } = await supabase
+      .from("project_proforma_lines")
+      .insert(plan.manualInserts.map((m) => ({ ...m.line, proforma_id: head.id, sort_order: sort++ })));
+    if (manualError) throw manualError;
+  }
+  if (plan.markReplaced.length > 0) {
+    const { error: replacedError } = await supabase
+      .from("project_proforma_lines")
+      .update({ line_status: "replaced" })
+      .in("id", plan.markReplaced);
+    if (replacedError) throw replacedError;
+  }
+  if (plan.convertedBillingLineIds.length > 0) {
+    const { error: deleteError } = await supabase.from("program_item_billing_lines").delete().in("id", plan.convertedBillingLineIds);
+    if (deleteError) throw deleteError;
+  }
+  return { proformaId: head.id, legacy: { converted: plan.convertedBillingLineIds.length, skipped: plan.skipped } };
+}
 
 /**
  * De proforma van een project (docs/plan-proforma-factuur.md, fase 1):
@@ -94,22 +201,17 @@ export function useProforma({ requestId, quoteStatus, spec, specReady, autoCreat
   const freshLines = useMemo(() => (spec && specReady ? specToProformaLines(spec) : null), [spec, specReady]);
   const freshSignature = useMemo(() => (freshLines ? JSON.stringify(freshLines) : null), [freshLines]);
 
-  /** Maakt het concept aan uit de specificatie van nu. */
+  /** Maakt het concept aan uit de specificatie van nu en zet klantregels van het oude werkblad over. */
   const create = useCallback(async (): Promise<boolean> => {
     if (!requestId || !freshLines || creatingRef.current) return false;
     creatingRef.current = true;
     setBusy(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-      const { data: head, error } = await supabase
-        .from("project_proformas")
-        .insert({ request_id: requestId, created_by: session.session?.user.id ?? null })
-        .select("*")
-        .single();
-      if (error || !head) throw error ?? new Error("Proforma niet aangemaakt");
-      if (freshLines.length > 0) {
-        const { error: linesError } = await supabase.from("project_proforma_lines").insert(toRows(head.id, freshLines));
-        if (linesError) throw linesError;
+      const result = await createProformaForRequest(requestId, freshLines);
+      if (result.legacy.skipped.length > 0) {
+        toast.warning(
+          `${result.legacy.skipped.length} ${result.legacy.skipped.length === 1 ? "klantregel kon" : "klantregels konden"} niet mee naar de proforma: ${[...new Set(result.legacy.skipped.map((s) => s.reason))].join(", ")}.`,
+        );
       }
       lastSignatureRef.current = freshSignature;
       await load();
@@ -125,8 +227,9 @@ export function useProforma({ requestId, quoteStatus, spec, specReady, autoCreat
     }
   }, [requestId, freshLines, freshSignature, load]);
 
-  // Bij akkoord ontstaat de proforma vanzelf (fase 1: zodra een beheerder
-  // het project opent met de specificatie geladen).
+  // Bij akkoord ontstaat de proforma vanzelf (fase 4): zodra een beheerder
+  // het project opent met de specificatie geladen, of via de bulkactie op
+  // de facturatiepagina.
   useEffect(() => {
     if (!autoCreate || loading || proforma || !isAccepted || !freshLines) return;
     void create();

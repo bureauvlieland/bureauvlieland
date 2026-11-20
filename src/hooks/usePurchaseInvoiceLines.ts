@@ -65,23 +65,6 @@ export function usePurchaseInvoiceLinesByInvoice(invoiceId: string | null | unde
   });
 }
 
-export type ChargeDecision =
-  | { line_id: string; action: "item"; item_id: string }
-  | { line_id: string; action: "new_cost"; cost_key: string; cost_name: string }
-  | { line_id: string; action: "skip"; skip_reason: string | null }
-  | { line_id: string; action: "open" };
-
-export interface ApplyChargesResult {
-  charged: number;
-  kept: number;
-  skipped: number;
-  reopened: number;
-  new_costs: number;
-  /** Kostenposten uit het werkblad die leeg raakten en zijn verwijderd. */
-  removed_costs?: number;
-  new_cost_ids: Record<string, string>;
-}
-
 const invalidateAfterCharges = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: [PURCHASE_INVOICE_LINES_KEY] });
   queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
@@ -89,26 +72,6 @@ const invalidateAfterCharges = (queryClient: ReturnType<typeof useQueryClient>) 
   queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
   queryClient.invalidateQueries({ queryKey: ["item-billing-lines"] });
 };
-
-/** De ene schrijfactie van het werkblad: besluiten per regel, in één transactie. */
-export function useApplyPurchaseLineCharges(requestId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (decisions: ChargeDecision[]): Promise<ApplyChargesResult> => {
-      const { data, error } = await supabase.rpc("apply_purchase_line_charges", {
-        p_request_id: requestId,
-        p_decisions: decisions as unknown as Parameters<typeof supabase.rpc>[1] extends infer A ? A extends { p_decisions: infer J } ? J : never : never,
-      });
-      if (error) throw error;
-      return data as unknown as ApplyChargesResult;
-    },
-    onSuccess: () => invalidateAfterCharges(queryClient),
-    onError: (error: Error) => {
-      reportError(error, { where: "useApplyPurchaseLineCharges" });
-      toast.error(error.message || "Doorbelasten mislukt");
-    },
-  });
-}
 
 /**
  * Orderregels maken voor een factuur die er geen heeft (partnerregistratie,

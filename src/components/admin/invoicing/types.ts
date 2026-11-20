@@ -88,6 +88,8 @@ export interface InvoicingRow {
   request: ProgramRequestWithItems;
   totals: InvoiceTotals;
   spec: ProjectInvoiceSpec;
+  /** De specificatie zonder klantregels: de offerteregels waaruit een proforma ontstaat. */
+  quoteSpec: ProjectInvoiceSpec;
   /** Fase 3: de proforma in concept van dit project; dan komen totalen en regels daaruit. */
   proforma?: { proforma: Proforma; lines: ProformaLine[] } | null;
 }

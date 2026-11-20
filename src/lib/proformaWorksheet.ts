@@ -118,9 +118,10 @@ export interface WorksheetPurchaseState {
 
 /**
  * Welke inkoopregels waar staan. Een regel staat op de factuur als een
- * proformaregel hem als bron heeft, of als hij via de logiesofferte is
- * verwerkt. Regels van een factuur die de gast zelf betaalde horen nergens
- * op de klantfactuur en tellen als gelaten.
+ * proformaregel hem als bron heeft, als hij via de logiesofferte is
+ * verwerkt, of als hij vóór de proforma al op offerteprijs of als
+ * partnerverdeling was afgehandeld. Regels van een factuur die de gast zelf
+ * betaalde horen nergens op de klantfactuur en tellen als gelaten.
  */
 export function worksheetPurchaseLines(
   purchaseLines: WorksheetPurchaseLine[],
@@ -131,8 +132,11 @@ export function worksheetPurchaseLines(
   const customerBilled = new Set(invoices.filter((i) => i.billed_to === "customer").map((i) => i.id));
   const state: WorksheetPurchaseState = { open: [], kept: [], charged: [] };
   for (const line of purchaseLines) {
-    if (onProforma.has(line.id) || line.lodging_quote_id) state.charged.push(line);
-    else if (line.charge_status === "skipped" || customerBilled.has(line.invoice_id)) state.kept.push(line);
+    // kept_quote en legacy komen van vóór de proforma: de klant betaalt de
+    // offerteprijs, de verdeling voor de commissie staat al. Niet opnieuw open.
+    if (onProforma.has(line.id) || line.lodging_quote_id || line.charge_status === "kept_quote" || line.charge_status === "legacy") {
+      state.charged.push(line);
+    } else if (line.charge_status === "skipped" || customerBilled.has(line.invoice_id)) state.kept.push(line);
     else state.open.push(line);
   }
   return state;

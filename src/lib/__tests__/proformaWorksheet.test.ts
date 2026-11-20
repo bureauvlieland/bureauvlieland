@@ -95,13 +95,15 @@ describe("worksheetPurchaseLines", () => {
         pl({ id: "pl-kept", charge_status: "skipped", skip_reason: "toeristenbelasting" }),
         pl({ id: "pl-lodging", lodging_quote_id: "q" }),
         pl({ id: "pl-gast", invoice_id: "inv-gast" }),
+        pl({ id: "pl-kept-quote", charge_status: "kept_quote", item_id: "it-fortuna" }),
+        pl({ id: "pl-legacy", charge_status: "legacy", item_id: "it-boot" }),
       ],
       proforma,
       invoices,
     );
     expect(state.open.map((l) => l.id)).toEqual(["pl-open"]);
     expect(state.kept.map((l) => l.id)).toEqual(["pl-kept", "pl-gast"]);
-    expect(state.charged.map((l) => l.id)).toEqual(["pl-charged", "pl-lodging"]);
+    expect(state.charged.map((l) => l.id)).toEqual(["pl-charged", "pl-lodging", "pl-kept-quote", "pl-legacy"]);
   });
 });
 

@@ -9,7 +9,7 @@
  * een nieuwe kostenpost; toeristenbelasting wordt nooit doorbelast.
  *
  * Deze module rekent alleen; het scherm beslist en de databasefunctie
- * `apply_purchase_line_charges` schrijft (docs/plan-inkoopfacturen-doorbelasten.md, §4).
+ * `apply_proforma_changes` schrijft (docs/plan-proforma-factuur.md, fase 2).
  */
 
 /**

@@ -123,7 +123,6 @@ import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConfl
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
-import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
 import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
@@ -163,7 +162,6 @@ import { AdminAiProgramDialog } from "@/components/admin/AdminAiProgramDialog";
 import { CopyFromProgramDialog } from "@/components/admin/CopyFromProgramDialog";
 import { SyncBuildingBlocksDialog } from "@/components/admin/SyncBuildingBlocksDialog";
 import { AdminAddCostSheet } from "@/components/admin/AdminAddCostSheet";
-import { ChargeWorksheetCard } from "@/components/admin/charge/ChargeWorksheetCard";
 import { ProformaWorksheetCard } from "@/components/admin/proforma/ProformaWorksheetCard";
 import { useProforma } from "@/hooks/useProforma";
 import { proformaToStoredLines, totalsFromProformaLines } from "@/lib/proforma";
@@ -678,12 +676,11 @@ const AdminRequestDetail = () => {
     accommodation: specAccommodation,
     invoices: bureauInvoices,
   });
-  // Fase 2 van docs/plan-proforma-factuur.md: de proforma is het werkblad.
-  // Haar offerteregels komen uit de specificatie zónder klantregels (die
-  // horen bij het oude werkblad); doorbelasten schrijft proformaregels.
-  // Aanmaken gaat nog met de knop op de kaart (besluit 3: eerst één
-  // testproject). Bestaat de proforma, dan vervangt zij het werkblad, het
-  // overzicht, Overige kosten en de regeleditor, en levert zij het
+  // De proforma is het werkblad (docs/plan-proforma-factuur.md). Haar
+  // offerteregels komen uit de specificatie zónder klantregels; doorbelasten
+  // schrijft proformaregels. Bij akkoord ontstaat zij vanzelf (fase 4), met
+  // de klantregels van het oude werkblad overgezet. Bestaat de proforma, dan
+  // vervangt zij het overzicht en Overige kosten en levert zij het
   // projecttotaal voor de voltooiingsstatus.
   const { spec: quoteSpec, isReady: quoteSpecReady } = useProjectInvoiceSpec({
     request: (request as unknown as SpecRequestRow | null) ?? null,
@@ -697,7 +694,8 @@ const AdminRequestDetail = () => {
     requestId: request?.id,
     quoteStatus: request?.quote_status,
     spec: quoteSpec,
-    specReady: quoteSpecReady && !isLoading,
+    specReady: quoteSpecReady && !isLoading && !billingLinesLoading,
+    autoCreate: true,
   });
   const hasProforma = !!proformaState.proforma;
   const proformaTotals = useMemo(() => totalsFromProformaLines(proformaState.lines), [proformaState.lines]);
@@ -2778,13 +2776,6 @@ const AdminRequestDetail = () => {
                                                 }
                                               }}
                                             />
-                                            <AdminItemBillingLinesEditor
-                                              itemId={item.id}
-                                              itemName={item.block_name}
-                                              suggestedAmount={item.quoted_price ?? item.admin_price_override}
-                                              defaultVatRate={getItemVatRate(item)}
-                                              requestId={request.id}
-                                            />
                                           </div>
                                         </TableCell>
                                         <TableCell>
@@ -3282,21 +3273,12 @@ const AdminRequestDetail = () => {
                 bureauInvoices={bureauInvoices}
                 onRegisterInvoice={() => setInvoiceDialogOpen(true)}
                 isRegistered={proformaState.isRegistered}
+                onForwardInvoice={(inv) =>
+                  navigate(`/admin/projecten/${request.id}/factuur?action=forward&invoiceId=${inv.id}`)
+                }
               />
 
-              {/* Doorbelasten (oude werkblad): alleen zolang het project geen proforma heeft */}
-              {!hasProforma && (
-                <ChargeWorksheetCard
-                  requestId={request.id}
-                  items={items}
-                  numberOfPeople={request.number_of_people}
-                  selectedDates={(request.selected_dates as string[]) || []}
-                  linesByItem={billingLinesByItem}
-                  onChanged={() => fetchRequestData({ silent: true })}
-                />
-              )}
-
-              {/* Overige kosten (oud): op een project met proforma staan losse kosten op de proforma */}
+              {/* Overige kosten (offertefase): op een project met proforma staan losse kosten op de proforma */}
               {!hasProforma && (() => {
                 const extraCosts = items.filter((item) => item.day_index === -1);
                 return (

@@ -229,8 +229,8 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
                 )}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                {/* Doorbelasten en de verdeling voor de commissie gebeuren in het
-                    werkblad op het project; zonder project eerst de regels verdelen. */}
+                {/* Doorbelasten en de verdeling voor de commissie gebeuren op de
+                    proforma van het project; zonder project eerst de regels verdelen. */}
                 <Button
                   size="sm"
                   className="h-7 gap-1"
@@ -243,7 +243,7 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
                   }
                 >
                   <ArrowRightLeft className="h-3.5 w-3.5" />
-                  {invoice.request_id ? "Naar werkblad Doorbelasten" : "Regels verdelen over projecten"}
+                  {invoice.request_id ? "Naar de proforma" : "Regels verdelen over projecten"}
                 </Button>
                 <Button
                   size="sm"
