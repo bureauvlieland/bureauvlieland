@@ -184,7 +184,15 @@ export function matchableItemsFromProforma(
 export type Destination =
   | { kind: "replace"; lineId: string }
   | { kind: "add" }
-  | { kind: "keep"; reason: string | null };
+  | { kind: "keep"; reason: string | null }
+  /** Via de logiesofferte (`apply-purchase-invoice-to-lodging`): kamerprijs of extra. */
+  | { kind: "lodging"; quoteId: string; target: "room" | "extra" };
+
+export interface WorksheetLodgingQuote {
+  id: string;
+  partner_id: string | null;
+  accommodation_name: string;
+}
 
 export interface DestinationProposal {
   purchaseLineId: string;
@@ -203,8 +211,13 @@ export function proposeDestinations(args: {
   items: WorksheetItem[];
   numberOfPeople: number | null;
   selectedDates: string[];
+  /** Logiesoffertes van dit programma: een factuur van die partner hoort op de offerte, niet als kostenpost. */
+  lodgingQuotes?: WorksheetLodgingQuote[];
 }): DestinationProposal[] {
   const { matchable, lineByItem } = matchableItemsFromProforma(args.proformaLines, args.items, args.numberOfPeople, args.selectedDates);
+  const invoiceById = new Map(args.invoices.map((inv) => [inv.id, inv]));
+  const lodgingByPartner = new Map<string, WorksheetLodgingQuote>();
+  for (const q of args.lodgingQuotes ?? []) if (q.partner_id && !lodgingByPartner.has(q.partner_id)) lodgingByPartner.set(q.partner_id, q);
   const invoices: MatchableInvoice[] = args.invoices.map((inv) => ({
     id: inv.id,
     partnerId: inv.partner_id,
@@ -239,6 +252,19 @@ export function proposeDestinations(args: {
           match,
         };
       }
+    }
+    // Factuur van de accommodatie: de kamerprijs of een extra bij de
+    // logiesofferte, anders komt het logies twee keer op de factuur.
+    const partnerId = invoiceById.get(lines.find((l) => l.id === match.lineId)?.invoiceId ?? "")?.partner_id ?? null;
+    const lodging = partnerId ? lodgingByPartner.get(partnerId) : undefined;
+    if (lodging) {
+      return {
+        purchaseLineId: match.lineId,
+        destination: { kind: "lodging", quoteId: lodging.id, target: "room" },
+        sure: false,
+        reason: `partner van de logiesofferte ${lodging.accommodation_name}: kamer of extra, niet als eigen regel`,
+        match,
+      };
     }
     const reason = p.kind === "new_cost" ? p.reason : null;
     return { purchaseLineId: match.lineId, destination: { kind: "add" }, sure: true, reason, match };
@@ -296,9 +322,10 @@ export function changesFromDestinations(chosen: Array<{ purchaseLineId: string; 
       replaceByLine.set(destination.lineId, arr);
     } else if (destination.kind === "add") {
       add.push(purchaseLineId);
-    } else {
+    } else if (destination.kind === "keep") {
       changes.push({ action: "keep", purchase_line_id: purchaseLineId, reason: destination.reason });
     }
+    // "lodging" loopt via de edge function, niet via apply_proforma_changes.
   }
   for (const [lineId, ids] of replaceByLine) changes.push({ action: "replace", line_id: lineId, purchase_line_ids: ids });
   if (add.length > 0) changes.push({ action: "add", purchase_line_ids: add });
