@@ -55,7 +55,7 @@ const build = (items: SpecItemInput[], extra: Partial<Parameters<typeof buildPro
 
 /** Maakt van verse regels bestaande rijen, alsof ze zijn opgeslagen. */
 const stored = (inputs: ProformaLineInput[], proformaId = "pf-1"): ProformaLine[] =>
-  inputs.map((row, idx) => ({ ...row, id: `line-${idx}`, proforma_id: proformaId }));
+  inputs.map((row, idx) => ({ ...row, id: `line-${idx}`, proforma_id: proformaId, created_at: "2026-11-19T10:00:00Z", updated_at: "2026-11-19T10:00:00Z" }));
 
 describe("specToProformaLines", () => {
   it("geeft elke regel een herkomst, een sleutel en het offertebedrag van nu", () => {

@@ -38,7 +38,7 @@ export interface ProformaLineInput extends StoredInvoiceLineInput {
   accepted_amount_incl_vat: number | null;
 }
 
-export type ProformaLine = ProformaLineInput & { id: string; proforma_id: string };
+export type ProformaLine = ProformaLineInput & { id: string; proforma_id: string; created_at: string; updated_at: string };
 
 export interface Proforma {
   id: string;
@@ -121,6 +121,26 @@ export const activeProformaLines = <T extends { line_status: ProformaLineStatus 
   lines.filter((l) => l.line_status === "active");
 
 export const totalsFromProformaLines = (lines: ProformaLine[]) => totalsFromStoredLines(activeProformaLines(lines));
+
+/** De actieve regels als op te slaan factuurregels (zonder herkomstvelden), in de gegeven volgorde. */
+export function proformaToStoredLines(lines: ProformaLine[]): StoredInvoiceLineInput[] {
+  return activeProformaLines(lines).map((l, idx) => ({
+    sort_order: idx,
+    kind: l.kind,
+    section: l.section,
+    item_id: l.item_id,
+    description: l.description,
+    sub_description: l.sub_description,
+    quantity: Number(l.quantity),
+    quantity_label: l.quantity_label,
+    unit_price_excl_vat: Number(l.unit_price_excl_vat),
+    unit_suffix: l.unit_suffix,
+    vat_rate: Number(l.vat_rate),
+    amount_excl_vat: Number(l.amount_excl_vat),
+    vat_amount: Number(l.vat_amount),
+    amount_incl_vat: Number(l.amount_incl_vat),
+  }));
+}
 
 /** Velden die de volg-logica van de specificatie overneemt. */
 const FOLLOWED_FIELDS = [

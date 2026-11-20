@@ -5503,6 +5503,14 @@ export type Database = {
         Args: { p_request_id: string; p_decisions: Json }
         Returns: Json
       }
+      apply_proforma_changes: {
+        Args: { p_request_id: string; p_changes: Json }
+        Returns: Json
+      }
+      rebuild_allocations_from_proforma: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       sync_collective_invoice_header: {
         Args: { p_invoice_id: string }
         Returns: Json

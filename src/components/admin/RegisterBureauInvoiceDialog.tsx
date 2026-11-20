@@ -40,7 +40,7 @@ import { logAdminActivity, AdminActions, EntityTypes } from "@/lib/adminLogger";
 import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
 import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
-import { chooseStoredLines } from "@/lib/bureauInvoiceLines";
+import { chooseStoredLines, type StoredInvoiceLineInput } from "@/lib/bureauInvoiceLines";
 
 const formSchema = z.object({
   invoice_number: z.string().min(1, "Factuurnummer is verplicht"),
@@ -69,6 +69,8 @@ interface RegisterBureauInvoiceDialogProps {
   alreadyInvoiced?: number;
   /** Specificatie van het project; dekt de factuur het hele project, dan worden haar regels bevroren bij de factuur. */
   spec?: ProjectInvoiceSpec | null;
+  /** Regels van de proforma (fase 2): die worden bevroren in plaats van de specificatie. */
+  fullLines?: StoredInvoiceLineInput[] | null;
   onSuccess: () => void;
 }
 
@@ -82,6 +84,7 @@ export const RegisterBureauInvoiceDialog = ({
   projectTotal,
   alreadyInvoiced,
   spec = null,
+  fullLines = null,
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,6 +175,8 @@ export const RegisterBureauInvoiceDialog = ({
       // project dekt, anders een samenvatting per btw-tarief.
       const storedLines = chooseStoredLines({
         spec,
+        fullLines,
+        projectTotalInclVat: projectTotal ?? null,
         invoiceType: data.invoice_type,
         invoiceNumber: data.invoice_number,
         amountInclVat: totalInclVat,
