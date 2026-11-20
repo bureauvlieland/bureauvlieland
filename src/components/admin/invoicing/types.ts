@@ -1,4 +1,5 @@
 import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
+import type { Proforma, ProformaLine } from "@/lib/proforma";
 
 export interface AccommodationExtraForInvoicing {
   id: string;
@@ -87,4 +88,6 @@ export interface InvoicingRow {
   request: ProgramRequestWithItems;
   totals: InvoiceTotals;
   spec: ProjectInvoiceSpec;
+  /** Fase 3: de proforma in concept van dit project; dan komen totalen en regels daaruit. */
+  proforma?: { proforma: Proforma; lines: ProformaLine[] } | null;
 }

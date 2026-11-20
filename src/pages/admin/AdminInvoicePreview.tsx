@@ -1349,6 +1349,7 @@ const AdminInvoicePreview = () => {
         description={notes || loadedInvoice?.description || undefined}
         existingInvoiceId={isExistingInvoiceView ? loadedInvoice?.id ?? null : null}
         linesToStore={linesToStore}
+        proformaId={usesProforma ? proformaState.proforma?.id ?? null : null}
         onGeneratePdf={buildPdfBlob}
         onSent={() => navigate(`/admin/projecten/${request.id}`)}
       />

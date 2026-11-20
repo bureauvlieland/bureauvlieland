@@ -14,6 +14,9 @@ import { isFeeExcluded } from "@/lib/excludedFees";
 import { getDisplayUnitPrice, getEffectivePeople, isPerPersonItem, isPerDayItem } from "@/lib/portalPricing";
 import { buildProjectInvoiceSpec, type SpecItemInput } from "@/lib/projectInvoiceSpec";
 import type { FeeStructureSet } from "@/types/pricing";
+import type { PortalProformaLine } from "@/hooks/useCustomerProgram";
+import { totalsFromStoredLines, type StoredLineKind } from "@/lib/bureauInvoiceLines";
+import { orderProformaLines } from "@/lib/proformaWorksheet";
 
 interface PriceSummaryCardProps {
   items: ProgramRequestItem[];
@@ -39,6 +42,8 @@ interface PriceSummaryCardProps {
   arrivalDate?: string | null;
   /** Gefactureerde wijzigingsrondes na klantakkoord. */
   revisionFeesTotal?: number;
+  /** Actieve proformaregels (docs/plan-proforma-factuur.md, fase 3): dan is dit de specificatie. */
+  proformaLines?: PortalProformaLine[];
 }
 
 export const PriceSummaryCard = ({
@@ -58,6 +63,7 @@ export const PriceSummaryCard = ({
   requestDate,
   arrivalDate,
   revisionFeesTotal = 0,
+  proformaLines,
 }: PriceSummaryCardProps) => {
   const isBureauCentral = invoicingMode === "bureau_central";
   const { settings: appSettings } = useAppSettings();
@@ -219,8 +225,40 @@ export const PriceSummaryCard = ({
     };
   }, [items, numberOfPeople, numberOfDays, selectedAccommodationQuote, accommodationExtras, effectiveVatRates, linesByItem, appSettings, invoicingMode, excludedFees, feeStructure, requestDate, arrivalDate, revisionFeesTotal]);
 
+  // Bestaat er een proforma, dan is dát de specificatie: haar actieve regels
+  // in factuurvolgorde, zonder herkomst, met de totalen uit die regels.
+  const proformaView = useMemo(() => {
+    if (!proformaLines || proformaLines.length === 0) return null;
+    const ordered = orderProformaLines(proformaLines);
+    const totals = totalsFromStoredLines(
+      ordered.map((l) => ({
+        kind: l.kind as StoredLineKind,
+        vat_rate: Number(l.vat_rate),
+        amount_excl_vat: Number(l.amount_excl_vat),
+        vat_amount: Number(l.vat_amount),
+        amount_incl_vat: Number(l.amount_incl_vat),
+      })),
+    );
+    const sections: Array<{ label: string; lines: PortalProformaLine[]; subtotal: number }> = [];
+    for (const line of ordered) {
+      let section = sections.find((sec) => sec.label === line.section);
+      if (!section) {
+        section = { label: line.section, lines: [], subtotal: 0 };
+        sections.push(section);
+      }
+      section.lines.push(line);
+      if (line.kind !== "item_group") section.subtotal += Number(line.amount_incl_vat);
+    }
+    const vatLines: Record<number, { exclVat: number; vatAmount: number }> = {};
+    for (const g of totals.vatGroups) vatLines[g.rate] = { exclVat: g.exclVat, vatAmount: g.vatAmount };
+    return { sections, totals, vatLines };
+  }, [proformaLines]);
+  const grandTotal = proformaView ? proformaView.totals.inclVat : summary.grandTotalInclVat;
+  const totalExclVat = proformaView ? proformaView.totals.exclVat : summary.totalExclVat;
+  const vatLinesView = proformaView ? proformaView.vatLines : summary.allVatLines;
+
   // Don't show if there are no prices yet and no items at all
-  if (!summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
+  if (!proformaView && !summary.hasPrices && summary.orderLines.length === 0 && !summary.hasAccommodation) {
     return null;
   }
 
@@ -235,7 +273,14 @@ export const PriceSummaryCard = ({
           <span className="text-sm font-medium">Kostenspecificatie</span>
         </div>
         <div className="space-y-1.5 text-sm">
-          {summary.hasAccommodation && (
+          {proformaView &&
+            proformaView.sections.map((section) => (
+              <div key={section.label} className="flex items-center justify-between">
+                <span className="text-muted-foreground">{section.label}</span>
+                <span>€{formatPrice(section.subtotal)}</span>
+              </div>
+            ))}
+          {!proformaView && summary.hasAccommodation && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">
                 Logies
@@ -250,31 +295,31 @@ export const PriceSummaryCard = ({
               )}
             </div>
           )}
-          {pricedActivityLines.length > 0 && (
+          {!proformaView && pricedActivityLines.length > 0 && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Activiteiten ({pricedActivityLines.length})</span>
               <span>€{formatPrice(activitiesTotal)}</span>
             </div>
           )}
-          {summary.showTouristTax && (
+          {!proformaView && summary.showTouristTax && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Toeristenbelasting</span>
               <span>€{formatPrice(summary.touristTax)}</span>
             </div>
           )}
-          {summary.showNatureContribution && (
+          {!proformaView && summary.showNatureContribution && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Natuurbijdrage</span>
               <span>€{formatPrice(summary.natureContribution)}</span>
             </div>
           )}
-          {summary.showCoordinationFee && (
+          {!proformaView && summary.showCoordinationFee && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Coördinatiefee</span>
               <span>€{formatPrice(summary.coordinationFee)}</span>
             </div>
           )}
-          {summary.revisionFees > 0 && (
+          {!proformaView && summary.revisionFees > 0 && (
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Programmawijzigingen</span>
               <span>€{formatPrice(summary.revisionFees)}</span>
@@ -282,14 +327,14 @@ export const PriceSummaryCard = ({
           )}
           <div className="flex items-center justify-between pt-1.5 border-t">
             <span className="font-medium">Totaal incl. BTW</span>
-            <span className="font-semibold text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
+            <span className="font-semibold text-primary">€{formatPrice(grandTotal)}</span>
           </div>
-          {numberOfPeople > 0 && summary.hasPrices && (
+          {numberOfPeople > 0 && (proformaView || summary.hasPrices) && (
             <p className="text-xs text-muted-foreground">
-              ca. €{formatPrice(summary.grandTotalInclVat / numberOfPeople)} p.p.
+              ca. €{formatPrice(grandTotal / numberOfPeople)} p.p.
             </p>
           )}
-          {summary.pendingCount > 0 && (
+          {!proformaView && summary.pendingCount > 0 && (
             <p className="text-xs text-muted-foreground mt-1">
               +{summary.pendingCount} onderde{summary.pendingCount > 1 ? "len" : "el"} nog te bevestigen
             </p>
@@ -308,7 +353,42 @@ export const PriceSummaryCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-0">
-        {/* Order lines table */}
+        {proformaView ? (
+          <div className="divide-y divide-border">
+            <div className="flex items-center justify-between py-2 font-medium text-muted-foreground uppercase text-eyebrow">
+              <span>Onderdeel</span>
+              <span>Bedrag</span>
+            </div>
+            {proformaView.sections.map((section) => (
+              <div key={section.label} className="py-2">
+                <p className="font-medium text-muted-foreground uppercase text-eyebrow mb-1">{section.label}</p>
+                {section.lines.map((line) => {
+                  const isGroup = line.kind === "item_group";
+                  const isSub = line.kind === "sub";
+                  return (
+                    <div key={line.id} className={cn("flex items-start justify-between gap-4 py-0.5", isSub && "ml-3")}>
+                      <span className={cn("text-sm", isSub && "text-xs text-muted-foreground", isGroup && "font-medium")}>
+                        {line.description}
+                        {line.sub_description && !isSub && (
+                          <span className="block text-xs text-muted-foreground">{line.sub_description}</span>
+                        )}
+                        {line.quantity_label && line.quantity_label !== "1" && !isGroup && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            ({line.quantity_label}
+                            {line.unit_suffix ? ` ${line.unit_suffix}` : ""})
+                          </span>
+                        )}
+                      </span>
+                      <span className={cn("text-sm whitespace-nowrap shrink-0", isSub && "text-xs text-muted-foreground")}>
+                        €{formatPrice(Number(line.amount_incl_vat))}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        ) : (
         <div className="divide-y divide-border">
           {/* Table header */}
           <div className="flex items-center justify-between py-2 font-medium text-muted-foreground uppercase text-eyebrow">
@@ -497,15 +577,16 @@ export const PriceSummaryCard = ({
             </div>
           )}
         </div>
+        )}
 
         {/* VAT breakdown + single total */}
-        {summary.hasPrices && (
+        {(proformaView || summary.hasPrices) && (
           <div className="bg-muted/30 rounded-lg p-3 mt-4 space-y-1.5">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Subtotaal excl. BTW</span>
-              <span>€{formatPrice(summary.totalExclVat)}</span>
+              <span>€{formatPrice(totalExclVat)}</span>
             </div>
-            {Object.entries(summary.allVatLines)
+            {Object.entries(vatLinesView)
               .sort(([a], [b]) => Number(a) - Number(b))
               .map(([rate, { vatAmount }]) => (
                 <div key={rate} className="flex items-center justify-between text-sm">
@@ -515,19 +596,19 @@ export const PriceSummaryCard = ({
               ))}
             <div className="flex items-center justify-between pt-2 border-t">
               <span className="font-medium">Totaal incl. BTW</span>
-              <span className="font-bold text-lg text-primary">€{formatPrice(summary.grandTotalInclVat)}</span>
+              <span className="font-bold text-lg text-primary">€{formatPrice(grandTotal)}</span>
             </div>
             {numberOfPeople > 0 && (
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Per persoon incl. BTW</span>
-                <span>€{formatPrice(summary.grandTotalInclVat / numberOfPeople)}</span>
+                <span>€{formatPrice(grandTotal / numberOfPeople)}</span>
               </div>
             )}
           </div>
         )}
 
         {/* Pending notice */}
-        {(summary.pendingCount > 0 || summary.hasPreliminaryItems) && (
+        {!proformaView && (summary.pendingCount > 0 || summary.hasPreliminaryItems) && (
           <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3 mt-3">
             <Clock className="h-4 w-4 shrink-0 mt-0.5" />
             <p>

@@ -149,6 +149,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 4a) Proforma (docs/plan-proforma-factuur.md, fase 3): bestaat er een
+    //     proforma, dan toont het portaal haar actieve regels in plaats van
+    //     de eigen berekening. Zonder herkomst, zonder doorgestreepte regels.
+    let proformaLines: Array<Record<string, unknown>> = [];
+    {
+      const { data: proformaHeads } = await supabase
+        .from("project_proformas")
+        .select("id, status, created_at")
+        .eq("request_id", program.id)
+        .order("created_at", { ascending: false });
+      const head = (proformaHeads || []).find((h: any) => h.status === "concept") ?? (proformaHeads || [])[0] ?? null;
+      if (head) {
+        const { data: pLines } = await supabase
+          .from("project_proforma_lines")
+          .select("id, sort_order, kind, section, item_id, description, sub_description, quantity, quantity_label, unit_price_excl_vat, unit_suffix, vat_rate, amount_excl_vat, vat_amount, amount_incl_vat, line_status, replaces_line_id, line_key, created_at")
+          .eq("proforma_id", head.id)
+          .eq("line_status", "active")
+          .order("sort_order", { ascending: true });
+        proformaLines = (pLines || []) as Array<Record<string, unknown>>;
+      }
+    }
+
     // 4b) Maatwerk quote lines grouped by item_id
     let quoteLinesByItem: Record<string, any[]> = {};
     if (itemIds.length > 0) {
@@ -342,6 +364,7 @@ Deno.serve(async (req) => {
         quoteLinesByItem,
         blockVatRates,
         revisionFeesTotal,
+        proformaLines,
         linkedAccommodation,
         accommodationQuotes,
         extrasByQuoteId,

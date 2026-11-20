@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { PortalProformaLine } from "@/hooks/useCustomerProgram";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -162,6 +163,8 @@ export interface ProgramViewProps {
   blockVatRates?: Record<string, number>;
   /** Som van billable wijzigingsrondes (uit get-customer-program). */
   revisionFeesTotal?: number;
+  /** Actieve proformaregels (fase 3): dan toont de kostenspecificatie die. */
+  proformaLines?: PortalProformaLine[];
   /** Naar een weergave; met `anchor` daarna naar dat element scrollen. */
   onNavigate?: (view: PortalView, anchor?: string) => void;
 }
@@ -234,6 +237,7 @@ export const ProgramView = ({
   billingLinesByItem,
   blockVatRates,
   revisionFeesTotal,
+  proformaLines,
   onNavigate,
 }: ProgramViewProps) => {
   const section: ProgramSection = initialSection ?? "program";
@@ -800,6 +804,7 @@ export const ProgramView = ({
                 requestDate={requestDate}
                 arrivalDate={arrivalDate}
                 revisionFeesTotal={revisionFeesTotal}
+                proformaLines={proformaLines}
               />
             </div>
             {termsAccepted && <PaymentStatusCard items={program.items} termsAcceptedAt={program.terms_accepted_at!} />}

@@ -55,7 +55,10 @@ export interface WorksheetItem {
   override_people?: number | null;
 }
 
-const byOrder = (a: ProformaLine, b: ProformaLine) =>
+/** Wat de ordening nodig heeft; het klantportaal kent alleen deze velden. */
+export type OrderableLine = Pick<ProformaLine, "id" | "sort_order" | "created_at" | "replaces_line_id" | "line_key">;
+
+const byOrder = (a: OrderableLine, b: OrderableLine) =>
   a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at);
 
 /**
@@ -65,10 +68,10 @@ const byOrder = (a: ProformaLine, b: ProformaLine) =>
  * teruggegeven kopie heeft een doorlopende `sort_order`, zodat voorbeeld en
  * PDF (die per sectie op `sort_order` sorteren) dezelfde volgorde tonen.
  */
-export function orderProformaLines(lines: ProformaLine[]): ProformaLine[] {
-  const replacing = new Map<string, ProformaLine[]>();
-  const base: ProformaLine[] = [];
-  const loose: ProformaLine[] = [];
+export function orderProformaLines<T extends OrderableLine>(lines: T[]): T[] {
+  const replacing = new Map<string, T[]>();
+  const base: T[] = [];
+  const loose: T[] = [];
   for (const line of lines) {
     if (line.replaces_line_id) {
       const arr = replacing.get(line.replaces_line_id) ?? [];
@@ -80,8 +83,8 @@ export function orderProformaLines(lines: ProformaLine[]): ProformaLine[] {
       loose.push(line);
     }
   }
-  const ordered: ProformaLine[] = [];
-  const push = (line: ProformaLine) => {
+  const ordered: T[] = [];
+  const push = (line: T) => {
     ordered.push(line);
     for (const sub of (replacing.get(line.id) ?? []).sort(byOrder)) push(sub);
   };

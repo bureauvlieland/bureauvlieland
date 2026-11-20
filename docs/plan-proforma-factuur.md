@@ -184,6 +184,43 @@ Pizza & Borrel"; na "Bevestig" staan ze doorgestreept met het nieuwe bedrag
 eronder; "Terugdraaien" zet de offerteregel terug; het voorbeeld toont
 dezelfde regels en hetzelfde totaal.
 
+**Fase 3 (20 november 2026), alles leest de proforma.** Migratie
+`20261120120000_proforma-fase3.sql`: `sync_invoice_spec_total_from_proforma`
+schrijft bij elke wijziging aan de regels of de kop van een proforma in
+concept het projecttotaal (`program_requests.invoice_spec_total_incl_vat`)
+uit de actieve regels, via triggers op `project_proforma_lines` en
+`project_proformas`; de bestaande trigger herrekent daarna de
+voltooiingsstatus. Zo klopt "openstaand" ook zonder open beheerscherm. De
+beheerschermen schrijven dat totaal niet meer voor projecten met een
+proforma.
+
+Registreren sluit de proforma af: dekt een factuur haar helemaal
+(`storesFullProforma`: de bevroren regels zijn haar regels, geen
+samenvatting), dan zet `markProformaRegistered` de proforma op
+`registered` met `registered_invoice_id`, vanuit "Factuur registreren" op
+het project en de facturatiepagina én vanuit "Verstuur naar klant" in het
+voorbeeld. `useProforma` laadt daarna de geregistreerde proforma; het
+werkblad toont de pill "Geregistreerd als …", een melding, "Bekijk factuur"
+en geen acties meer (de trigger uit fase 1 bevriest de regels). Een deel-,
+slot- of creditfactuur laat het concept staan.
+
+De facturatiepagina laadt per project de proforma in concept en gebruikt
+haar totaal, openstaand bedrag en btw-groepen; "Factuur registreren" daar
+bevriest haar regels. De marge op het project rekent met het
+proformatotaal. Het klantportaal krijgt van `get-customer-program` de
+actieve regels (`proformaLines`, zonder herkomst, zonder vervangen of
+verborgen regels) en `PriceSummaryCard` toont die in secties met de
+totalen uit die regels, zowel in de kaart als in de compacte variant; zonder
+proforma blijft de eigen berekening. Een inkoopfactuur waarvan regels op
+een proforma staan kan niet meer worden verwijderd of opnieuw verwerkt
+(`assertInvoiceNotOnProforma`: "n regels staan op de proforma, draai die
+eerst terug").
+
+Nog open: "Nieuwe proforma voor het restant" na een geregistreerde
+eindfactuur (nu: creditnota of aanvullende factuur via de dialoog), het
+vanzelf aanmaken bij akkoord (fase 4, samen met de migratie van lopende
+projecten) en de commissie over een regel zonder onderdeel.
+
 ## 1. Hoe het nu werkt
 
 ```

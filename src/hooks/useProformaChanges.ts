@@ -111,3 +111,18 @@ export function useManualProformaLines() {
 
   return { add, rename, remove };
 }
+
+/**
+ * Fase 3: een volledige eindfactuur is geregistreerd uit de proforma. De
+ * proforma gaat op `registered` (regels bevroren door de trigger) en wijst
+ * naar de factuur. Mislukt dit, dan blijft het concept staan; de factuur
+ * zelf is al geregistreerd, dus we melden alleen.
+ */
+export async function markProformaRegistered(proformaId: string, invoiceId: string): Promise<void> {
+  const { error } = await supabase
+    .from("project_proformas")
+    .update({ status: "registered", registered_invoice_id: invoiceId })
+    .eq("id", proformaId)
+    .eq("status", "concept");
+  if (error) reportError(error, { where: "markProformaRegistered" });
+}
