@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { reportError } from "@/lib/errorReporting";
 import { PURCHASE_INVOICE_LINES_KEY } from "@/hooks/usePurchaseInvoiceLines";
 import type { ProformaChange } from "@/lib/proformaWorksheet";
-import { computeBillingLineAmounts } from "@/types/programItemBillingLine";
+import { computeLineAmounts } from "@/lib/proforma";
 
 export interface ApplyProformaResult {
   replaced: number;
@@ -55,7 +55,7 @@ export interface ManualLineInput {
 export function useManualProformaLines() {
   const add = useMutation({
     mutationFn: async ({ proformaId, input, sortOrder }: { proformaId: string; input: ManualLineInput; sortOrder: number }) => {
-      const amounts = computeBillingLineAmounts(input.quantity, input.unit_price_excl_vat, input.vat_rate);
+      const amounts = computeLineAmounts(input.quantity, input.unit_price_excl_vat, input.vat_rate);
       const { error } = await supabase.from("project_proforma_lines").insert({
         proforma_id: proformaId,
         sort_order: sortOrder,

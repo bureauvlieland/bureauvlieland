@@ -134,20 +134,9 @@ Deno.serve(async (req) => {
       blockVatRates[bid] = (b as any)?.vat_rate ?? 21;
     }
 
-    // 4) Billing lines, grouped by item_id
-    let billingLinesByItem: Record<string, any[]> = {};
-    if (itemIds.length > 0) {
-      const { data: linesData } = await supabase
-        .from("program_item_billing_lines")
-        .select("*")
-        .in("item_id", itemIds)
-        .order("sort_order", { ascending: true });
-      for (const line of linesData || []) {
-        const arr = billingLinesByItem[(line as any).item_id] || [];
-        arr.push(line);
-        billingLinesByItem[(line as any).item_id] = arr;
-      }
-    }
+    // 4) Klantregels per onderdeel bestaan niet meer (opruiming stap 2);
+    //    de sleutel blijft leeg voor oudere clients.
+    const billingLinesByItem: Record<string, any[]> = {};
 
     // 4a) Proforma (docs/plan-proforma-factuur.md, fase 3): bestaat er een
     //     proforma, dan toont het portaal haar actieve regels in plaats van

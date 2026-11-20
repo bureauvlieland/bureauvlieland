@@ -27,7 +27,6 @@ import type {
   ProgramRequestWithItems,
 } from "@/components/admin/invoicing/types";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { buildProjectInvoiceSpec, scaleVatGroups } from "@/lib/projectInvoiceSpec";
 import { syncInvoiceSpecTotals } from "@/hooks/useProjectInvoiceSpec";
@@ -251,7 +250,6 @@ const AdminInvoicing = () => {
       return map;
     },
   });
-  const { linesByItem, loading: isLinesLoading } = useItemBillingLinesBatch(allItemIds);
   const allItems = useMemo(() => requests.flatMap((request) => request.items), [requests]);
   const { vatRateMap } = useItemVatRates(allItems);
 
@@ -269,7 +267,7 @@ const AdminInvoicing = () => {
             reference_number: request.reference_number,
           },
           items: request.items,
-          linesByItem,
+          linesByItem: {},
           blockVatRates: vatRateMap,
           accommodation:
             request.linked_accommodation_id && request.selected_accommodation_base_total != null
@@ -370,12 +368,12 @@ const AdminInvoicing = () => {
           },
         };
       }),
-    [requests, linesByItem, vatRateMap, activeStructure, settings, proformasByRequest],
+    [requests, vatRateMap, activeStructure, settings, proformasByRequest],
   );
 
   // Opgeslagen projecttotaal gelijk houden met de berekening, zodat de
   // SQL-trigger voor de voltooiingsstatus hetzelfde getal ziet.
-  const specSyncReady = !isLoading && !isLinesLoading && !isSettingsLoading && !isStructuresLoading && rows.length > 0;
+  const specSyncReady = !isLoading && !isSettingsLoading && !isStructuresLoading && rows.length > 0;
   useEffect(() => {
     if (!specSyncReady) return;
     // Projecten met een proforma schrijft de database zelf (trigger).

@@ -277,21 +277,36 @@ de enkelvoudige `useItemBillingLines` (schrijven van klantregels) is weg,
 alleen de batchlezer blijft; `purchaseInvoiceCleanup` zet een lege
 kostenpost nog op € 0 maar verwijdert niets meer.
 
-**Opruiming stap 2 (nog niet).** `program_item_billing_lines` blijft tot
-elk project dat vóór de proforma volledig is gefactureerd een proforma
-heeft. "Proforma's aanmaken" slaat die projecten bewust over: hun fees
-zouden opnieuw over de offerte worden berekend in plaats van over de
-klantregels, waardoor het totaal kan verschuiven en de voltooiingsstatus
-van "volledig gefactureerd" af kan. De nette route is per afgerond project
-een proforma met status `registered`, gevuld uit de bevroren
-`bureau_invoice_lines` van de eindfactuur (die bestaan sinds oktober);
-projecten van vóór die tijd hebben alleen een PDF en houden hun klantregels
-als spoor. Daarna kunnen de tabel, de leesroutes (`useItemBillingLinesBatch`,
-`get-customer-program`, de UBL-terugval in `forward-bureau-invoice`, de
-SQL-terugval in `recalculate_program_completion_for_request`) en
-`purchaseInvoiceCleanup.ts` weg. `charge_status` en `skip_reason` blijven
-(commissiewerklijst), `excluded_fees` blijft (projecten zonder akkoord en
-het klantportaal), de dag −1 kostenposten blijven (offertefase).
+**Opruiming stap 2 (20 november 2026).** Twee migraties. `20261120170000_proforma-opruimen-2a.sql`:
+elk project dat vóór de proforma al volledig gefactureerd was krijgt een
+proforma met status `registered`, gevuld uit de bevroren
+`bureau_invoice_lines` van de eindfactuur als die het hele project dekken,
+anders één samenvattende regel per factuur uit de kop (creditnota's
+negatief), zodat het proformatotaal gelijk is aan wat is gefactureerd en de
+voltooiingsstatus niet verschuift; de terugval van
+`recalculate_program_completion_for_request` leest de klantregels niet
+meer. `20261120170100_proforma-opruimen-2b.sql` heeft een poort: staan er
+nog klantregels op een project zonder proforma, dan stopt de deploy met
+een melding die de projecten noemt (projecten met akkoord: "Proforma's
+aanmaken" op de facturatiepagina en de deploy opnieuw draaien; projecten
+zonder akkoord: met de hand bekijken). Daarna valt
+`program_item_billing_lines`.
+
+In de code zijn alle lezers weg: `useItemBillingLines`,
+`types/programItemBillingLine.ts` (de bedragberekening heet nu
+`computeLineAmounts` in `proforma.ts`), `purchaseInvoiceCleanup.ts` (de
+proforma-controle staat in `purchaseInvoiceGuards.ts`), de klantregels in
+`get-customer-program` (`billingLinesByItem` blijft leeg mee voor oudere
+clients) en de btw-terugval in `forward-bureau-invoice` die nu de actieve
+proformaregels leest. "Regels verdelen over projecten" weigert een regel
+die op een proforma staat. `createProformaForRequest` zet klantregels nog
+over zolang de tabel bestaat en doet anders niets.
+
+Blijft: `charge_status` en `skip_reason` (commissiewerklijst),
+`excluded_fees` (projecten zonder akkoord en klantportaal), de dag −1
+kostenposten (offertefase) en `linesByItem` als parameter van
+`projectInvoiceSpec` (altijd leeg; kan bij een volgende opschoning van de
+specificatie weg).
 
 ## 1. Hoe het nu werkt
 

@@ -165,14 +165,28 @@ export function useCreateLinesFromInvoice() {
 
 /**
  * Regels naar een (ander) project verplaatsen. Een verplaatste regel begint
- * daar opnieuw: bestemming en klantregels gaan weg. Daarna volgt de kop de
- * regels: één project → op de kop; meerdere → verzamelfactuur.
+ * daar opnieuw: de bestemming gaat weg; staat hij op een proforma, dan
+ * moet hij daar eerst worden teruggedraaid. Daarna volgt de kop de regels:
+ * één project → op de kop; meerdere → verzamelfactuur.
  */
 export function useMoveLinesToProject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: { invoiceId: string; moves: Array<{ lineId: string; requestId: string | null }> }) => {
       let changed = 0;
+      const { count: onProforma, error: checkErr } = await supabase
+        .from("project_proforma_lines")
+        .select("id", { count: "exact", head: true })
+        .in(
+          "purchase_invoice_line_id",
+          input.moves.map((m) => m.lineId),
+        );
+      if (checkErr) throw checkErr;
+      if ((onProforma ?? 0) > 0) {
+        throw new Error(
+          `${onProforma} ${onProforma === 1 ? "regel staat" : "regels staan"} op de proforma van dit project. Draai die eerst terug in het werkblad.`,
+        );
+      }
       for (const move of input.moves) {
         const { error: lineErr } = await supabase
           .from("purchase_invoice_lines")
@@ -185,11 +199,6 @@ export function useMoveLinesToProject() {
           })
           .eq("id", move.lineId);
         if (lineErr) throw lineErr;
-        const { error: blErr } = await supabase
-          .from("program_item_billing_lines")
-          .delete()
-          .eq("purchase_invoice_line_id", move.lineId);
-        if (blErr) throw blErr;
         changed += 1;
       }
       const { data, error } = await supabase.rpc("sync_collective_invoice_header", { p_invoice_id: input.invoiceId });
