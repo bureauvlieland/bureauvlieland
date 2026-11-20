@@ -39,8 +39,11 @@ BEGIN
      LIMIT 1;
     v_has_full := FOUND;
 
+    -- Eerst als concept: de regels van een geregistreerde proforma zijn
+    -- bevroren (trigger uit fase 1), dus de regels gaan erin vóór de status
+    -- op 'registered' gaat.
     INSERT INTO public.project_proformas (request_id, status, accepted_at, registered_invoice_id)
-    VALUES (r.id, 'registered', COALESCE(r.completed_at, r.created_at, now()), CASE WHEN v_has_full THEN v_invoice.id ELSE NULL END)
+    VALUES (r.id, 'concept', COALESCE(r.completed_at, r.created_at, now()), CASE WHEN v_has_full THEN v_invoice.id ELSE NULL END)
     RETURNING id INTO v_proforma_id;
 
     IF v_has_full THEN
@@ -84,6 +87,8 @@ BEGIN
         v_sort := v_sort + 1;
       END LOOP;
     END IF;
+
+    UPDATE public.project_proformas SET status = 'registered' WHERE id = v_proforma_id;
   END LOOP;
 END $$;
 
