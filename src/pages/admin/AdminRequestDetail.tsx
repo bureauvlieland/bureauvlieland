@@ -3281,6 +3281,7 @@ const AdminRequestDetail = () => {
                 selectedDates={(request.selected_dates as string[]) || []}
                 bureauInvoices={bureauInvoices}
                 onRegisterInvoice={() => setInvoiceDialogOpen(true)}
+                isRegistered={proformaState.isRegistered}
               />
 
               {/* Doorbelasten (oude werkblad): alleen zolang het project geen proforma heeft */}
@@ -3459,7 +3460,7 @@ const AdminRequestDetail = () => {
               {/* Margin overview */}
               <ProjectProfitSummary
                 purchaseInvoices={purchaseInvoices || []}
-                projectedRevenueInclVat={invoiceSpec?.totals.inclVat ?? 0}
+                projectedRevenueInclVat={hasProforma ? proformaTotals.inclVat : invoiceSpec?.totals.inclVat ?? 0}
                 invoicedRevenueInclVat={invoiceSpec?.totals.invoiced ?? 0}
                 coordinationFee={invoiceSpec?.totals.coordinationFee ?? 0}
                 expectedPartnerCosts={expectedPartnerCosts}
@@ -3707,6 +3708,7 @@ const AdminRequestDetail = () => {
         alreadyInvoiced={invoiceSpec?.totals.invoiced}
         spec={invoiceSpec}
         fullLines={hasProforma ? proformaToStoredLines(proformaState.lines) : null}
+        proformaId={hasProforma ? proformaState.proforma?.id ?? null : null}
         onSuccess={fetchRequestData}
       />
 

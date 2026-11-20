@@ -247,3 +247,11 @@ export function proformaDeltaInclVat(lines: ProformaLine[], spec: ProjectInvoice
   const total = totalsFromProformaLines(lines).inclVat;
   return Math.round((total - spec.totals.inclVat) * 100) / 100;
 }
+
+/**
+ * Dekt deze factuur de hele proforma? Dan wordt de proforma bij registreren
+ * geregistreerd (bevroren) en de factuur eraan gekoppeld. Een deel-, slot-
+ * of creditfactuur krijgt samenvattende regels en laat het concept staan.
+ */
+export const storesFullProforma = (storedLines: Array<{ kind: string }>): boolean =>
+  storedLines.length > 0 && storedLines.every((l) => l.kind !== "summary");

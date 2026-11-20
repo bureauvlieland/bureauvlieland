@@ -31,6 +31,8 @@ import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { buildProjectInvoiceSpec, scaleVatGroups } from "@/lib/projectInvoiceSpec";
 import { syncInvoiceSpecTotals } from "@/hooks/useProjectInvoiceSpec";
+import { proformaToStoredLines, totalsFromProformaLines, type Proforma, type ProformaLine } from "@/lib/proforma";
+import { orderProformaLines } from "@/lib/proformaWorksheet";
 import { sumBillableRevisions } from "@/lib/feeEngine";
 import {
   countUnforwardedInvoices,
@@ -213,6 +215,38 @@ const AdminInvoicing = () => {
     () => requests.flatMap((request) => request.items.map((item) => item.id)),
     [requests],
   );
+  const requestIdsKey = useMemo(() => requests.map((r) => r.id).sort().join(","), [requests]);
+
+  // Fase 3 van docs/plan-proforma-factuur.md: een project met een proforma in
+  // concept krijgt zijn totalen en factuurregels daaruit, niet uit de
+  // specificatie met klantregels.
+  const { data: proformasByRequest = new Map<string, { proforma: Proforma; lines: ProformaLine[] }>() } = useQuery({
+    queryKey: ["admin-invoicing-proformas", requestIdsKey],
+    enabled: requestIdsKey.length > 0,
+    queryFn: async () => {
+      const ids = requestIdsKey.split(",");
+      const { data: heads, error } = await supabase
+        .from("project_proformas")
+        .select("*")
+        .in("request_id", ids)
+        .eq("status", "concept");
+      if (error) throw error;
+      const map = new Map<string, { proforma: Proforma; lines: ProformaLine[] }>();
+      if (!heads || heads.length === 0) return map;
+      const { data: lines, error: linesError } = await supabase
+        .from("project_proforma_lines")
+        .select("*")
+        .in("proforma_id", heads.map((h) => h.id));
+      if (linesError) throw linesError;
+      for (const head of heads) {
+        map.set(head.request_id, {
+          proforma: head as unknown as Proforma,
+          lines: ((lines ?? []) as unknown as ProformaLine[]).filter((l) => l.proforma_id === head.id),
+        });
+      }
+      return map;
+    },
+  });
   const { linesByItem, loading: isLinesLoading } = useItemBillingLinesBatch(allItemIds);
   const allItems = useMemo(() => requests.flatMap((request) => request.items), [requests]);
   const { vatRateMap } = useItemVatRates(allItems);
@@ -254,9 +288,33 @@ const AdminInvoicing = () => {
           revisionFeesTotal: request.revision_fees_total ?? 0,
           invoices: request.invoices,
         });
+        const proforma = proformasByRequest.get(request.id) ?? null;
+        if (proforma) {
+          const pt = totalsFromProformaLines(proforma.lines);
+          const invoiced = spec.totals.invoiced;
+          return {
+            request,
+            spec: { ...spec, vatGroups: pt.vatGroups },
+            proforma,
+            totals: {
+              programItemsTotal: spec.totals.programItems,
+              extraCostsTotal: spec.totals.extraCosts,
+              coordinationFee: spec.totals.coordinationFee,
+              touristTax: spec.totals.touristTax,
+              natureContribution: spec.totals.natureContribution,
+              centralSurcharge: spec.totals.centralSurcharge,
+              revisionFees: spec.totals.revisionFees,
+              accommodationTotal: spec.totals.lodging + spec.totals.lodgingExtras,
+              grandTotalInclVat: pt.inclVat,
+              invoicedTotal: invoiced,
+              outstanding: Math.max(0, Math.round((pt.inclVat - invoiced) * 100) / 100),
+            },
+          };
+        }
         return {
           request,
           spec,
+          proforma: null,
           totals: {
             programItemsTotal: spec.totals.programItems,
             extraCostsTotal: spec.totals.extraCosts,
@@ -272,7 +330,7 @@ const AdminInvoicing = () => {
           },
         };
       }),
-    [requests, linesByItem, vatRateMap, activeStructure, settings],
+    [requests, linesByItem, vatRateMap, activeStructure, settings, proformasByRequest],
   );
 
   // Opgeslagen projecttotaal gelijk houden met de berekening, zodat de
@@ -280,12 +338,15 @@ const AdminInvoicing = () => {
   const specSyncReady = !isLoading && !isLinesLoading && !isSettingsLoading && !isStructuresLoading && rows.length > 0;
   useEffect(() => {
     if (!specSyncReady) return;
+    // Projecten met een proforma schrijft de database zelf (trigger).
     void syncInvoiceSpecTotals(
-      rows.map((row) => ({
-        requestId: row.request.id,
-        storedTotal: row.request.invoice_spec_total_incl_vat,
-        computedTotal: row.spec.totals.inclVat,
-      })),
+      rows
+        .filter((row) => !row.proforma)
+        .map((row) => ({
+          requestId: row.request.id,
+          storedTotal: row.request.invoice_spec_total_incl_vat,
+          computedTotal: row.spec.totals.inclVat,
+        })),
     );
     // De rijen veranderen bij elke herberekening; schrijven gebeurt alleen bij een verschil.
   }, [specSyncReady, rows]);
@@ -555,6 +616,8 @@ const AdminInvoicing = () => {
           alreadyInvoiced={selectedRow.totals.invoicedTotal}
           suggestedVatGroups={selectedVatGroups}
           spec={selectedRow.spec}
+          fullLines={selectedRow.proforma ? proformaToStoredLines(orderProformaLines(selectedRow.proforma.lines)) : null}
+          proformaId={selectedRow.proforma?.proforma.id ?? null}
           onSuccess={handleInvoiceSuccess}
         />
       )}

@@ -13,7 +13,7 @@ import type {
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
-import { clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
+import { assertInvoiceNotOnProforma, clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
 import { reportError } from "@/lib/errorReporting";
 
 type RawAllocationRow = {
@@ -300,6 +300,9 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
   const deleteInvoice = useMutation({
     mutationFn: async (invoice: PurchaseInvoiceWithRelations) => {
       const { id, item_id, request_id, file_path, invoice_number, partner_id, amount_excl_vat } = invoice;
+
+      // Regels op een proforma: eerst terugdraaien in het werkblad.
+      await assertInvoiceNotOnProforma(id);
 
       // Klantregels die deze factuur op onderdelen heeft gezet gaan mee: anders
       // blijft de klant bedragen betalen van een factuur die niet meer bestaat.

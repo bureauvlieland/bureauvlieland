@@ -1,4 +1,5 @@
 import { FileText } from "lucide-react";
+import type { PortalProformaLine } from "@/hooks/useCustomerProgram";
 import { Pill } from "@/components/system";
 import { isBillingComplete } from "@/lib/billingDetails";
 import { BillingDetailsCard } from "./BillingDetailsCard";
@@ -37,6 +38,7 @@ interface CompactBillingSectionProps {
   requestDate?: string | null;
   arrivalDate?: string | null;
   revisionFeesTotal?: number;
+  proformaLines?: PortalProformaLine[];
 }
 
 export const CompactBillingSection = ({
@@ -56,6 +58,7 @@ export const CompactBillingSection = ({
   requestDate,
   arrivalDate,
   revisionFeesTotal,
+  proformaLines,
 }: CompactBillingSectionProps) => {
   const billingComplete = isBillingComplete(program);
 
@@ -91,6 +94,7 @@ export const CompactBillingSection = ({
         requestDate={requestDate}
         arrivalDate={arrivalDate}
         revisionFeesTotal={revisionFeesTotal}
+        proformaLines={proformaLines}
       />
     </div>
   );

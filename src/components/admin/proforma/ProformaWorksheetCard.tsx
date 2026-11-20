@@ -75,6 +75,8 @@ interface ProformaWorksheetCardProps {
   selectedDates: string[];
   bureauInvoices: BureauInvoice[];
   onRegisterInvoice: () => void;
+  /** Fase 3: de proforma is als eindfactuur geregistreerd en bevroren. */
+  isRegistered?: boolean;
 }
 
 /** Bestemming van een open inkoopregel in het werkblad, inclusief logies. */
@@ -128,6 +130,7 @@ export function ProformaWorksheetCard({
   selectedDates,
   bureauInvoices,
   onRegisterInvoice,
+  isRegistered = false,
 }: ProformaWorksheetCardProps) {
   const navigate = useNavigate();
   const { invoices, isLoading: invoicesLoading } = usePurchaseInvoicesByRequest(requestId);
@@ -353,7 +356,10 @@ export function ProformaWorksheetCard({
       toast.success("Regel verwijderd");
     });
 
-  const isBusy = busy || working || apply.isPending || applyLodging.isPending;
+  const isBusy = busy || working || apply.isPending || applyLodging.isPending || isRegistered;
+  const registeredInvoice = proforma?.registered_invoice_id
+    ? bureauInvoices.find((inv) => inv.id === proforma.registered_invoice_id) ?? null
+    : null;
 
   // ── Weergave ──────────────────────────────────────────────────────────────
 
@@ -593,8 +599,11 @@ export function ProformaWorksheetCard({
             <CardTitle className="text-lg flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Proforma
-              {proforma && state.open.length === 0 && <Pill tone="success">Alle inkoopregels verwerkt</Pill>}
-              {proforma && state.open.length > 0 && (
+              {proforma && isRegistered && (
+                <Pill tone="info">Geregistreerd{registeredInvoice ? ` als ${registeredInvoice.invoice_number}` : ""}</Pill>
+              )}
+              {proforma && !isRegistered && state.open.length === 0 && <Pill tone="success">Alle inkoopregels verwerkt</Pill>}
+              {proforma && !isRegistered && state.open.length > 0 && (
                 <Pill tone="warning">
                   {state.open.length} {state.open.length === 1 ? "inkoopregel" : "inkoopregels"} nog niet op de factuur
                 </Pill>
@@ -608,12 +617,24 @@ export function ProformaWorksheetCard({
           </div>
           {proforma && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/projecten/${requestId}/factuur`)}>
-                Bekijk voorbeeld
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  navigate(
+                    registeredInvoice
+                      ? `/admin/projecten/${requestId}/factuur?invoiceId=${registeredInvoice.id}`
+                      : `/admin/projecten/${requestId}/factuur`,
+                  )
+                }
+              >
+                {isRegistered ? "Bekijk factuur" : "Bekijk voorbeeld"}
               </Button>
-              <Button size="sm" variant={state.open.length === 0 ? "default" : "outline"} onClick={onRegisterInvoice} disabled={isBusy}>
-                {invoiced > 0.005 && outstanding > 0.005 ? "Restant factureren" : "Factuur registreren"}
-              </Button>
+              {!isRegistered && (
+                <Button size="sm" variant={state.open.length === 0 ? "default" : "outline"} onClick={onRegisterInvoice} disabled={isBusy}>
+                  {invoiced > 0.005 && outstanding > 0.005 ? "Restant factureren" : "Factuur registreren"}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -635,6 +656,13 @@ export function ProformaWorksheetCard({
           )
         ) : (
           <>
+            {isRegistered && (
+              <Notice tone="info" title="Geregistreerd en bevroren">
+                Deze proforma is als eindfactuur geregistreerd
+                {registeredInvoice ? ` (${registeredInvoice.invoice_number})` : ""}. De regels zijn bevroren; een latere
+                inkoopfactuur gaat via een creditnota of een aanvullende factuur.
+              </Notice>
+            )}
             {/* De factuur */}
             <div className="rounded-md border">
               {sections.length === 0 ? (

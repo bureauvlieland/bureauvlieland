@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { storesFullProforma } from "@/lib/proforma";
+import { markProformaRegistered } from "@/hooks/useProformaChanges";
 import { toast } from "sonner";
 import type { InvoiceType } from "@/types/bureauInvoice";
 import { reportError } from "@/lib/errorReporting";
@@ -36,6 +38,8 @@ interface SendBureauInvoiceToCustomerDialogProps {
   existingInvoiceId?: string | null;
   /** Regels die bij registreren worden bevroren bij de factuur (`bureau_invoice_lines`). */
   linesToStore?: StoredInvoiceLineInput[];
+  /** De proforma waar `linesToStore` van komt; dekt de factuur haar helemaal, dan wordt zij geregistreerd. */
+  proformaId?: string | null;
   /** Async; resolves with the PDF blob to send. */
   onGeneratePdf: () => Promise<Blob | null>;
   onSent?: () => void;
@@ -68,6 +72,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
   description,
   existingInvoiceId = null,
   linesToStore = [],
+  proformaId = null,
   onGeneratePdf,
   onSent,
 }: SendBureauInvoiceToCustomerDialogProps) => {
@@ -148,6 +153,9 @@ export const SendBureauInvoiceToCustomerDialog = ({
             .from("bureau_invoice_lines")
             .insert(linesToStore.map((line) => ({ ...line, invoice_id: storedInvoiceId })));
           if (linesError) reportError(linesError, { where: "SendBureauInvoiceToCustomerDialog: factuurregels opslaan" });
+          if (proformaId && storesFullProforma(linesToStore)) {
+            await markProformaRegistered(proformaId, storedInvoiceId);
+          }
         }
 
         await supabase.from("program_request_history").insert({

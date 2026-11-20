@@ -33,6 +33,29 @@ export interface AccommodationSummary {
   totalQuotes: number;
 }
 
+/** Actieve regel van de proforma (docs/plan-proforma-factuur.md), zoals get-customer-program hem meegeeft. */
+export interface PortalProformaLine {
+  id: string;
+  sort_order: number;
+  kind: string;
+  section: string;
+  item_id: string | null;
+  description: string;
+  sub_description: string | null;
+  quantity: number;
+  quantity_label: string | null;
+  unit_price_excl_vat: number;
+  unit_suffix: string;
+  vat_rate: number;
+  amount_excl_vat: number;
+  vat_amount: number;
+  amount_incl_vat: number;
+  line_status: string;
+  replaces_line_id: string | null;
+  line_key: string | null;
+  created_at: string;
+}
+
 /** De ingevulde beoordeling van de klant, zoals het portaal die kent (fase 4). */
 export interface CustomerReviewSummary {
   created_at: string;
@@ -94,6 +117,8 @@ interface UseCustomerProgramReturn {
   extrasByQuoteId: Record<string, any[]>;
   /** Som van billable wijzigingsrondes — zelfde grondslag als de admin-factuur. */
   revisionFeesTotal: number;
+  /** Actieve proformaregels van het project (fase 3), leeg zonder proforma. */
+  proformaLines: PortalProformaLine[];
 }
 
 
@@ -147,6 +172,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
   const [blockVatRates, setBlockVatRates] = useState<Record<string, number>>({});
   const [extrasByQuoteId, setExtrasByQuoteId] = useState<Record<string, any[]>>({});
   const [revisionFeesTotal, setRevisionFeesTotal] = useState(0);
+  const [proformaLines, setProformaLines] = useState<PortalProformaLine[]>([]);
   const [customerReview, setCustomerReview] = useState<CustomerReviewSummary | null>(null);
   const [participantReview, setParticipantReview] = useState<ParticipantReviewSettings | null>(null);
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
@@ -298,6 +324,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
       setBlockVatRates(payload.blockVatRates || {});
       setExtrasByQuoteId(payload.extrasByQuoteId || {});
       setRevisionFeesTotal(Number(payload.revisionFeesTotal) || 0);
+      setProformaLines((payload.proformaLines || []) as PortalProformaLine[]);
       setCustomerReview((payload.customerReview as CustomerReviewSummary | null) ?? null);
       setParticipantReview((payload.participantReview as ParticipantReviewSettings | null) ?? null);
     } catch (err) {
@@ -1111,6 +1138,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
     blockVatRates,
     extrasByQuoteId,
     revisionFeesTotal,
+    proformaLines,
     customerReview,
     participantReview,
   };

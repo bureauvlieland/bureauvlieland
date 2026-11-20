@@ -80,6 +80,7 @@ const CustomerProgram = () => {
     billingLinesByItem,
     blockVatRates,
     revisionFeesTotal,
+    proformaLines,
     customerReview,
   } = useCustomerProgram(token || "");
 
@@ -485,6 +486,7 @@ const CustomerProgram = () => {
     billingLinesByItem,
     blockVatRates,
     revisionFeesTotal,
+    proformaLines,
   };
 
   // Decision 2: Single-day programs skip the splash and go directly to program

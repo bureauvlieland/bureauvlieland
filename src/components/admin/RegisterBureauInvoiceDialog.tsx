@@ -41,6 +41,8 @@ import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
 import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
 import { chooseStoredLines, type StoredInvoiceLineInput } from "@/lib/bureauInvoiceLines";
+import { storesFullProforma } from "@/lib/proforma";
+import { markProformaRegistered } from "@/hooks/useProformaChanges";
 
 const formSchema = z.object({
   invoice_number: z.string().min(1, "Factuurnummer is verplicht"),
@@ -71,6 +73,8 @@ interface RegisterBureauInvoiceDialogProps {
   spec?: ProjectInvoiceSpec | null;
   /** Regels van de proforma (fase 2): die worden bevroren in plaats van de specificatie. */
   fullLines?: StoredInvoiceLineInput[] | null;
+  /** De proforma waar `fullLines` van komt; dekt de factuur haar helemaal, dan wordt zij geregistreerd. */
+  proformaId?: string | null;
   onSuccess: () => void;
 }
 
@@ -85,6 +89,7 @@ export const RegisterBureauInvoiceDialog = ({
   alreadyInvoiced,
   spec = null,
   fullLines = null,
+  proformaId = null,
   onSuccess,
 }: RegisterBureauInvoiceDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -194,6 +199,9 @@ export const RegisterBureauInvoiceDialog = ({
           .from("bureau_invoice_lines")
           .insert(storedLines.map((line) => ({ ...line, invoice_id: inserted.id })));
         if (linesError) reportError(linesError, { where: "RegisterBureauInvoiceDialog: factuurregels opslaan" });
+        if (proformaId && fullLines && storesFullProforma(storedLines)) {
+          await markProformaRegistered(proformaId, inserted.id);
+        }
       }
 
       // Add history entry

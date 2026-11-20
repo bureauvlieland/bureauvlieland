@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PurchaseInvoiceInboxItem, InboxStatus } from "@/types/purchaseInvoiceInbox";
 import { reportError } from "@/lib/errorReporting";
-import { clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
+import { assertInvoiceNotOnProforma, clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
 
 export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const queryClient = useQueryClient();
@@ -100,6 +100,8 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
     mutationFn: async (item: PurchaseInvoiceInboxItem) => {
       const invoiceId = item.processed_invoice_id;
       if (invoiceId) {
+        // Regels op een proforma: eerst terugdraaien in het werkblad.
+        await assertInvoiceNotOnProforma(invoiceId);
         // Fetch invoice for cleanup metadata
         const { data: inv } = await supabase
           .from("partner_purchase_invoices")

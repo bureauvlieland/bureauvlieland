@@ -55,12 +55,14 @@ export function useProforma({ requestId, quoteStatus, spec, specReady, autoCreat
       setLoading(false);
       return;
     }
-    const { data: head, error } = await supabase
+    // Het concept als dat er is, anders de laatst geregistreerde proforma
+    // (fase 3: na registreren blijft het werkblad alleen-lezen zichtbaar).
+    const { data: heads, error } = await supabase
       .from("project_proformas")
       .select("*")
       .eq("request_id", requestId)
-      .eq("status", "concept")
-      .maybeSingle();
+      .order("created_at", { ascending: false });
+    const head = (heads ?? []).find((h) => h.status === "concept") ?? (heads ?? [])[0] ?? null;
     if (error) {
       reportError(error, { where: "useProforma.load" });
       setLoading(false);
@@ -178,6 +180,7 @@ export function useProforma({ requestId, quoteStatus, spec, specReady, autoCreat
     busy,
     isAccepted,
     canCreate: isAccepted && !proforma && !!freshLines && !loading,
+    isRegistered: proforma?.status === "registered",
     create,
     reload: load,
     lastSyncedAt,
