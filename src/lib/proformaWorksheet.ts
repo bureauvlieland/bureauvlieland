@@ -142,6 +142,38 @@ export function worksheetPurchaseLines(
   return state;
 }
 
+/**
+ * Inkoopregels die een offerteregel kunnen vervangen: alles wat nog niet op
+ * de proforma staat en niet via de logiesofferte loopt, dus ook regels die
+ * vóór de proforma al "verdeeld" (legacy) of op offerteprijs (kept_quote)
+ * waren afgehandeld, en gelaten regels. Facturen die de gast betaalde niet.
+ */
+export function replaceCandidates(
+  purchaseLines: WorksheetPurchaseLine[],
+  proformaLines: ProformaLine[],
+  invoices: WorksheetInvoice[],
+): WorksheetPurchaseLine[] {
+  const onProforma = new Set(proformaLines.map((l) => l.purchase_invoice_line_id).filter(Boolean));
+  const customerBilled = new Set(invoices.filter((i) => i.billed_to === "customer").map((i) => i.id));
+  return purchaseLines.filter(
+    (line) => !onProforma.has(line.id) && !line.lodging_quote_id && !customerBilled.has(line.invoice_id),
+  );
+}
+
+/** Korte status van een inkoopregel die nog niet op de proforma staat, voor de pill in de dialoog. */
+export function candidateStatusLabel(line: WorksheetPurchaseLine): string | null {
+  switch (line.charge_status) {
+    case "skipped":
+      return "gelaten";
+    case "legacy":
+      return "verdeeld, nog niet op de factuur";
+    case "kept_quote":
+      return "op offerteprijs";
+    default:
+      return null;
+  }
+}
+
 /** Een offerteregel met onderdeel die vervangen kan worden. */
 export const isReplaceableQuoteLine = (line: ProformaLine): boolean =>
   line.origin === "quote_item" && line.item_id != null && line.line_status !== "hidden" && line.kind !== "sub";

@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { ProformaLine } from "@/lib/proforma";
 import {
+  candidateStatusLabel,
   changesFromDestinations,
+  replaceCandidates,
   itemFigures,
   matchableItemsFromProforma,
   orderProformaLines,
@@ -104,6 +106,28 @@ describe("worksheetPurchaseLines", () => {
     expect(state.open.map((l) => l.id)).toEqual(["pl-open"]);
     expect(state.kept.map((l) => l.id)).toEqual(["pl-kept", "pl-gast"]);
     expect(state.charged.map((l) => l.id)).toEqual(["pl-charged", "pl-lodging", "pl-kept-quote", "pl-legacy"]);
+  });
+});
+
+describe("replaceCandidates", () => {
+  it("biedt ook verdeelde en op-offerteprijs regels aan, maar niets dat al op de proforma of via logies loopt", () => {
+    const proforma = [line({ id: "p", origin: "purchase_line", purchase_invoice_line_id: "pl-charged" })];
+    const candidates = replaceCandidates(
+      [
+        pl({ id: "pl-open" }),
+        pl({ id: "pl-legacy", charge_status: "legacy", item_id: "it-boot" }),
+        pl({ id: "pl-kept-quote", charge_status: "kept_quote", item_id: "it-fortuna" }),
+        pl({ id: "pl-kept", charge_status: "skipped" }),
+        pl({ id: "pl-charged" }),
+        pl({ id: "pl-lodging", lodging_quote_id: "q" }),
+        pl({ id: "pl-gast", invoice_id: "inv-gast" }),
+      ],
+      proforma,
+      invoices,
+    );
+    expect(candidates.map((l) => l.id)).toEqual(["pl-open", "pl-legacy", "pl-kept-quote", "pl-kept"]);
+    expect(candidateStatusLabel(pl({ id: "x", charge_status: "legacy" }))).toBe("verdeeld, nog niet op de factuur");
+    expect(candidateStatusLabel(pl({ id: "x" }))).toBeNull();
   });
 });
 
