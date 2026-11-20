@@ -221,6 +221,50 @@ eindfactuur (nu: creditnota of aanvullende factuur via de dialoog), het
 vanzelf aanmaken bij akkoord (fase 4, samen met de migratie van lopende
 projecten) en de commissie over een regel zonder onderdeel.
 
+**Fase 4 (20 november 2026), alle projecten over, oude werkblad weg.**
+Zonder migratie: de proforma ontstaat nu vanzelf zodra een beheerder een
+project met akkoord opent (`useProforma` met `autoCreate`), en op de
+facturatiepagina staat "Proforma's aanmaken (n)" voor alle projecten met
+akkoord die er nog geen hebben. Beide lopen via `createProformaForRequest`:
+de proforma uit de offerteregels (specificatie zonder klantregels), en
+daarna de klantregels van het oude werkblad overgezet volgens
+`planLegacyConversion` (`src/lib/proformaLegacy.ts`, met tests): een
+klantregel uit een inkoopregel wordt "vervang de offerteregel van dat
+onderdeel door die inkoopregel" via `apply_proforma_changes` (dus mét de
+commissieverdeling), een handmatige klantregel wordt een handmatige
+proformaregel die de offerteregel vervangt; overgezette klantregels gaan
+weg, zodat er één bron is. Wat niet mee kan (onderdeel niet op de proforma,
+inkoopregel van een ander project of weg, factuur door de gast betaald)
+blijft staan en wordt gemeld met reden. Inkoopregels die vóór de proforma
+op offerteprijs (`kept_quote`) of als partnerverdeling (`legacy`) waren
+afgehandeld tellen in het werkblad niet als open.
+
+Opgeruimd: `ChargeWorksheetCard` (werkblad Doorbelasten),
+`AdminItemBillingLinesEditor` (de regeleditor, ook uit het Financieel
+Overzicht en de onderdelentabel) en `useApplyPurchaseLineCharges`. Het
+werkblad toont nu ook de geregistreerde facturen met "Naar klant" en
+"Snelstart", zodat het Financieel Overzicht alleen nog voor projecten
+zonder akkoord bestaat. De werkbank-taak "inkoopfactuur zonder onderdeel"
+stuurt naar de proforma.
+
+**Bewust nog niet opgeruimd (schema).** `program_item_billing_lines`,
+`keep_quoted_price`, `final_billing_locked_at`,
+`created_from_purchase_lines`, `charge_status`, `skip_reason`,
+`excluded_fees`, de dag −1 kostenposten, `apply_purchase_line_charges` en
+`purchaseInvoiceCleanup.ts` blijven staan: `charge_status` en `skip_reason`
+worden door de commissiewerklijst gelezen, `excluded_fees` door het
+klantportaal en de voltooiingsstatus van projecten zonder proforma, de
+kostenposten door de offertefase, en de klantregels door projecten die
+nog geen proforma hebben. Zodra alle projecten met akkoord een proforma
+hebben (de knop op de facturatiepagina is dan weg) kan een aparte
+opruimmigratie volgen; die vraagt eerst een check dat geen enkele
+klantregel meer bestaat op een project met proforma.
+
+Te controleren: open /admin/facturatie en klik "Proforma's aanmaken (n)";
+de melding noemt het aantal en wat niet mee kon; open daarna een paar
+projecten en vergelijk het proformatotaal met wat het overzicht eerder
+toonde.
+
 ## 1. Hoe het nu werkt
 
 ```

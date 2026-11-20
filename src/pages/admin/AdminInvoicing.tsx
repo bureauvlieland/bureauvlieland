@@ -33,6 +33,10 @@ import { buildProjectInvoiceSpec, scaleVatGroups } from "@/lib/projectInvoiceSpe
 import { syncInvoiceSpecTotals } from "@/hooks/useProjectInvoiceSpec";
 import { proformaToStoredLines, totalsFromProformaLines, type Proforma, type ProformaLine } from "@/lib/proforma";
 import { orderProformaLines } from "@/lib/proformaWorksheet";
+import { specToProformaLines } from "@/lib/proforma";
+import { createProformaForRequest, isAcceptedQuoteStatus } from "@/hooks/useProforma";
+import { toast } from "sonner";
+import { reportError } from "@/lib/errorReporting";
 import { sumBillableRevisions } from "@/lib/feeEngine";
 import {
   countUnforwardedInvoices,
@@ -289,12 +293,47 @@ const AdminInvoicing = () => {
           invoices: request.invoices,
         });
         const proforma = proformasByRequest.get(request.id) ?? null;
+        // Zonder klantregels: de offerteregels waaruit een nieuwe proforma ontstaat.
+        const quoteSpec = buildProjectInvoiceSpec({
+          request: {
+            number_of_people: request.number_of_people,
+            selected_dates: request.selected_dates,
+            invoicing_mode: request.invoicing_mode,
+            excluded_fees: request.excluded_fees,
+            created_at: request.created_at,
+            reference_number: request.reference_number,
+          },
+          items: request.items,
+          linesByItem: {},
+          blockVatRates: vatRateMap,
+          accommodation:
+            request.linked_accommodation_id && request.selected_accommodation_base_total != null
+              ? {
+                  accommodation_name: request.selected_accommodation_name ?? "Logies",
+                  price_total: Number(request.selected_accommodation_base_total) || 0,
+                  vat_rate: request.selected_accommodation_vat_rate,
+                  extras: (request.selected_accommodation_extras ?? []).map((extra) => ({
+                    id: extra.id,
+                    name: extra.name ?? "Extra",
+                    quantity: Number(extra.quantity) || 0,
+                    unit_price: Number(extra.unit_price) || 0,
+                    pricing_type: extra.pricing_type,
+                    vat_rate: extra.vat_rate,
+                  })),
+                }
+              : null,
+          settings,
+          feeStructure: resolveFeeStructure(request.fee_snapshot, activeStructure),
+          revisionFeesTotal: request.revision_fees_total ?? 0,
+          invoices: request.invoices,
+        });
         if (proforma) {
           const pt = totalsFromProformaLines(proforma.lines);
           const invoiced = spec.totals.invoiced;
           return {
             request,
             spec: { ...spec, vatGroups: pt.vatGroups },
+            quoteSpec,
             proforma,
             totals: {
               programItemsTotal: spec.totals.programItems,
@@ -314,6 +353,7 @@ const AdminInvoicing = () => {
         return {
           request,
           spec,
+          quoteSpec,
           proforma: null,
           totals: {
             programItemsTotal: spec.totals.programItems,
@@ -443,6 +483,44 @@ const AdminInvoicing = () => {
     ),
   );
 
+  // Fase 4: projecten met akkoord maar zonder proforma in één keer overzetten.
+  const [creatingProformas, setCreatingProformas] = useState(false);
+  const rowsWithoutProforma = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          !row.proforma &&
+          !proformasByRequest.has(row.request.id) &&
+          isAcceptedQuoteStatus((row.request as unknown as { quote_status?: string | null }).quote_status) &&
+          row.request.completion_status !== "fully_invoiced",
+      ),
+    [rows, proformasByRequest],
+  );
+  const handleCreateProformas = async () => {
+    if (rowsWithoutProforma.length === 0) return;
+    setCreatingProformas(true);
+    let created = 0;
+    let skippedLines = 0;
+    const failed: string[] = [];
+    for (const row of rowsWithoutProforma) {
+      try {
+        const result = await createProformaForRequest(row.request.id, specToProformaLines(row.quoteSpec));
+        created += 1;
+        skippedLines += result.legacy.skipped.length;
+      } catch (err) {
+        reportError(err, { where: "AdminInvoicing.createProformas", requestId: row.request.id });
+        failed.push(row.request.reference_number ?? row.request.customer_name);
+      }
+    }
+    setCreatingProformas(false);
+    queryClient.invalidateQueries({ queryKey: ["admin-invoicing-proformas"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-invoicing-requests"] });
+    const parts = [`${created} ${created === 1 ? "proforma" : "proforma's"} aangemaakt`];
+    if (skippedLines > 0) parts.push(`${skippedLines} ${skippedLines === 1 ? "klantregel kon" : "klantregels konden"} niet mee`);
+    if (failed.length > 0) parts.push(`mislukt: ${failed.join(", ")}`);
+    (failed.length > 0 ? toast.error : toast.success)(parts.join(" · "));
+  };
+
   const selectedRow = rows.find((row) => row.request.id === selectedRowId) ?? null;
   // Btw-groepen van het openstaande deel, pro rata uit de specificatie.
   const selectedVatGroups = useMemo(
@@ -485,11 +563,18 @@ const AdminInvoicing = () => {
   return (
     <AdminLayout>
       <div className="space-y-6 p-4 sm:p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Facturatie</h1>
-          <p className="text-muted-foreground">
-            Registreer facturen, stuur ze door naar de boekhouding en rond projecten af.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Facturatie</h1>
+            <p className="text-muted-foreground">
+              Registreer facturen, stuur ze door naar de boekhouding en rond projecten af.
+            </p>
+          </div>
+          {rowsWithoutProforma.length > 0 && (
+            <Button variant="outline" onClick={handleCreateProformas} disabled={creatingProformas}>
+              {creatingProformas ? "Bezig…" : `Proforma's aanmaken (${rowsWithoutProforma.length})`}
+            </Button>
+          )}
         </div>
 
         <div role="tablist" aria-label="Facturatiestatus" className="grid grid-cols-2 gap-3 lg:grid-cols-5">

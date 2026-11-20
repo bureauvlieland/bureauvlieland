@@ -54,7 +54,8 @@ import {
 } from "@/hooks/usePurchaseInvoiceLines";
 import { useApplyProformaChanges, useManualProformaLines, type ManualLineInput } from "@/hooks/useProformaChanges";
 import { lodgingExtraCategory } from "@/lib/purchaseLineMatcher";
-import type { BureauInvoice } from "@/types/bureauInvoice";
+import { invoiceTypeLabels, type BureauInvoice } from "@/types/bureauInvoice";
+import { useInvoiceCustomerSendStatus } from "@/hooks/useInvoiceCustomerSendStatus";
 import type { PurchaseInvoiceWithRelations } from "@/types/purchaseInvoice";
 
 const formatCurrency = (n: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
@@ -77,6 +78,8 @@ interface ProformaWorksheetCardProps {
   onRegisterInvoice: () => void;
   /** Fase 3: de proforma is als eindfactuur geregistreerd en bevroren. */
   isRegistered?: boolean;
+  /** Doorsturen naar de boekhouding (opent het voorbeeld met de doorstuurdialoog). */
+  onForwardInvoice?: (invoice: BureauInvoice) => void;
 }
 
 /** Bestemming van een open inkoopregel in het werkblad, inclusief logies. */
@@ -131,7 +134,12 @@ export function ProformaWorksheetCard({
   bureauInvoices,
   onRegisterInvoice,
   isRegistered = false,
+  onForwardInvoice,
 }: ProformaWorksheetCardProps) {
+  const { data: customerSendMap = {} } = useInvoiceCustomerSendStatus(
+    requestId,
+    bureauInvoices.map((i) => i.id),
+  );
   const navigate = useNavigate();
   const { invoices, isLoading: invoicesLoading } = usePurchaseInvoicesByRequest(requestId);
   const { data: purchaseRows, isLoading: purchaseLoading } = usePurchaseInvoiceLinesByRequest(requestId);
@@ -779,6 +787,66 @@ export function ProformaWorksheetCard({
                 ))
               )}
             </div>
+
+            {bureauInvoices.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Gefactureerd</h4>
+                {bureauInvoices.map((invoice) => {
+                  const isForwarded = invoice.status === "forwarded" || !!invoice.forwarded_to_accounting_at;
+                  const customerSentAt = customerSendMap[invoice.id] ?? customerSendMap[`number:${invoice.invoice_number}`];
+                  return (
+                    <div key={invoice.id} className="flex flex-wrap items-start justify-between gap-2 rounded-md border px-3 py-2 text-sm">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            className="font-medium underline decoration-dotted underline-offset-2 hover:text-primary"
+                            onClick={() => navigate(`/admin/projecten/${requestId}/factuur?invoiceId=${invoice.id}`)}
+                          >
+                            {invoice.invoice_number}
+                          </button>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: nl })}
+                          </span>
+                          <Pill tone="neutral" size="sm">{invoiceTypeLabels[invoice.invoice_type] ?? invoice.invoice_type}</Pill>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Pill tone={customerSentAt ? "success" : "neutral"} size="sm">
+                            {customerSentAt ? `Naar klant ${format(new Date(customerSentAt), "d MMM", { locale: nl })}` : "Niet naar klant verstuurd"}
+                          </Pill>
+                          <Pill tone={isForwarded ? "info" : "neutral"} size="sm">
+                            {isForwarded
+                              ? `Snelstart${invoice.forwarded_to_accounting_at ? ` ${format(new Date(invoice.forwarded_to_accounting_at), "d MMM", { locale: nl })}` : ""}`
+                              : "Nog niet doorgestuurd"}
+                          </Pill>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={cn("tabular-nums font-medium", invoice.invoice_type === "credit" && "text-destructive")}>
+                          {invoice.invoice_type === "credit" ? "-" : ""}
+                          {formatCurrency(Number(invoice.amount_incl_vat))}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => navigate(`/admin/projecten/${requestId}/factuur?action=send&invoiceId=${invoice.id}`)}
+                          >
+                            {customerSentAt ? "Opnieuw naar klant" : "Naar klant"}
+                          </Button>
+                          {onForwardInvoice && (
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => onForwardInvoice(invoice)}>
+                              {isForwarded ? "Opnieuw Snelstart" : "Snelstart"}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {state.kept.length > 0 && (
               <div className="space-y-2">

@@ -13,7 +13,6 @@ import { resolveItemVatRate } from "@/lib/itemVatRate";
 import type { BureauInvoice, InvoiceType } from "@/types/bureauInvoice";
 import { EXCLUDABLE_FEE_LABELS, type ExcludableFeeKey } from "@/lib/excludedFees";
 import type { ProjectInvoiceSpec, SpecLine } from "@/lib/projectInvoiceSpec";
-import { AdminItemBillingLinesEditor } from "@/components/admin/AdminItemBillingLinesEditor";
 
 /** Exacte btw-uitsplitsing van het projecttotaal, zoals getoond in het
  *  Financieel Overzicht. Gaat mee naar de registratiedialoog zodat de
@@ -177,15 +176,6 @@ export const FinancialOverviewCard = ({
                     </div>
                     <div className="flex items-center gap-1 ml-2">
                       <span className="font-medium whitespace-nowrap tabular-nums">{itemPriceLabel(line)}</span>
-                      {line.itemId && (
-                        <AdminItemBillingLinesEditor
-                          itemId={line.itemId}
-                          itemName={line.description}
-                          suggestedAmount={line.amountInclVat}
-                          defaultVatRate={line.vatRate}
-                          requestId={requestId}
-                        />
-                      )}
                     </div>
                   </div>
                   <SubLines line={line} />
@@ -201,13 +191,6 @@ export const FinancialOverviewCard = ({
                 </div>
                 <div className="flex items-center gap-1 ml-2">
                   <span className="text-muted-foreground whitespace-nowrap">Op aanvraag</span>
-                  <AdminItemBillingLinesEditor
-                    itemId={item.id}
-                    itemName={item.block_name}
-                    suggestedAmount={null}
-                    defaultVatRate={resolveItemVatRate(item, blockVatRates)}
-                    requestId={requestId}
-                  />
                 </div>
               </div>
             ))}
@@ -238,15 +221,6 @@ export const FinancialOverviewCard = ({
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="font-medium tabular-nums">{formatCurrency(line.amountInclVat)}</span>
-                      {line.itemId && (
-                        <AdminItemBillingLinesEditor
-                          itemId={line.itemId}
-                          itemName={line.description}
-                          suggestedAmount={line.amountInclVat}
-                          defaultVatRate={line.vatRate}
-                          requestId={requestId}
-                        />
-                      )}
                     </div>
                   </div>
                   <SubLines line={line} />
