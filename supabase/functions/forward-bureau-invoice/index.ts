@@ -335,21 +335,27 @@ Deno.serve(async (req) => {
         vat_amount: round2(Number(r.vat_amount) || 0),
       }));
 
-    // Fetch billing lines for this project's items to derive per-VAT-rate totals
-    const { data: items } = await supabase
-      .from("program_request_items")
-      .select("id")
-      .eq("request_id", invoice.request_id);
-    const itemIds = (items || []).map((i: any) => i.id);
-
+    // Btw-verhouding van het project voor de terugval: de actieve regels
+    // van de proforma (docs/plan-proforma-factuur.md), concept of geregistreerd.
     let projectLines: BillingLineRow[] = [];
-    if (itemIds.length > 0) {
-      const { data: lineRows } = await supabase
-        .from("program_item_billing_lines")
-        .select("description, quantity, unit_price_excl_vat, vat_rate, amount_excl_vat, vat_amount")
-        .in("item_id", itemIds)
-        .order("sort_order", { ascending: true });
-      projectLines = (lineRows || []) as BillingLineRow[];
+    {
+      const { data: proformaHeads } = await supabase
+        .from("project_proformas")
+        .select("id, status, created_at")
+        .eq("request_id", invoice.request_id)
+        .order("created_at", { ascending: false });
+      const head = (proformaHeads || []).find((h: any) => h.status === "concept") ?? (proformaHeads || [])[0] ?? null;
+      if (head) {
+        const { data: lineRows } = await supabase
+          .from("project_proforma_lines")
+          .select("description, quantity, unit_price_excl_vat, vat_rate, amount_excl_vat, vat_amount, kind")
+          .eq("proforma_id", head.id)
+          .eq("line_status", "active")
+          .order("sort_order", { ascending: true });
+        projectLines = ((lineRows || []) as Array<BillingLineRow & { kind: string }>)
+          .filter((r) => r.kind !== "item_group")
+          .map(({ kind: _kind, ...rest }) => rest);
+      }
     }
 
     const isCredit = invoice.invoice_type === "credit";

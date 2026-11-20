@@ -196,7 +196,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
       // token-validated). Replaces the previous fan-out of anon SELECTs across
       // program_requests, program_request_items, building_blocks,
       // program_request_history, accommodation_requests, accommodation_quotes,
-      // program_item_billing_lines and accommodation_quote_extras.
+      // klantregels (leeg sinds de proforma) and accommodation_quote_extras.
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const response = await fetch(

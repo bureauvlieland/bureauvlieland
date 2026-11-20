@@ -66,12 +66,13 @@ export async function createProformaForRequest(requestId: string, freshLines: Pr
   const itemIds = (items ?? []).map((i) => i.id);
   const empty: CreateProformaResult = { proformaId: head.id, legacy: { converted: 0, skipped: [] } };
   if (itemIds.length === 0) return empty;
+  // Klantregels van het oude werkblad; na opruiming stap 2b bestaat de
+  // tabel niet meer en is er niets over te zetten.
   const { data: billingRows, error: billingError } = await supabase
-    .from("program_item_billing_lines")
+    .from("program_item_billing_lines" as never)
     .select("*")
     .in("item_id", itemIds);
-  if (billingError) throw billingError;
-  const billingLines = (billingRows ?? []) as unknown as LegacyBillingLine[];
+  const billingLines = billingError ? [] : ((billingRows ?? []) as unknown as LegacyBillingLine[]);
   if (billingLines.length === 0) return empty;
 
   const { data: proformaRows, error: proformaError } = await supabase
@@ -130,7 +131,10 @@ export async function createProformaForRequest(requestId: string, freshLines: Pr
     if (replacedError) throw replacedError;
   }
   if (plan.convertedBillingLineIds.length > 0) {
-    const { error: deleteError } = await supabase.from("program_item_billing_lines").delete().in("id", plan.convertedBillingLineIds);
+    const { error: deleteError } = await supabase
+      .from("program_item_billing_lines" as never)
+      .delete()
+      .in("id", plan.convertedBillingLineIds);
     if (deleteError) throw deleteError;
   }
   return { proformaId: head.id, legacy: { converted: plan.convertedBillingLineIds.length, skipped: plan.skipped } };

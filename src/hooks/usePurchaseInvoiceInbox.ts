@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PurchaseInvoiceInboxItem, InboxStatus } from "@/types/purchaseInvoiceInbox";
 import { reportError } from "@/lib/errorReporting";
-import { assertInvoiceNotOnProforma, clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
+import { assertInvoiceNotOnProforma } from "@/lib/purchaseInvoiceGuards";
 
 export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
   const queryClient = useQueryClient();
@@ -108,17 +108,6 @@ export function usePurchaseInvoiceInbox(status: InboxStatus | "all" = "new") {
           .select("id, item_id, request_id, file_path, invoice_number, partner_id, amount_excl_vat")
           .eq("id", invoiceId)
           .maybeSingle();
-
-        // Klantregels die deze factuur op onderdelen zette gaan mee terug.
-        const { data: allocationRows } = await supabase
-          .from("partner_purchase_invoice_allocations")
-          .select("item_id")
-          .eq("invoice_id", invoiceId);
-        await clearCustomerLinesForInvoice({
-          id: invoiceId,
-          item_id: inv?.item_id ?? null,
-          allocations: allocationRows ?? [],
-        });
 
         // Cascade cleanup children
         await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", invoiceId);

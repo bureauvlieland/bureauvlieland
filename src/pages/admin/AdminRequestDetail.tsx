@@ -123,7 +123,6 @@ import { AdminPartnerConflictBanner } from "@/components/admin/AdminPartnerConfl
 import { AdminQuoteStatusBadge } from "@/components/admin/AdminQuoteStatusBadge";
 import { AdminItemQuoteStatusSelect } from "@/components/admin/AdminItemQuoteStatusSelect";
 import { AdminQuotePriceEditor } from "@/components/admin/AdminQuotePriceEditor";
-import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { AdminSendQuoteDialog } from "@/components/admin/AdminSendQuoteDialog";
 import { AdminAddActivitySheet } from "@/components/admin/AdminAddActivitySheet";
@@ -561,7 +560,6 @@ const AdminRequestDetail = () => {
   const { vatRateMap, getItemVatRate } = useItemVatRates(items);
 
   // Definitive billing lines per item (override quoted_price in financial overview)
-  const { linesByItem: billingLinesByItem, loading: billingLinesLoading } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // Selected accommodation quote for this request
   const [selectedAccommodationQuote, setSelectedAccommodationQuote] = useState<{
@@ -669,7 +667,7 @@ const AdminRequestDetail = () => {
   const { spec: invoiceSpec, isReady: specReady } = useProjectInvoiceSpec({
     request: (request as unknown as SpecRequestRow | null) ?? null,
     items,
-    linesByItem: billingLinesByItem,
+    linesByItem: EMPTY_LINES_BY_ITEM,
     blockVatRates: vatRateMap,
     accommodation: specAccommodation,
     invoices: bureauInvoices,
@@ -692,7 +690,7 @@ const AdminRequestDetail = () => {
     requestId: request?.id,
     quoteStatus: request?.quote_status,
     spec: quoteSpec,
-    specReady: quoteSpecReady && !isLoading && !billingLinesLoading,
+    specReady: quoteSpecReady && !isLoading,
     autoCreate: true,
   });
   const hasProforma = !!proformaState.proforma;
@@ -702,7 +700,7 @@ const AdminRequestDetail = () => {
     request?.id,
     invoiceSpec,
     (request as unknown as SpecRequestRow | null)?.invoice_spec_total_incl_vat,
-    specReady && !billingLinesLoading && !isLoading && !hasProforma,
+    specReady && !isLoading && !hasProforma,
   );
   useEffect(() => {
     if (!hasProforma || !request?.id || proformaState.loading) return;

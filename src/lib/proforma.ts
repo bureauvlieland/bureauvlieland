@@ -255,3 +255,12 @@ export function proformaDeltaInclVat(lines: ProformaLine[], spec: ProjectInvoice
  */
 export const storesFullProforma = (storedLines: Array<{ kind: string }>): boolean =>
   storedLines.length > 0 && storedLines.every((l) => l.kind !== "summary");
+
+/** Bedragen van een regel uit aantal, prijs excl. btw en tarief. */
+export function computeLineAmounts(quantity: number, unitPriceExclVat: number, vatRate: number) {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  const amount_excl_vat = r(quantity * unitPriceExclVat);
+  const vat_amount = r(amount_excl_vat * (vatRate / 100));
+  const amount_incl_vat = r(amount_excl_vat + vat_amount);
+  return { amount_excl_vat, vat_amount, amount_incl_vat };
+}

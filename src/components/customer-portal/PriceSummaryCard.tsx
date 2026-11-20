@@ -7,7 +7,6 @@ import type { ProgramRequestItem } from "@/types/programRequest";
 import type { AccommodationQuote } from "@/types/accommodation";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { supabase } from "@/integrations/supabase/client";
-import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { useQuoteExtras } from "@/hooks/useQuoteExtras";
 import { calculateExtraTotal } from "@/types/accommodationExtras";
 import { isFeeExcluded } from "@/lib/excludedFees";
@@ -68,12 +67,9 @@ export const PriceSummaryCard = ({
   const isBureauCentral = invoicingMode === "bureau_central";
   const { settings: appSettings } = useAppSettings();
 
-  // Prefer server-resolved data; only call the hook when not provided (admin/back-office contexts).
-  const itemIds = useMemo(() => items.map(i => i.id), [items]);
-  const { linesByItem: linesByItemFromHook } = useItemBillingLinesBatch(
-    billingLinesByItemProp ? [] : itemIds,
-  );
-  const linesByItem = billingLinesByItemProp ?? linesByItemFromHook;
+  // Klantregels per onderdeel bestaan niet meer (docs/plan-proforma-factuur.md,
+  // opruiming stap 2); de prop blijft voor oudere payloads.
+  const linesByItem = useMemo(() => billingLinesByItemProp ?? {}, [billingLinesByItemProp]);
 
   // Fetch lodging extras for selected accommodation - prefer override prop
   const { data: extrasFromHook = [] } = useQuoteExtras(

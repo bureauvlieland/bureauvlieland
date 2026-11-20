@@ -13,7 +13,7 @@ import type {
 } from "@/types/purchaseInvoice";
 import { findDuplicatePurchaseInvoice } from "@/lib/purchaseInvoiceDuplicateCheck";
 import { isAwaitingPdfMatch } from "@/lib/purchaseInvoiceStatusFlow";
-import { assertInvoiceNotOnProforma, clearCustomerLinesForInvoice } from "@/lib/purchaseInvoiceCleanup";
+import { assertInvoiceNotOnProforma } from "@/lib/purchaseInvoiceGuards";
 import { reportError } from "@/lib/errorReporting";
 
 type RawAllocationRow = {
@@ -304,10 +304,6 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
       // Regels op een proforma: eerst terugdraaien in het werkblad.
       await assertInvoiceNotOnProforma(id);
 
-      // Klantregels die deze factuur op onderdelen heeft gezet gaan mee: anders
-      // blijft de klant bedragen betalen van een factuur die niet meer bestaat.
-      const itemsWithLinesCleared = await clearCustomerLinesForInvoice(invoice);
-
       // Cascade-cleanup children first
       await supabase.from("purchase_invoice_lines").delete().eq("invoice_id", id);
       await supabase.from("partner_purchase_invoice_allocations").delete().eq("invoice_id", id);
@@ -374,24 +370,17 @@ export function usePurchaseInvoices(filters?: PurchaseInvoiceFilters) {
         });
       }
 
-      return { id, itemsWithLinesCleared };
+      return { id };
     },
-    onSuccess: ({ itemsWithLinesCleared }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["commission-worklist"] });
       queryClient.invalidateQueries({ queryKey: ["purchase-invoice-consistency"] });
-      queryClient.invalidateQueries({ queryKey: ["item-billing-lines"] });
-      if (itemsWithLinesCleared > 0) {
-        toast.success(
-          `Inkoopfactuur verwijderd. De klantregels op ${itemsWithLinesCleared === 1 ? "1 onderdeel zijn" : `${itemsWithLinesCleared} onderdelen zijn`} weggehaald; de klant krijgt daar weer de offerteprijs.`,
-        );
-      } else {
-        toast.success("Inkoopfactuur verwijderd");
-      }
+      toast.success("Inkoopfactuur verwijderd");
     },
     onError: (error) => {
       reportError(error, { where: "usePurchaseInvoices: Error deleting purchase invoice" });
-      toast.error("Fout bij verwijderen inkoopfactuur");
+      toast.error(error instanceof Error && error.message ? error.message : "Fout bij verwijderen inkoopfactuur");
     },
   });
 

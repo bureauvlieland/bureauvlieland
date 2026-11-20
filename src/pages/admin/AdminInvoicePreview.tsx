@@ -32,7 +32,6 @@ import { supabase } from "@/integrations/supabase/client";
 import ambassadeurLogo from "@/assets/ambassadeur-waddenzee-werelderfgoed.png";
 import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { useItemBillingLinesBatch } from "@/hooks/useItemBillingLines";
 import { SendBureauInvoiceToCustomerDialog } from "@/components/admin/SendBureauInvoiceToCustomerDialog";
 import {
   ForwardBureauInvoiceDialog,
@@ -210,7 +209,6 @@ const AdminInvoicePreview = () => {
   const [priorInvoices, setPriorInvoices] = useState<Array<{ id: string; invoice_number: string; invoice_date: string; amount_incl_vat: number; invoice_type: string }>>([]);
 
   // Load billing lines per item (definitive lines override quoted_price)
-  const { linesByItem } = useItemBillingLinesBatch(items.map((i) => i.id));
 
   // Accommodation state
   const [loadedAccommodationQuote, setAccommodationQuote] = useState<AccommodationQuoteData | null>(null);
@@ -456,7 +454,7 @@ const AdminInvoicePreview = () => {
   };
 
   // De ene berekening van het project (projectInvoiceSpec): regels, btw-groepen, totaal.
-  const buildSpec = useCallback((lines: typeof linesByItem): ProjectInvoiceSpec | null => {
+  const buildSpec = useCallback((lines: Record<string, never>): ProjectInvoiceSpec | null => {
     if (!request) return null;
     return buildProjectInvoiceSpec({
       request: {
@@ -487,7 +485,7 @@ const AdminInvoicePreview = () => {
       bundleExtras: true,
     });
   }, [request, items, vatRateMap, accommodationQuote, accommodationNights, accommodationExtras, settings, activeStructure, revisionBillableTotal]);
-  const spec = useMemo(() => buildSpec(linesByItem), [buildSpec, linesByItem]);
+  const spec = useMemo(() => buildSpec(EMPTY_LINES_BY_ITEM), [buildSpec]);
   // De offerte zonder klantregels: daaruit volgt de proforma haar offerteregels.
   const quoteSpec = useMemo(() => buildSpec(EMPTY_LINES_BY_ITEM), [buildSpec]);
 
