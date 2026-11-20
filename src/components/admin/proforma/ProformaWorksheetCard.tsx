@@ -31,8 +31,10 @@ import { cn } from "@/lib/utils";
 import type { Proforma, ProformaLine } from "@/lib/proforma";
 import { totalsFromProformaLines } from "@/lib/proforma";
 import {
+  candidateStatusLabel,
   changesFromDestinations,
   isReplaceableQuoteLine,
+  replaceCandidates,
   itemFigures,
   orderProformaLines,
   originLabel,
@@ -623,7 +625,7 @@ export function ProformaWorksheetCard({
     );
   };
 
-  const candidateLinesForReplace = [...state.open, ...state.kept.filter((l) => invoiceById.get(l.invoice_id)?.billed_to !== "customer")];
+  const candidateLinesForReplace = replaceCandidates(purchaseLines, lines, worksheetInvoices);
 
   return (
     <Card>
@@ -941,7 +943,7 @@ export function ProformaWorksheetCard({
                       />
                       <span className="flex-1 min-w-0 truncate">{line.description}</span>
                       <span className="text-xs text-muted-foreground tabular-nums">{formatCurrency(line.amount_incl_vat)}</span>
-                      {line.charge_status === "skipped" && <Pill tone="neutral" size="sm">gelaten</Pill>}
+                      {candidateStatusLabel(line) && <Pill tone="neutral" size="sm">{candidateStatusLabel(line)}</Pill>}
                     </label>
                   ))}
                 </div>
