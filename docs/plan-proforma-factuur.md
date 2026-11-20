@@ -308,6 +308,21 @@ kostenposten (offertefase) en `linesByItem` als parameter van
 `projectInvoiceSpec` (altijd leeg; kan bij een volgende opschoning van de
 specificatie weg).
 
+**Nazorg (20 november 2026), logies dubbel.** Op het eerste project na
+fase 4 stond Badhotel Bruin twee keer op de proforma: als logiesregel uit
+de logiesofferte én als kostenpost van € 1.487,80 waar het oude werkblad
+de hotelfactuur op had gezet (die kostenpost kwam in fase 4 netjes mee).
+Twee maatregelen: (1) de voorstellen kennen nu de logiesoffertes: een
+inkoopregel van de accommodatie-partner krijgt "Kamer: <offerte>" als
+voorstel in plaats van "als eigen regel" (niet aangevinkt, met reden), zodat
+het logies de factuur volgt via `apply-purchase-invoice-to-lodging` en niet
+als tweede post verschijnt; (2) een kostenpost (onderdeel op dag −1) zonder
+regels erop heeft in het menu "Kostenpost verwijderen", dat het onderdeel
+en zijn proformaregel weghaalt. Rechtzetten van een bestaande dubbele:
+"Terugdraaien" op de inkoopregels onder de kostenpost, daarna in "Nog niet
+op de factuur" de kamerregel op "Kamer: …" en de rest op "Extra bij: …"
+zetten en bevestigen, en tot slot "Kostenpost verwijderen" op de lege post.
+
 ## 1. Hoe het nu werkt
 
 ```

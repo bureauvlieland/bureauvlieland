@@ -153,6 +153,27 @@ describe("proposeDestinations", () => {
   });
 });
 
+describe("proposeDestinations met logiesofferte", () => {
+  it("stelt voor een factuur van de accommodatie de logiesofferte voor in plaats van een eigen regel", () => {
+    const [proposal] = proposeDestinations({
+      openLines: [pl({ id: "pl-hotel", invoice_id: "inv-hotel", description: "Overnachting 2 nachten", amount_incl_vat: 1487.8 })],
+      invoices: [{ id: "inv-hotel", partner_id: "badhotel", partner_name: "Badhotel Bruin", invoice_number: "1", amount_incl_vat: 1487.8 }],
+      proformaLines: [],
+      items: [],
+      numberOfPeople: 20,
+      selectedDates: [],
+      lodgingQuotes: [{ id: "q-bruin", partner_id: "badhotel", accommodation_name: "Badhotel Bruin" }],
+    });
+    expect(proposal.destination).toEqual({ kind: "lodging", quoteId: "q-bruin", target: "room" });
+    expect(proposal.sure).toBe(false);
+    expect(proposal.reason).toContain("logiesofferte");
+  });
+
+  it("laat 'lodging' buiten de besluiten voor de databasefunctie", () => {
+    expect(changesFromDestinations([{ purchaseLineId: "a", destination: { kind: "lodging", quoteId: "q", target: "room" } }])).toEqual([]);
+  });
+});
+
 describe("itemFigures", () => {
   it("geeft offerte, inkoop en factuur per offerteregel", () => {
     const quote = line({ id: "q", item_id: "it-fortuna", line_status: "replaced", amount_incl_vat: 525, quote_amount_incl_vat: 525 });

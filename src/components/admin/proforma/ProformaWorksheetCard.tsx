@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Proforma, ProformaLine } from "@/lib/proforma";
 import { totalsFromProformaLines } from "@/lib/proforma";
@@ -82,10 +83,8 @@ interface ProformaWorksheetCardProps {
   onForwardInvoice?: (invoice: BureauInvoice) => void;
 }
 
-/** Bestemming van een open inkoopregel in het werkblad, inclusief logies. */
-type Draft =
-  | Destination
-  | { kind: "lodging"; quoteId: string; target: "room" | "extra" };
+/** Bestemming van een open inkoopregel in het werkblad. */
+type Draft = Destination;
 
 const draftValue = (d: Draft | undefined): string => {
   if (!d) return "";
@@ -215,9 +214,10 @@ export function ProformaWorksheetCard({
           items,
           numberOfPeople,
           selectedDates,
+          lodgingQuotes: lodgingQuotes ?? [],
         }).map((p) => [p.purchaseLineId, p]),
       ),
-    [state.open, worksheetInvoices, lines, items, numberOfPeople, selectedDates],
+    [state.open, worksheetInvoices, lines, items, numberOfPeople, selectedDates, lodgingQuotes],
   );
 
   // Voorstellen worden het concept; zekere voorstellen staan aangevinkt.
@@ -364,6 +364,24 @@ export function ProformaWorksheetCard({
       toast.success("Regel verwijderd");
     });
 
+  // Een kostenpost (onderdeel op dag −1) die niets meer draagt: weg uit het
+  // programma én van de proforma. Met inkoopregels erop eerst terugdraaien.
+  const handleRemoveCostPost = (line: ProformaLine) =>
+    run(async () => {
+      if (!line.item_id) return;
+      const { error: linesError } = await supabase.from("project_proforma_lines").delete().eq("id", line.id);
+      if (linesError) throw linesError;
+      const { error } = await supabase.from("program_request_items").delete().eq("id", line.item_id);
+      if (error) throw error;
+      toast.success(`Kostenpost “${line.description}” verwijderd`);
+    });
+  const isEmptyCostPost = (line: ProformaLine) =>
+    line.origin === "quote_item" &&
+    line.kind === "cost" &&
+    !!line.item_id &&
+    items.find((it) => it.id === line.item_id)?.day_index === -1 &&
+    !lines.some((l) => l.replaces_line_id === line.id && l.line_status === "active");
+
   const isBusy = busy || working || apply.isPending || applyLodging.isPending || isRegistered;
   const registeredInvoice = proforma?.registered_invoice_id
     ? bureauInvoices.find((inv) => inv.id === proforma.registered_invoice_id) ?? null
@@ -476,6 +494,14 @@ export function ProformaWorksheetCard({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive" onClick={() => handleManualRemove(line)}>
                     Verwijderen
+                  </DropdownMenuItem>
+                </>
+              )}
+              {isEmptyCostPost(line) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive" onClick={() => handleRemoveCostPost(line)}>
+                    Kostenpost verwijderen
                   </DropdownMenuItem>
                 </>
               )}
