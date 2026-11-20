@@ -19,30 +19,13 @@ describe("onderdelen waar een inkoopfactuur aan hangt", () => {
 
 describe("onderdelen zonder klantregels terugzetten", () => {
   const program = { id: "p", day_index: 1, block_id: "blok" };
-  const worksheetPost = { id: "w", day_index: -1, block_id: null, created_from_purchase_lines: true };
-  const manualPost = { id: "m", day_index: -1, block_id: null, created_from_purchase_lines: false };
+  const post = { id: "m", day_index: -1, block_id: null };
 
-  it("verwijdert een lege kostenpost van het werkblad en zet een handmatige op nul", () => {
-    expect(planResetForItems([program, worksheetPost, manualPost], new Set())).toEqual({
-      remove: ["w"],
-      zero: ["m"],
-      unlock: ["p"],
-    });
+  it("zet een lege kostenpost op nul en laat een gewoon onderdeel met rust", () => {
+    expect(planResetForItems([program, post], new Set())).toEqual({ zero: ["m"], unlock: ["p"] });
   });
 
   it("laat een kostenpost staan zolang er inkoopregels aan hangen", () => {
-    expect(planResetForItems([worksheetPost, manualPost], new Set(["w", "m"]))).toEqual({
-      remove: [],
-      zero: [],
-      unlock: ["w", "m"],
-    });
-  });
-
-  it("ziet een kostenpost met bouwsteen niet als losse post", () => {
-    expect(planResetForItems([{ id: "b", day_index: -1, block_id: "blok" }], new Set())).toEqual({
-      remove: [],
-      zero: [],
-      unlock: ["b"],
-    });
+    expect(planResetForItems([post], new Set(["m"]))).toEqual({ zero: [], unlock: ["m"] });
   });
 });

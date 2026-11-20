@@ -3408,15 +3408,12 @@ export type Database = {
           duration: string | null
           executed_at: string | null
           external_url: string | null
-          final_billing_locked_at: string | null
           id: string
           invoiced_amount: number | null
           invoiced_date: string | null
           invoiced_file_path: string | null
           invoiced_number: string | null
           is_custom_quote: boolean
-          created_from_purchase_lines: boolean
-          keep_quoted_price: boolean
           item_quote_status: string | null
           location_address: string | null
           location_lat: number | null
@@ -3530,15 +3527,12 @@ export type Database = {
           duration?: string | null
           executed_at?: string | null
           external_url?: string | null
-          final_billing_locked_at?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
-          created_from_purchase_lines?: boolean
-          keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
@@ -3652,15 +3646,12 @@ export type Database = {
           duration?: string | null
           executed_at?: string | null
           external_url?: string | null
-          final_billing_locked_at?: string | null
           id?: string
           invoiced_amount?: number | null
           invoiced_date?: string | null
           invoiced_file_path?: string | null
           invoiced_number?: string | null
           is_custom_quote?: boolean
-          created_from_purchase_lines?: boolean
-          keep_quoted_price?: boolean
           item_quote_status?: string | null
           location_address?: string | null
           location_lat?: number | null
@@ -5499,10 +5490,6 @@ export type Database = {
       }
     }
     Functions: {
-      apply_purchase_line_charges: {
-        Args: { p_request_id: string; p_decisions: Json }
-        Returns: Json
-      }
       apply_proforma_changes: {
         Args: { p_request_id: string; p_changes: Json }
         Returns: Json
