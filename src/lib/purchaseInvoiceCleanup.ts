@@ -58,15 +58,12 @@ export interface ResettableItem {
   id: string;
   day_index: number;
   block_id: string | null;
-  created_from_purchase_lines?: boolean | null;
 }
 
 export interface ResetPlan {
-  /** Door het werkblad aangemaakte kostenposten die leeg raakten: weg. */
-  remove: string[];
-  /** Handmatige kostenposten die als bestemming dienden: op € 0, het bedrag van de regels is weg. */
+  /** Kostenposten die als bestemming dienden: op € 0, het bedrag van de regels is weg. */
   zero: string[];
-  /** Gewone onderdelen: terug op de offerteprijs. */
+  /** Gewone onderdelen: niets te doen, de offerteprijs geldt weer. */
   unlock: string[];
 }
 
@@ -75,27 +72,20 @@ export interface ResetPlan {
  * zonder bouwsteen toont zijn bedrag ook buiten de regels om
  * (`admin_price_override`, gelijkgezet aan de som van de regels); laat je
  * die staan, dan betaalt de klant een factuur die niet meer bestaat.
- * Kostenposten waar nog inkoopregels aan hangen (`referencedIds`, bv. op
- * offerteprijs gehouden) blijven zoals ze zijn.
+ * Kostenposten waar nog inkoopregels aan hangen (`referencedIds`) blijven
+ * zoals ze zijn.
  */
 export function planResetForItems(items: ResettableItem[], referencedIds: Set<string>): ResetPlan {
-  const plan: ResetPlan = { remove: [], zero: [], unlock: [] };
+  const plan: ResetPlan = { zero: [], unlock: [] };
   for (const item of items) {
     const isCostPost = item.day_index === -1 && item.block_id == null;
-    if (isCostPost && !referencedIds.has(item.id)) {
-      if (item.created_from_purchase_lines) plan.remove.push(item.id);
-      else plan.zero.push(item.id);
-    } else {
-      plan.unlock.push(item.id);
-    }
+    if (isCostPost && !referencedIds.has(item.id)) plan.zero.push(item.id);
+    else plan.unlock.push(item.id);
   }
   return plan;
 }
 
-/**
- * Zet onderdelen zonder klantregels terug op de offerteprijs en ruimt lege
- * kostenposten op; geeft terug hoeveel onderdelen zijn geraakt.
- */
+/** Zet lege kostenposten op € 0; geeft terug hoeveel onderdelen zijn geraakt. */
 async function resetItemsWithoutLines(itemIds: string[]): Promise<number> {
   if (itemIds.length === 0) return 0;
   const { data: remaining, error: readError } = await supabase
@@ -108,10 +98,7 @@ async function resetItemsWithoutLines(itemIds: string[]): Promise<number> {
   if (toReset.length === 0) return 0;
 
   const [{ data: items, error: itemsError }, { data: refs, error: refsError }] = await Promise.all([
-    supabase
-      .from("program_request_items")
-      .select("id, day_index, block_id, created_from_purchase_lines")
-      .in("id", toReset),
+    supabase.from("program_request_items").select("id, day_index, block_id").in("id", toReset),
     supabase
       .from("purchase_invoice_lines")
       .select("item_id")
@@ -125,23 +112,11 @@ async function resetItemsWithoutLines(itemIds: string[]): Promise<number> {
     (items ?? []) as ResettableItem[],
     new Set((refs ?? []).map((r) => r.item_id).filter((id): id is string => !!id)),
   );
-  const now = new Date().toISOString();
-  if (plan.remove.length > 0) {
-    const { error } = await supabase.from("program_request_items").delete().in("id", plan.remove);
-    if (error) throw error;
-  }
   if (plan.zero.length > 0) {
     const { error } = await supabase
       .from("program_request_items")
-      .update({ final_billing_locked_at: null, admin_price_override: 0, updated_at: now })
+      .update({ admin_price_override: 0, updated_at: new Date().toISOString() })
       .in("id", plan.zero);
-    if (error) throw error;
-  }
-  if (plan.unlock.length > 0) {
-    const { error } = await supabase
-      .from("program_request_items")
-      .update({ final_billing_locked_at: null, updated_at: now })
-      .in("id", plan.unlock);
     if (error) throw error;
   }
   return toReset.length;

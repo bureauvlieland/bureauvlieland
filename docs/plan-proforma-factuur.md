@@ -265,6 +265,34 @@ de melding noemt het aantal en wat niet mee kon; open daarna een paar
 projecten en vergelijk het proformatotaal met wat het overzicht eerder
 toonde.
 
+**Opruiming stap 1 (20 november 2026).** Migratie
+`20261120150000_proforma-opruimen-1.sql`: `apply_purchase_line_charges`
+weg (sinds fase 4 zonder aanroeper), en de drie vlaggen op
+`program_request_items` die alleen het oude werkblad las: `keep_quoted_price`
+(op de proforma is "offerteprijs houden" gewoon een regel niet vervangen),
+`final_billing_locked_at` (een regel is vervangen of niet, er is geen vlag)
+en `created_from_purchase_lines` (de proforma maakt geen onderdelen aan).
+De partnerguard is zonder die twee vlaggen opnieuw aangemaakt. In de code:
+de enkelvoudige `useItemBillingLines` (schrijven van klantregels) is weg,
+alleen de batchlezer blijft; `purchaseInvoiceCleanup` zet een lege
+kostenpost nog op € 0 maar verwijdert niets meer.
+
+**Opruiming stap 2 (nog niet).** `program_item_billing_lines` blijft tot
+elk project dat vóór de proforma volledig is gefactureerd een proforma
+heeft. "Proforma's aanmaken" slaat die projecten bewust over: hun fees
+zouden opnieuw over de offerte worden berekend in plaats van over de
+klantregels, waardoor het totaal kan verschuiven en de voltooiingsstatus
+van "volledig gefactureerd" af kan. De nette route is per afgerond project
+een proforma met status `registered`, gevuld uit de bevroren
+`bureau_invoice_lines` van de eindfactuur (die bestaan sinds oktober);
+projecten van vóór die tijd hebben alleen een PDF en houden hun klantregels
+als spoor. Daarna kunnen de tabel, de leesroutes (`useItemBillingLinesBatch`,
+`get-customer-program`, de UBL-terugval in `forward-bureau-invoice`, de
+SQL-terugval in `recalculate_program_completion_for_request`) en
+`purchaseInvoiceCleanup.ts` weg. `charge_status` en `skip_reason` blijven
+(commissiewerklijst), `excluded_fees` blijft (projecten zonder akkoord en
+het klantportaal), de dag −1 kostenposten blijven (offertefase).
+
 ## 1. Hoe het nu werkt
 
 ```

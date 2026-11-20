@@ -273,8 +273,6 @@ interface ProgramRequestItem {
   invoiced_amount: number | null;
   invoiced_number: string | null;
   commission_status: string | null;
-  /** Offerteprijs houden: inkoopregels tellen voor de commissie, maar vervangen de prijs niet. */
-  keep_quoted_price?: boolean | null;
   // Quote mode fields
   item_quote_status: ItemQuoteStatus | null;
   admin_price_override: number | null;
@@ -1212,7 +1210,6 @@ const AdminRequestDetail = () => {
         proforma_deadline: _proDeadline,
         proforma_sent_at: _proSent,
         deviation_reason: _devReason,
-        final_billing_locked_at: _finalLocked,
         ...rest
       } = fullItem as Record<string, unknown>;
 
