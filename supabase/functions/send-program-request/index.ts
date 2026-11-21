@@ -72,8 +72,7 @@ import {
   replaceVariables,
   buildReplyTo,
   TemplateIds,
-  getBureauAdminEmail,
-} from "../_shared/email-templates.ts";
+  getBureauAdminEmail, getPortalBaseUrl } from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -217,6 +216,9 @@ const handler = async (req: Request): Promise<Response> => {
       partner_items: partnerItemsHtml,
       self_arranged_items: selfArrangedItemsHtml,
       notes: safeNotes ? safeNotes.replace(/\n/g, '<br>') : '',
+      // Knop naar de Werkbank; geen vaste URL in de template (trigger
+      // email_templates_block_hardcoded_urls).
+      admin_url: `${getPortalBaseUrl(origin)}/admin/werkbank`,
     }, { customer_name: requestData.name, number_of_people: String(requestData.numberOfPeople) });
 
     const customerTemplate = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_CUSTOMER, {

@@ -100,6 +100,7 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "cancellation_reason",
     "customer_name",
     "dates",
+    "programma_url",
     "reference_number"
   ],
   "cancellation_partner": [
@@ -313,6 +314,7 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reset_link"
   ],
   "program_request_bureau": [
+    "admin_url",
     "bureau_items",
     "customer_company",
     "customer_email",
