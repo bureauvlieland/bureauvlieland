@@ -180,8 +180,6 @@ export const EmailTypes = {
   PROGRAM_REQUEST_PARTNER: "program_request_partner",
   
   // Quote request emails
-  QUOTE_REQUEST_BUREAU: "quote_request_bureau",
-  QUOTE_REQUEST_CUSTOMER: "quote_request_customer",
   
   // Status update emails
   STATUS_CONFIRMED: "status_confirmed",
