@@ -5,7 +5,7 @@ vraag van Erwin: "Ik zou wel een notificatie willen als een partner een
 activiteit bevestigt. Welke notificaties zijn er nu, aan wie, wanneer, hoe
 nuttig zijn ze, wat missen we en wat is overkill?"
 
-Bronnen: de code in `supabase/functions/**` en `src/**` (de volledige inventaris per functie staat in `docs/notificaties-inventaris-bijlage.md`), en de productiedata
+Bronnen: de code in `supabase/functions/**` en `src/**` (de volledige inventaris per functie staat in `docs/notificaties-inventaris-bijlage.md`, de inhoudelijke audit van alle teksten in `docs/notificaties-audit-inhoud.md`), en de productiedata
 (`email_log`, `admin_todos`, `cron.job`, `program_request_history`) over de
 laatste 180 dagen (25 mei tot 21 november 2026).
 
@@ -381,7 +381,141 @@ Concreet:
 
 ## 5. Plan
 
-### Fase 1 — Reparaties (1 bouwdag)
+### Fase 0 — Inhoudelijke audit van alle teksten (uitgevoerd 21 november)
+
+Aanleiding: de inkoopfacturen-misser liet zien dat het onderzoek naar het
+mechanisme (wie, wanneer) niets zei over de inhoud (wat staat erin, klopt
+dat nog). Daarom zijn alle 59 database-templates, de mails met eigen HTML in
+39 edge functions en de teksten van alle Werkbank-taken getoetst aan de
+huidige werkwijze in `docs/`, de routes in `src/App.tsx` en de code die de
+variabelen vult. Het volledige verslag per mail staat in
+`docs/notificaties-audit-inhoud.md` (64 mails en taakgroepen, elk met
+regelnummers). De kern:
+
+**Fouten (mail gaat niet, komt verkeerd aan of zegt iets onwaars)**
+
+1. `quote_expired_partner` gaat nooit weg: in de lus overschaduwt
+   `const req = quote.request` de HTTP-request, `req.headers.get` gooit een
+   fout, de `catch` slikt hem in (`check-pending-items/index.ts:790,838`).
+   De offerte staat dan wel op verlopen en de Werkbank-taak zegt "de partner
+   heeft een notificatie ontvangen". Dit verklaart de 0 verzendingen in 180
+   dagen.
+2. Antwoorden op commissiefacturen verdwijnen: het antwoordadres is
+   `reply+BVC-…@`, maar `inbound-email` kent alleen `BV-` en `LOG-`
+   (`send-commission-invoice-to-partner:227`, `inbound-email:712-723`).
+3. `partner_missing_pdf_reminder` linkt naar `/partner/financieel`, een route
+   die niet bestaat (404), en beschrijft een knop "PDF toevoegen" die weg is.
+4. Twee klantmails bij één partnerreactie op een tegenvoorstel:
+   `counter_proposal_response` én `status_*` (geen `else`,
+   `update-partner-item-status:485,730`); twee keer gebeurd.
+5. Twee klantmails bij "akkoord en ondertekenen" in één klik:
+   `booking_confirmed_customer` én `quote_accepted_customer`
+   (`CustomerProgram.tsx:259-269`); in de code sinds fase 4 van de klantreis,
+   in de data nog niet voorgekomen.
+6. De Werkbank-taak `forward_accommodation_quote` ("stuur de offerte door")
+   wordt aangemaakt door precies de functie die de offerte net heeft
+   doorgestuurd (`notify-accommodation-quote:322-330`): 23 keer aangemaakt,
+   23 keer zonder reden gesloten.
+7. `accommodation_selected_customer` toont "€ € 1.234,00" (dubbel euroteken)
+   en belooft de klant dat "de accommodatie contact opneemt", terwijl de
+   partnermail zegt dat "Bureau Vlieland contact opneemt met de gast".
+8. `cancellation_customer` en `date_change_customer` beweren dat "alle
+   aanbieders automatisch op de hoogte zijn gesteld", ook als dat niet is
+   gebeurd (annulering door jou zonder partnermelding; mislukte
+   datumwijziging).
+9. `item_changes_partner` zegt "De klant heeft wijzigingen doorgevoerd" ook
+   als jij publiceert, en zet partner- en klantnaam ongesanitized in de mail.
+10. `item_added_partner` toont "Voorkeurstijd: Voorkeurstijd: 10:00" (label
+    in code én template).
+11. `chat_notification_bureau` noemt elk WhatsApp-bericht "Klantportaal" met
+    e-mail "onbekend"; `chat_reply_visitor` overschrijft het onderwerp met
+    referentie uit de code door een vast template-onderwerp.
+12. `send-project-email` knipt "Met vriendelijke groet, Bureau Vlieland" van
+    het eind omdat "de wrapper die toevoegt", maar de wrapper doet dat niet:
+    de mail gaat zonder afsluiting.
+13. `program_draft_link` heeft `info@bureauvlieland.nl` in de voettekst;
+    `catering_request_customer` belooft "binnen 2 werkdagen" waar de site 5
+    zegt.
+14. De watchdog-taak `system_cron_failure` wordt nooit aangemaakt (status
+    "open", al in 3.3 genoemd).
+
+**Verouderd (zegt iets dat niet meer zo werkt), vooral facturatie**
+
+- Zeven partnermails geven nog de oude factuurinstructie ("upload in het
+  portaal", "Factuur registreren", `inkoop@reply.bureauvlieland.nl`, "je
+  ontvangt apart bericht via het portaal"): `send-items-to-partners:140`,
+  `accept-quote-proposal:175`, de templates `program_request_partner`,
+  `booking_confirmed_partner` (plus fallback), `partner_invitation`,
+  `accommodation_selected_partner`, en `send-partner-headsup-t3:292`. Dat
+  zijn precies de mails die partners het vaakst krijgen (130 in 180 dagen).
+  Overal moet dezelfde zin: "Mail na uitvoering de pdf van je factuur naar
+  invoices@reply.bureauvlieland.nl met onze referentie {{reference_number}}
+  erop. Wij factureren centraal aan de klant."
+- De factuurherinneringen T+3/T+7 behandelen elk onderdeel als
+  offerte-onderdeel met bureaufactuur: een mededeling of een onderdeel op de
+  verblijfsnota krijgt "factuur ontbreekt". De T+3-template zegt "Gisteren"
+  terwijl de mail na drie dagen gaat.
+- `program_request_partner` kent in de template geen onderscheid tussen
+  bevestiging, offerte en mededeling (`plan-afhandeling-onderdelen.md`);
+  alleen `send-items-to-partners` doet dat. Dezelfde mail bestaat drie keer
+  (twee inline kopieën en een template) en loopt uit elkaar.
+- `send-partner-headsup-t3` selecteert alleen status `accepted`; een door de
+  partner bevestigd onderdeel (`confirmed`) krijgt geen briefing. De
+  database-template `partner_briefing_t3` wordt nergens gebruikt.
+- `booking_confirmed_customer` zegt "Alle activiteiten zijn nu definitief"
+  terwijl de code er een "onder voorbehoud"-blok voor plakt.
+- `program_request_bureau` toont altijd "Handling fee: € 0" en heeft geen
+  link naar het project; `program_request_customer` is nooit aangepast aan
+  het huidige aanvraagformulier.
+- `terms_reminder` (eerste variant) vraagt om "voorwaarden accepteren" als
+  losse stap; akkoord en tekenen zijn sinds 26 oktober één handeling.
+- Werkbank-taken rond inkoopfacturen zeggen "geregistreerd" waar het nu
+  "ontvangen in de inkoop-inbox" is (`post_execution_invoice_check`,
+  `commission_missing_invoice`, `commission_unlinked_invoice`,
+  `purchase_invoice_pending`, `commission_pending`).
+
+**Dood (bestaat, wordt niet gebruikt)**
+
+- Functies zonder aanroeper: `send-quote-request` (met beide
+  `quote_request_*`-templates), `notify-partners-informational`,
+  `notify-partner-item-deletion`, `send-partner-intro-email`.
+- Templates die geen code rendert: `partner_briefing_t3`,
+  `proforma_commission_notification` (beschrijft een bezwaarronde die niet
+  bestaat), `cancellation_accommodation_partner` (code gebruikt eigen HTML),
+  `sales_followup_offer_3d/_7d`, `sales_pre_signing`,
+  `sales_post_signing_welcome`, `presales_*` (vier stuks).
+
+**Toon en vorm**
+
+- Partners worden in 24 van 25 templates getutoyeerd ("Hoi … je"); negen
+  inline mails zeggen "Beste … u" (aantalwijziging, headcount-beoordeling,
+  intrekking, commissiefactuur, admin-wachtwoordreset, en de bulkvariant). De
+  klant krijgt "u", maar zes fallbacks tutoyeren.
+- Ruim twintig inline mails gaan zonder de huisstijlwrapper (geen logo, geen
+  voettekst met KvK en IBAN), waaronder de drie belangrijkste partnermails.
+- De meeste onderwerpregels missen het BV- of LOG-nummer; bedragen in
+  bureau- en boekhoudmails staan als "€1234.50".
+- De Werkbank toont de ruwe sleutel (`purchase_invoice_inbox`) en "Prio:
+  high" naast de taak; de Nederlandse labels in `autoTodoCreator.ts` worden
+  alleen op de verborgen legacy-pagina gebruikt en missen voor ruim twintig
+  sleutels. Zes legacy-links wijzen naar `/admin/logies/<programma-id>` waar
+  een logies-id hoort.
+- Twee adresbronnen voor "het bureau": helft via de instelling
+  `bureau_admin_email`, helft hard `hallo@`. Zolang die gelijk zijn merk je
+  niets; zodra je de instelling wijzigt, gaat de helft ergens anders heen.
+
+**Wat dit betekent voor het plan**
+
+De audit voegt werk toe aan fase 1 (de fouten 1 tot 6 en 14) en maakt fase 3
+groter: niet alleen minder mails, maar ook de teksten van wat blijft. Dat is
+hieronder verwerkt; het plan gaat van 6 naar 9 bouwdagen. Twee bijvangsten
+die het herhalen van deze audit overbodig maken: één bron per mailtekst (de
+template in de database, met de fallback in code alleen als noodrem die
+inhoudelijk gelijk is), en een test die alle templates én inline HTML
+controleert op dode routes, oude adressen (`inkoop@`, `info@`,
+`administratie@`) en het woord "registreer".
+
+### Fase 1 — Reparaties (2 bouwdagen)
 
 - `reconcile-admin-todos`: `partner_status_update` niet meer sluiten op
   `confirmed`; sluiten na 7 dagen of als jij hem afvinkt. Test erbij.
@@ -408,6 +542,17 @@ Concreet:
   `reconcileTodosContract.test.ts` dat voor taken doet).
 - De drie alarmmails via `logEmail` laten lopen; `cron-watchdog` zet de taak
   op `todo` in plaats van `open`.
+- Uit de audit: `quote_expired_partner` repareren (variabele hernoemen),
+  antwoordadres `BVC-` routeren in `inbound-email`, de 404-link en
+  instructie in `partner_missing_pdf_reminder` (tot de functie weggaat), de
+  dubbele klantmails bij tegenvoorstel en bij akkoord-en-tekenen, de
+  spooktaak `forward_accommodation_quote`, het dubbele euroteken en de
+  tegenstrijdige contactbelofte bij logies, de onware "alle aanbieders zijn
+  geïnformeerd"-zinnen, het dubbele label in `item_added_partner`, de
+  verkeerde actor in `item_changes_partner`, de groet-strip in
+  `send-project-email`, `info@` en "2 werkdagen".
+- De zeven verouderde factuurinstructies vervangen door één zin (zie fase
+  0), in de templates én in de fallbacks.
 
 ### Fase 2 — Gebeurtenissen van buiten (2 bouwdagen)
 
@@ -424,7 +569,7 @@ Concreet:
   "gezien"-knop; teller in de zijbalk telt dit cluster apart.
 - `new_program_request` sluit automatisch bij offerte verstuurd of archief.
 
-### Fase 3 — Minder ruis (2 bouwdagen)
+### Fase 3 — Minder ruis en betere teksten (4 bouwdagen)
 
 - Wijzigingsmails (`item_changes_*`) bundelen per ontvanger per dag via een
   wachtrijtabel `pending_change_notifications` en een avondcron; knop "nu
@@ -438,6 +583,30 @@ Concreet:
   `new_program_request`. `reconcileTodosContract.test.ts` bijwerken.
 - Reconciler: taken die hij sluit krijgen altijd een `completion_reason`, zodat
   de churn meetbaar wordt (nu heeft 99% van de 3.800 sluitingen geen reden).
+- Dode functies en templates verwijderen (fase 0, "Dood"), inclusief
+  `edgeFunctionTestCoverage.ts` en `AdminEmailTemplates`.
+- Eén tekst per moment: `program_request_partner` naar één gedeelde
+  generator in `_shared/` met de drie onderdeelsoorten; `partner_headsup_t3`
+  op de template; `cancellation_accommodation_partner` op de template; de
+  aantalwijzigingsmails (bulk en per onderdeel) samen; `admin-reset-partner-
+  password` op de template van `send-partner-reset-email`.
+- Alle inline mails door `wrapEmailHtml`; referentienummer in elk
+  onderwerp; partners overal "Hoi … je", klanten overal "u"; bedragen via
+  `formatCurrencyNL`; "Aan zet"-regel waar de ontvanger iets moet doen.
+- Templates herschrijven die iets anders zeggen dan de code doet
+  (`booking_confirmed_customer`, `program_request_bureau`,
+  `program_request_customer`, `accommodation_quote_notification`,
+  `accommodation_selected_partner`, `terms_reminder`).
+- Werkbank: Nederlandse labels uit `autoTodoCreator.ts` tonen in plaats van
+  de sleutel, de ruim twintig ontbrekende sleutels aanvullen in label- en
+  clusterkaart, taakteksten zonder jargon en met de actie ("ontvangen in de
+  inkoop-inbox", "publiceer of maak ongedaan"), legacy-pagina
+  `/admin/todos-legacy` verwijderen.
+- Eén adresbron voor het bureau: alles via `getBureauAdminEmail()`.
+- Test `emailContentGuard.test.ts`: geen `inkoop@`, `info@`,
+  `administratie@`, geen "registreer"/"upload" in factuurcontext, elke vaste
+  route bestaat in `App.tsx`, elke `{{variabele}}` in een template komt voor
+  in de aanroepende code.
 
 ### Fase 4 — Dagelijkse samenvatting en meting (1 bouwdag)
 
@@ -450,8 +619,9 @@ Concreet:
   het aantal herinneringen per onderdeel (moet nooit boven 3 komen). Over
   een maand opnieuw draaien.
 
-Totaal 6 bouwdagen. Fase 1 kan direct en lost de vraag uit BV-2611-0001 én de
-twee fouten in de factuurherinneringen op.
+Totaal 9 bouwdagen (fase 0 is gedaan). Fase 1 kan direct en lost de vraag
+uit BV-2611-0001, de factuurherinneringen en de veertien fouten uit de audit
+op.
 
 ## Beslissingen voor Erwin
 
@@ -467,6 +637,9 @@ twee fouten in de factuurherinneringen op.
    ja.
 6. **Dagelijkse samenvatting om 7:30?** Advies: ja, en na een maand bekijken
    of de losse bureau-mails dan nog nodig zijn.
+7. **De dode functies en templates uit fase 0 verwijderen, en de teksten
+   herschrijven volgens de audit (fase 3)?** Advies: ja; de zeven
+   factuurinstructies al in fase 1.
 
 ## Meetqueries
 
