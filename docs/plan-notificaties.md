@@ -259,6 +259,11 @@ hier het enige actieve kanaal.
    10 dagen, tot 5 per dag. De uitsluiting van bureau-onderdelen kijkt alleen
    naar `block_type !== 'bureau'` (`:1019,1092`) terwijl `isBureauItem()` in
    `_shared/bureau-item.ts` er al is en wel naar `provider_id` kijkt.
+   Dat het tot vijf keer per dag ging komt doordat `check-pending-items` niet
+   alleen om 8:00 draait: `reconcile-admin-todos` roept hem aan het eind ook
+   aan (`reconcile-admin-todos/index.ts:616`), en de Werkbank draait die
+   elke 5 minuten zolang hij open staat. Elke herinneringscheck draait dus
+   feitelijk de hele dag door.
 3. **`partner_status_update` wordt door de reconciler gesloten op
    `status = confirmed`**, terwijl dat juist de status is waarin de taak
    wordt aangemaakt (`reconcile-admin-todos/index.ts:494-505`).
@@ -350,6 +355,8 @@ Concreet:
 
 - `reconcile-admin-todos`: `partner_status_update` niet meer sluiten op
   `confirmed`; sluiten na 7 dagen of als jij hem afvinkt. Test erbij.
+- `reconcile-admin-todos` roept `check-pending-items` niet meer aan; die
+  draait alleen nog via zijn eigen dagelijkse cron (8:00 UTC).
 - `check-pending-items`: factuurherinneringen T+3 / T+7 / T+14 elk precies
   één keer (dedupe zonder tijdvenster, met `.limit(1)` in plaats van
   `.maybeSingle()`), bureau-onderdelen uitsluiten via `isBureauItem()`, en na
