@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { CommissionExemptDialog } from "@/components/admin/CommissionExemptDialog";
 import { isSystemTodo, looseGroupKey } from "@/lib/inboxAssemble";
+import { autoTodoLabel, todoPriorityLabel } from "@/lib/autoTodoCreator";
 import { useInboxTodoActions } from "@/hooks/useInboxTodoActions";
 
 interface LinkableInvoice {
@@ -161,8 +162,8 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         </div>
         <h2 className="mt-1 text-xl font-semibold leading-snug">{todo.title}</h2>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <Badge variant="outline">Prio: {todo.priority}</Badge>
-          {todo.auto_type && <Badge variant="secondary">{todo.auto_type}</Badge>}
+          <Badge variant="outline">Prioriteit: {todoPriorityLabel(todo.priority)}</Badge>
+          {todo.auto_type && <Badge variant="secondary">{autoTodoLabel(todo.auto_type)}</Badge>}
           {todo.due_date && <span>Deadline {todo.due_date}</span>}
           <span>Aangemaakt {new Date(todo.created_at).toLocaleDateString("nl-NL")}</span>
         </div>
@@ -172,9 +173,17 @@ export function OrphanTodoPanel({ todoId, onResolved }: { todoId: string; onReso
         <Card className="border-sky-200 bg-sky-50/60">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
             <div className="min-w-0">
-              <div className="font-medium">Dit is een melding van de dagelijkse zelftest.</div>
+              <div className="font-medium">
+                {todo.auto_type === "critical_selftest_failure"
+                  ? "Dit is een melding van de dagelijkse zelftest."
+                  : todo.auto_type === "system_cron_failure"
+                  ? "Dit is een melding van de bewaking van de geplande taken."
+                  : "Dit is een melding van de bewaking van de mailstatus."}
+              </div>
               <div className="text-xs text-muted-foreground">
-                De taak wordt automatisch afgerond zodra de zelftest weer slaagt. Bekijk de details en herstelhints op Email health.
+                {todo.auto_type === "critical_selftest_failure"
+                  ? "De taak wordt automatisch afgerond zodra de zelftest weer slaagt. Bekijk de details en herstelhints op Email health."
+                  : "De taak wordt automatisch afgerond zodra het weer loopt. Bekijk de details op Email health."}
               </div>
             </div>
             <Button size="sm" variant="outline" className="gap-1 bg-white" onClick={() => navigate("/admin/email-health")}>

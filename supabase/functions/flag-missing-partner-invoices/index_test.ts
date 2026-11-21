@@ -1,5 +1,5 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { shouldFlag, todoForRow, type FlagTodoRow } from "./index.ts";
+import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { isInvoicingReleased, shouldFlag, todoForRow, type FlagTodoRow } from "./index.ts";
 
 const row = (overrides: Partial<FlagTodoRow> = {}): FlagTodoRow => ({
   status: "missing_invoice",
@@ -40,7 +40,7 @@ Deno.test("logies zonder factuur: taak hangt aan het gekoppelde programma, niet 
   }));
   assertEquals(todo?.related_request_id, "prog-7");
   assertEquals(todo?.priority, "high");
-  assertEquals(todo?.title, "Inkoopfactuur ontbreekt: Badhotel Bruin — Badhotel Bruin (LOG-2602-0004)");
+  assertEquals(todo?.title, "Geen factuur ontvangen van Badhotel Bruin — Badhotel Bruin (LOG-2602-0004)");
 });
 
 Deno.test("losse logiesaanvraag zonder programma: geen related_request_id", () => {
@@ -62,7 +62,9 @@ Deno.test("niet-gekoppelde inkoopfactuur: taak op de factuur", () => {
   assertEquals(todo?.auto_type, "commission_unlinked_invoice");
   assertEquals(todo?.auto_entity_id, "inv-9");
   assertEquals(todo?.related_request_id, null);
-  assertEquals(todo?.title, "Inkoopfactuur niet gekoppeld: Trattoria Oliva — factuur 2026-017");
+  assertEquals(todo?.title, "Factuur niet gekoppeld: Trattoria Oliva — factuur 2026-017");
+  assert(todo!.description.includes("is ontvangen maar niet gekoppeld"));
+  assert(!todo!.description.includes("geregistreerd"));
 });
 
 Deno.test("zonder entiteit geen taak", () => {
@@ -80,4 +82,29 @@ Deno.test("shouldFlag: drempels, verwachte regels en commissievrij", () => {
   assertEquals(shouldFlag({ status: "missing_invoice", ageDays: 40, readiness: "expected" }, cfg), false);
   assertEquals(shouldFlag({ status: "missing_invoice", ageDays: 40, commissionExempt: true }, cfg), false);
   assertEquals(shouldFlag({ status: "match", ageDays: 40 }, cfg), false);
+});
+
+Deno.test("factuur ontbreekt: tekst zegt inkoop-inbox en dat de partner al herinnerd is", () => {
+  const todo = todoForRow(row())!;
+  assert(todo.description.includes("ontvangen in de Inkoop-inbox"));
+  assert(todo.description.includes("automatisch herinnerd (3, 7 en 14 dagen na uitvoering)"));
+  assert(!todo.description.includes("geregistreerd"));
+});
+
+Deno.test("project niet vrijgegeven: variant 'geef het project vrij', prioriteit hoog, zelfde sleutel", () => {
+  // Vervangt de oude T+7-taak post_execution_invoice_check uit check-pending-items.
+  const todo = todoForRow(row(), { invoicingReleased: false })!;
+  assertEquals(todo.auto_type, "commission_missing_invoice");
+  assertEquals(todo.auto_entity_id, "item-1");
+  assertEquals(todo.priority, "high");
+  assertEquals(todo.title, "Trattoria Oliva kan nog niet factureren voor Diner (BV-2606-0001): geef het project vrij");
+  assert(todo.description.includes("Markeer als klaar voor facturatie"));
+  assert(!todo.description.includes("herinnerd (3, 7"));
+});
+
+Deno.test("isInvoicingReleased: getekend of door het bureau vrijgegeven", () => {
+  assertEquals(isInvoicingReleased(null), false);
+  assertEquals(isInvoicingReleased({ terms_accepted_at: null, completion_status: "in_progress" }), false);
+  assertEquals(isInvoicingReleased({ terms_accepted_at: "2026-11-01T10:00:00Z", completion_status: "in_progress" }), true);
+  assertEquals(isInvoicingReleased({ terms_accepted_at: null, completion_status: "ready_for_invoice" }), true);
 });

@@ -96,7 +96,6 @@ const AdminCRM = lazy(() => import("./pages/admin/AdminCRM"));
 const AdminRequestDetail = lazy(() => import("./pages/admin/AdminRequestDetail"));
 
 const AdminPartnerDetail = lazy(() => import("./pages/admin/AdminPartnerDetail"));
-const AdminTodos = lazy(() => import("./pages/admin/AdminTodos"));
 const AdminLogs = lazy(() => import("./pages/admin/AdminLogs"));
 const AdminMessages = lazy(() => import("./pages/admin/AdminMessages"));
 const AdminEmailTemplates = lazy(() => import("./pages/admin/AdminEmailTemplates"));
@@ -298,7 +297,7 @@ const App = () => {
             {/* AdminPartners removed — /admin/partners redirects to /admin/crm?tab=partners above */}
             <Route path="/admin/partners/:id" element={<AdminPartnerDetail />} />
             <Route path="/admin/todos" element={<Navigate to="/admin/werkbank" replace />} />
-            <Route path="/admin/todos-legacy" element={<AdminTodos />} />
+            <Route path="/admin/todos-legacy" element={<Navigate to="/admin/werkbank" replace />} />
             <Route path="/admin/logs" element={<AdminLogs />} />
             <Route path="/admin/berichten" element={<AdminMessages />} />
             <Route path="/admin/berichten/templates" element={<AdminEmailTemplates />} />

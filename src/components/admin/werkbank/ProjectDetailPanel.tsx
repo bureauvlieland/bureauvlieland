@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { ItemDisplayStatusBadge } from "@/components/shared/ItemDisplayStatusBadge";
 import { deriveItemDisplayStatusLoose } from "@/lib/itemStatus";
 import { REFERRAL_STATUS_LABEL, type ReferralStatus } from "@/lib/weddingReferrals";
+import { autoTodoLabel, todoPriorityLabel } from "@/lib/autoTodoCreator";
 
 type ItemRow = Pick<
   Tables<"program_request_items">,
@@ -195,9 +196,9 @@ function ProjectActionsCard({ requestId }: { requestId: string }) {
                   <div className="mt-0.5 text-xs opacity-80 whitespace-pre-wrap">{t.description}</div>
                 )}
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] opacity-70">
-                  <span>Prioriteit: {t.priority}</span>
+                  <span>Prioriteit: {todoPriorityLabel(t.priority)}</span>
                   {t.due_date && <span>· Deadline {t.due_date}</span>}
-                  {t.auto_type && <span>· {t.auto_type}</span>}
+                  {t.auto_type && <span>· {autoTodoLabel(t.auto_type)}</span>}
                 </div>
               </div>
               <div className="flex shrink-0 gap-1">

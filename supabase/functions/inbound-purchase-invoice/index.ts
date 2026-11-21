@@ -288,8 +288,8 @@ Deno.serve(async (req) => {
 
     if (inboxIds.length > 0) {
       await supabase.from("admin_todos").insert({
-        title: `Nieuwe inkoopfactuur in inbox van ${fromName || fromEmail}`,
-        description: subject ? `Onderwerp: "${subject}"` : "Bekijk de inbox.",
+        title: `Verwerk de factuur van ${fromName || fromEmail} in de Inkoop-inbox`,
+        description: `${subject ? `Onderwerp: "${subject}". ` : ""}Bevestig partner en project, controleer het bedrag naast de pdf en sla de factuur op.`,
         priority: "normal",
         status: "todo",
         auto_type: "purchase_invoice_inbox",

@@ -38,12 +38,17 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Elke sluiting krijgt een reden die ook in admin_todos.completion_reason
+  // terechtkomt (docs/plan-notificaties.md, fase 3: de churn van de
+  // reconciler moet meetbaar zijn). De eerste reden wint.
   const closedIds = new Set<string>();
+  const reasonById = new Map<string, string>();
   const reasons: Record<string, number> = {};
 
   const markClosed = (id: string, reason: string) => {
     if (closedIds.has(id)) return;
     closedIds.add(id);
+    reasonById.set(id, reason);
     reasons[reason] = (reasons[reason] ?? 0) + 1;
   };
 
@@ -88,8 +93,6 @@ Deno.serve(async (req) => {
       } else if (REQUEST_BOUND_AUTO_TYPES.has(type)) {
         if (isUuid(eid)) requestIds.add(eid);
       } else if (
-        type === "post_execution_invoice_check" ||
-        type === "post_execution_feedback" ||
         type === "book_ferry_tickets" ||
         type === "stale_pending_change" ||
         type === "partner_reminder" ||
@@ -224,18 +227,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // sales invoices grouped by request (for post_execution_invoice_check fallback)
-    const salesByRequest = new Map<string, number>();
-    if (requestIds.size) {
-      const { data: bi } = await supabase
-        .from("bureau_invoices")
-        .select("request_id")
-        .in("request_id", [...requestIds]);
-      for (const row of (bi ?? []) as { request_id: string }[]) {
-        salesByRequest.set(row.request_id, (salesByRequest.get(row.request_id) ?? 0) + 1);
-      }
-    }
-
     // selected lodging quotes per accommodation request (for customer_inputs_missing)
     const selectedLodging = new Set<string>();
     {
@@ -280,21 +271,16 @@ Deno.serve(async (req) => {
       }
 
       switch (type) {
-        case "post_execution_invoice_check": {
-          const item = eid ? itemMap.get(eid) : null;
-          // Closed when there is at least one bureau_invoice for this request
-          // or project is fully invoiced.
-          const reqRow = item
-            ? requestMap.get(item.request_id) ?? req
-            : req;
-          if (
-            (reqRow && reqRow.completion_status === "fully_invoiced") ||
-            (item && (salesByRequest.get(item.request_id) ?? 0) > 0) ||
-            (t.related_request_id &&
-              (salesByRequest.get(t.related_request_id) ?? 0) > 0)
-          ) {
-            markClosed(t.id, type);
-          }
+        case "customer_status_email_due":
+        case "post_execution_feedback":
+        case "post_execution_invoice_check":
+        case "new_request_received": {
+          // Samengevoegd in fase 3 (docs/plan-notificaties.md): deze sleutels
+          // worden niet meer aangemaakt. customer_status_update_due,
+          // customer_aftersales, commission_missing_invoice en
+          // new_program_request nemen het over. Wat nog openstaat sluit met
+          // een herkenbare reden.
+          markClosed(t.id, "samengevoegd_fase3");
           break;
         }
         case "purchase_invoice_pending":
@@ -425,7 +411,6 @@ Deno.serve(async (req) => {
           }
           break;
         }
-        case "new_request_received":
         case "new_program_request": {
           // Dicht zodra de aanvraag niet meer nieuw is: offerte verstuurd
           // (quote_status), gearchiveerd, of niet meer actief.
@@ -623,18 +608,31 @@ Deno.serve(async (req) => {
     }
 
 
+    // Wegschrijven per reden, zodat completion_reason gevuld is.
     let closed = 0;
     if (closedIds.size) {
-      const ids = [...closedIds];
+      const idsByReason = new Map<string, string[]>();
+      for (const id of closedIds) {
+        const reason = reasonById.get(id) ?? "reconcile";
+        const arr = idsByReason.get(reason) ?? [];
+        arr.push(id);
+        idsByReason.set(reason, arr);
+      }
+      const completedAt = new Date().toISOString();
       const chunkSize = 200;
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        const { error: upErr, count } = await supabase
-          .from("admin_todos")
-          .update({ status: "done", completed_at: new Date().toISOString() }, { count: "exact" })
-          .in("id", chunk);
-        if (upErr) throw upErr;
-        closed += count ?? chunk.length;
+      for (const [reason, ids] of idsByReason) {
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          const { error: upErr, count } = await supabase
+            .from("admin_todos")
+            .update(
+              { status: "done", completed_at: completedAt, completion_reason: reason },
+              { count: "exact" },
+            )
+            .in("id", chunk);
+          if (upErr) throw upErr;
+          closed += count ?? chunk.length;
+        }
       }
     }
 

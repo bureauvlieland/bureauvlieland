@@ -57,14 +57,22 @@ export type TodoCluster =
 
 const CLUSTER_MAP: Record<string, TodoCluster> = {
   // bureau next action
-  new_request_received: "next_action_bureau",
   new_program_request: "next_action_bureau",
   new_accommodation_request: "next_action_bureau",
   quote_ready_to_send: "next_action_bureau",
   send_items_to_partners: "next_action_bureau",
   bureau_item_pricing: "next_action_bureau",
+  book_ferry_tickets: "next_action_bureau",
   forward_accommodation_quote: "next_action_bureau",
   invoicing_ready: "next_action_bureau",
+  bureau_invoice_pending: "next_action_bureau",
+  lodging_board_missing: "next_action_bureau",
+  stale_pending_change: "next_action_bureau",
+  availability_conflict: "next_action_bureau",
+  people_change_notify_failed: "next_action_bureau",
+  customer_date_change_partner_notify: "next_action_bureau",
+  customer_practical_info_updated: "next_action_bureau",
+  customer_accommodation_setup_changed: "next_action_bureau",
 
   // awaiting partner
   quote_pending_partner: "awaiting_partner",
@@ -74,24 +82,30 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
   quote_expired: "awaiting_customer",
   quote_expired_partner: "awaiting_partner",
   accommodation_quote_declined: "awaiting_partner",
+  accommodation_alternative_dates: "awaiting_partner",
 
   // awaiting customer
   quote_pending_customer: "awaiting_customer",
   terms_reminder: "awaiting_customer",
   request_no_response: "awaiting_customer",
   customer_inputs_missing: "awaiting_customer",
-  customer_status_email_due: "awaiting_customer",
+  customer_billing_missing: "awaiting_customer",
+  customer_terms_missing: "awaiting_customer",
   customer_status_update_due: "awaiting_customer",
   customer_counter_proposal: "awaiting_customer",
   customer_cancellation: "awaiting_customer",
 
   // post execution
-  post_execution_feedback: "post_execution",
-  post_execution_invoice_check: "post_execution",
   customer_aftersales: "post_execution",
   commission_pending: "post_execution",
   commission_ready_to_invoice: "post_execution",
   accommodation_commission_ready: "post_execution",
+  commission_missing_invoice: "post_execution",
+  commission_unlinked_invoice: "post_execution",
+  commission_invoice_lost: "post_execution",
+  customer_review_low: "post_execution",
+  reference_case_approved: "post_execution",
+  reference_case_feedback: "post_execution",
 
   // inbound
   inbound_email: "inbound",
@@ -109,7 +123,53 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
   partner_item_executed: "inbound",
   customer_quote_accepted: "inbound",
   customer_terms_signed: "inbound",
+  partner_post_charge: "inbound",
+  partner_agreement_accepted: "inbound",
+  wedding_referral_claim: "inbound",
+
+  // systeem: geen dossier, eigen sectie in de Werkbank (SYSTEM_AUTO_TYPES)
+  system_cron_failure: "other",
+  email_webhook_silent: "other",
+  email_undeliverable: "other",
+  critical_selftest_failure: "other",
+
+  // Niet meer aangemaakt sinds fase 3 (samengevoegd), maar nog bekend zodat
+  // open exemplaren en de spiegel met REFERRAL_PAUSED_AUTO_TYPES in
+  // supabase/functions/_shared/project-activity.ts kloppen.
+  new_request_received: "next_action_bureau",
+  customer_status_email_due: "awaiting_customer",
+  post_execution_feedback: "post_execution",
+  post_execution_invoice_check: "post_execution",
 };
+
+/**
+ * Taaksoorten die in fase 3 een cluster kregen maar (nog) niet in
+ * REFERRAL_PAUSED_AUTO_TYPES van de edge functions staan. Zolang de edge
+ * functions ze bij een doorverwezen bruiloft niet sluiten, pauzeert de
+ * frontend ze ook niet; anders lopen Werkbank en reconciler uiteen
+ * (referralPause.test.ts bewaakt de spiegel). Wil je ze wél pauzeren: voeg
+ * ze toe aan de Deno-lijst en haal ze hier weg.
+ */
+const NOT_YET_PAUSED_BY_REFERRAL = new Set<string>([
+  "accommodation_alternative_dates",
+  "availability_conflict",
+  "book_ferry_tickets",
+  "bureau_invoice_pending",
+  "commission_invoice_lost",
+  "commission_missing_invoice",
+  "commission_unlinked_invoice",
+  "customer_accommodation_setup_changed",
+  "customer_billing_missing",
+  "customer_date_change_partner_notify",
+  "customer_practical_info_updated",
+  "customer_review_low",
+  "customer_terms_missing",
+  "lodging_board_missing",
+  "people_change_notify_failed",
+  "reference_case_approved",
+  "reference_case_feedback",
+  "stale_pending_change",
+]);
 
 /**
  * Alle auto_types in cluster "Binnengekomen": gebeurtenissen van buiten die
@@ -136,6 +196,7 @@ export function clusterForAutoType(autoType: string | null | undefined): TodoClu
 export function isTodoPausedByReferral(autoType: string | null | undefined): boolean {
   if (!autoType) return false;
   if (autoType.startsWith("wedding_referral")) return false;
+  if (NOT_YET_PAUSED_BY_REFERRAL.has(autoType)) return false;
   const cluster = clusterForAutoType(autoType);
   return (
     cluster === "next_action_bureau" ||
