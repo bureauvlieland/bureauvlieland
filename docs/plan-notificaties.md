@@ -602,7 +602,7 @@ controleert op dode routes, oude adressen (`inkoop@`, `info@`,
   de sleutel, de ruim twintig ontbrekende sleutels aanvullen in label- en
   clusterkaart, taakteksten zonder jargon en met de actie ("ontvangen in de
   inkoop-inbox", "publiceer of maak ongedaan"), legacy-pagina
-  `/admin/todos-legacy` verwijderen.
+  `/admin/todos-legacy` verwijderen (gedaan, zie "Gebouwd").
 - Eén adresbron voor het bureau: alles via `getBureauAdminEmail()`.
 - Test `emailContentGuard.test.ts`: geen `inkoop@`, `info@`,
   `administratie@`, geen "registreer"/"upload" in factuurcontext, elke vaste
@@ -745,6 +745,74 @@ onderdeelsoorten in de partnertemplates.
 - Labels en clusterkaart aangevuld met de nieuwe taaktypen en
   `commission_invoice_reply`.
 
+
+### Fase 3 (21 november 2026)
+
+Opruimen:
+
+- Vier functies zonder aanroeper verwijderd (`send-quote-request`,
+  `notify-partners-informational`, `notify-partner-item-deletion`,
+  `send-partner-intro-email`) met hun config, registratie en TemplateIds.
+  Migratie `20261121150000` verwijdert de dertien templates die geen code
+  rendert. Na de deploy moeten de vier functies nog uit het project met de
+  workflow "Deploy Supabase" en `delete_functions`.
+- Dubbele taken samengevoegd: `customer_status_email_due` in
+  `customer_status_update_due` (met eigen titel per situatie),
+  `post_execution_feedback` in `customer_aftersales`,
+  `post_execution_invoice_check` in `commission_missing_invoice` (met de
+  variant "geef het project vrij"), `new_request_received` in de
+  databasetrigger `new_program_request` (titel "— programma samenstellen").
+  Migratie `20261121155000` sluit de open exemplaren met reden
+  `samengevoegd_fase3`; de reconciler kent de oude sleutels nog als legacy.
+- Reconciler en opschoner schrijven bij elke sluiting een `completion_reason`,
+  zodat de churn meetbaar is (meetquery onderaan).
+- De legacy-pagina `/admin/todos-legacy` is weg (redirect naar de Werkbank);
+  "Opschonen" staat in het menu van de Werkbank.
+
+Werkbank:
+
+- Nederlandse labels en prioriteiten (`autoTodoLabel`, `todoPriorityLabel`)
+  in plaats van sleutels en "Prio: high"; label- en clusterkaart dekken alle
+  68 taaktypen; `system_cron_failure` en `email_webhook_silent` tellen als
+  systeemmelding.
+- Taakteksten noemen wat er gebeurde en wat Erwin doet, zonder jargon:
+  inkoop-inbox ("Verwerk de factuur … bevestig partner en project, controleer
+  het bedrag naast de pdf"), commissie ("geen factuur ontvangen in de
+  Inkoop-inbox; de partner is automatisch herinnerd"), wijziging niet
+  gepubliceerd ("Publiceer de wijziging of maak haar ongedaan"), en zo door.
+  Nieuwe taaktypen in gepauzeerde clusters staan nog niet op de
+  doorverwijzingspauze (`NOT_YET_PAUSED_BY_REFERRAL`), omdat de
+  spiegeltest met de edge functions dat vereist; dat is een losse keuze.
+
+Minder ruis:
+
+- Wijzigingsmails "programma bijgewerkt" aan klant en partner gaan één keer
+  per dag per ontvanger en dossier: `publish-program-changes` en
+  `update-customer-program` zetten ze in `pending_change_notifications`,
+  `send-change-digest` (cron 16:00 UTC) bundelt en verstuurt, met de
+  bestaande types `item_changes_*` en `template_name` `item_changes_digest`.
+  Datumwijzigingen, nieuwe onderdelen die akkoord vragen en annuleringen
+  blijven direct. In het publiceervenster staat de keuze "Nu versturen (niet
+  wachten tot de dagelijkse bundel)". Migratie `20261121180000`.
+- Bureau-mail tegenvoorstel zonder "Hoi team", met klantnaam en BV-nummer in
+  het onderwerp en de regel "Aan zet".
+
+
+
+### Fase 4 (21 november 2026)
+
+- `send-bureau-daily-digest` (opbouw in `digest.ts`, vijf tests): één mail
+  per ochtend met wat er gisteren binnenkwam (cluster Binnengekomen, ook als
+  het al gezien is), wat vandaag verloopt (taken met deadline, offertes die
+  vandaag aflopen), wat langer dan drie dagen open staat (taken en
+  onbeantwoorde e-mail en chat, dezelfde definitie als het Berichtencentrum)
+  en hoeveel mails gisteren niet aankwamen. Gaat ook als er niets is
+  ("niets nieuws"), zodat het uitblijven van de mail zelf een signaal is.
+  Idempotent per dag; `{ "force": true }` stuurt opnieuw. Cron 06:30 UTC
+  (migratie `20261121190000`), naar het instelbare bureauadres.
+- Meetqueries onderaan dit document uitgebreid: open-percentage per
+  ontvangersgroep, taken aangemaakt tegenover automatisch gesloten, en of het
+  dagoverzicht elke dag komt. Eind december opnieuw meten.
 
 ## Beslissingen voor Erwin
 
