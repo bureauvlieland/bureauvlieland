@@ -119,6 +119,7 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
 
   // Handmatig vanuit het dossier
   bureau_daily_digest: { label: "Dagoverzicht bureau", category: "Bureau" },
+  template_test: { label: "Testmail (alle templates)", category: "Systeem" },
   partner_item_response_bureau: { label: "Partnerreactie op onderdeel (melding bureau)", category: "Bureau" },
   quote_accepted_bureau: { label: "Klant akkoord op voorstel (melding bureau)", category: "Bureau" },
   terms_signed_bureau: { label: "Klant heeft getekend (melding bureau)", category: "Bureau" },

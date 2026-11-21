@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { EmailTemplateSheet } from "@/components/admin/EmailTemplateSheet";
 import { EmailTemplatePreviewDialog } from "@/components/admin/EmailTemplatePreviewDialog";
+import { TemplateTestBatchDialog } from "@/components/admin/TemplateTestBatchDialog";
 
 interface EmailTemplate {
   id: string;
@@ -69,6 +70,7 @@ const AdminEmailTemplates = () => {
     else next.delete("tab");
     setParams(next, { replace: true });
   };
+  const [testBatchOpen, setTestBatchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -157,16 +159,22 @@ const AdminEmailTemplates = () => {
               </p>
             </div>
             {tab === "templates" && (
-              <Button
-                variant="outline"
-                onClick={() => refetch()}
-                disabled={isRefetching}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-                Vernieuwen
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setTestBatchOpen(true)}>
+                  Alles als test versturen
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => refetch()}
+                  disabled={isRefetching}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+                  Vernieuwen
+                </Button>
+              </div>
             )}
           </div>
+          <TemplateTestBatchDialog open={testBatchOpen} onOpenChange={setTestBatchOpen} />
 
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList>
