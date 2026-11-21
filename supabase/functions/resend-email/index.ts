@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
@@ -9,7 +10,7 @@ const corsHeaders = {
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
-const DEFAULT_SENDER_EMAIL = Deno.env.get("MAILJET_SENDER_EMAIL") || "info@bureauvlieland.nl";
+const DEFAULT_SENDER_EMAIL = Deno.env.get("MAILJET_SENDER_EMAIL") || GENERAL_CONTACT_EMAIL;
 const DEFAULT_SENDER_NAME = Deno.env.get("MAILJET_SENDER_NAME") || "Bureau Vlieland";
 
 interface Body {

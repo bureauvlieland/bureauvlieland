@@ -90,7 +90,7 @@ export function SendAccommodationQuoteRequestDialog({
     if (open) {
       const defaultSubject = `Offerteaanvraag logies - ${request.customer_name} (${request.number_of_guests} gasten)`;
       
-      const defaultBody = `Beste partner,
+      const defaultBody = `Hoi,
 
 We ontvingen een logiesaanvraag die goed bij jullie aanbod past. Graag ontvangen we jullie offerte.
 

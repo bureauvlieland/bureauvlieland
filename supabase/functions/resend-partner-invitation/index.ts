@@ -128,14 +128,14 @@ Deno.serve(async (req) => {
             Subject: subject,
             HTMLPart: rendered.body,
             TextPart:
-`Beste ${partner.name},
+`Hoi ${partner.name},
 
 Je hebt je account voor het Bureau Vlieland Partner Portaal nog niet geactiveerd.
 
 Stel hier eenmalig je wachtwoord in:
 ${setPasswordLink}
 
-Inloggen kan daarna op: ${portalLink}/login
+Inloggen kan daarna op: ${portalLink}
 
 Vragen? Neem contact op via hallo@bureauvlieland.nl
 

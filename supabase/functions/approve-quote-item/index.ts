@@ -10,11 +10,14 @@ import {
   getRenderedTemplate,
   buildReplyTo,
   TemplateIds,
-  renderEffectiveTimeLine,
   getEffectiveItemTime,
+  wrapEmailHtml,
+  formatCurrencyNL,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { expectsPartnerInvoice, isConfirmOnlyItem, isInformationalItem, partnerBillingNote } from "../_shared/itemHandling.ts";
+import { buildPartnerRequestMail } from "../_shared/partnerRequestMail.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -49,50 +52,6 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   }
   return await response.json();
 };
-
-function generatePartnerNotificationEmailFallback(
-  partnerName: string,
-  item: any,
-  program: any,
-  portalUrl: string
-): string {
-  const formattedDates = (program.selected_dates as string[])
-    .map((d: string) => formatDateNL(d))
-    .join(", ");
-
-  const timeInfo = renderEffectiveTimeLine(item, "Tijd");
-
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #1a365d;">Nieuwe aanvraag via Bureau Vlieland</h2>
-      <p>Beste ${sanitizeHtml(partnerName)},</p>
-      <p>Er is een nieuwe <strong>aanvraag</strong> binnengekomen via Bureau Vlieland.</p>
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">📋 Klantgegevens</h3>
-        <p><strong>Naam:</strong> ${sanitizeHtml(program.customer_name)}</p>
-        ${program.customer_company ? `<p><strong>Bedrijf:</strong> ${sanitizeHtml(program.customer_company)}</p>` : ""}
-        <p><strong>Email:</strong> ${sanitizeHtml(program.customer_email)}</p>
-        <p><strong>Telefoon:</strong> ${sanitizeHtml(program.customer_phone)}</p>
-      </div>
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0;">📅 Programma details</h3>
-        <p><strong>Datum(s):</strong> ${formattedDates}</p>
-        <p><strong>Aantal personen:</strong> ${program.number_of_people}</p>
-      </div>
-      <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0;">🎯 Aangevraagde activiteit</h3>
-        <p><strong>${sanitizeHtml(item.block_name)}</strong>${timeInfo}</p>
-      </div>
-      <div style="background: #ebf8ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4299e1;">
-        <h3 style="margin-top: 0;">📋 Partner Portal</h3>
-        <p>Bekijk en beheer deze aanvraag in uw Partner Portal.</p>
-        <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">Open Partner Portal</a>
-      </div>
-      <p style="color: #666; font-size: 14px;">Dit is een vrijblijvende aanvraag.</p>
-      <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-    </div>
-  `;
-}
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -330,7 +289,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             const recipientEmail = getRecipientEmail(partnerEmail, origin);
             const replyTo = buildReplyTo(program.reference_number);
             const priceLine = item.quoted_price != null
-              ? `<p><strong>Bevestigde prijs:</strong> €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>`
+              ? `<p><strong>Bevestigde prijs:</strong> ${formatCurrencyNL(Number(item.quoted_price))}</p>`
               : "";
             const alreadyConfirmedByPartner =
               item.status === "confirmed" || item.status === "accepted" || item.status === "executed";
@@ -338,22 +297,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
             const actionLine = alreadyConfirmedByPartner
               ? (knownTime
                   ? `<p>Je had dit onderdeel al bevestigd${knownTime ? ` voor ${sanitizeHtml(String(knownTime))}` : ""} — <strong>je hoeft nu niets te doen</strong>. Zet het definitief in je planning.</p>`
-                  : `<p>Je had dit onderdeel al bevestigd. Er staat nog geen tijd vast: geef de tijd door via je partnerportal.</p>`)
-              : `<p>Bevestig dit onderdeel in je partnerportal zodat we het definitief kunnen inplannen.</p>`;
+                  : `<p>Je had dit onderdeel al bevestigd. Er staat nog geen tijd vast: geef de tijd door via je partnerportaal.</p>`)
+              : `<p>Bevestig dit onderdeel in je partnerportaal zodat we het definitief kunnen inplannen.</p>`;
             const emailSubject = alreadyConfirmedByPartner
-              ? `Klant akkoord (geen actie nodig): ${item.block_name} — ${program.reference_number || ""}`
-              : `Klant akkoord op uw voorstel: ${item.block_name} — ${program.reference_number || ""}`;
-            const emailHtml = `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-                <h2 style="color: #1a365d;">Klant geeft akkoord op uw voorstel</h2>
-                <p>Hoi ${sanitizeHtml(item.provider_name)},</p>
-                <p>Goed nieuws: de klant heeft definitief akkoord gegeven op je aangepaste voorstel voor <strong>${sanitizeHtml(item.block_name)}</strong> (aanvraag ${sanitizeHtml(program.reference_number || "")}).</p>
-                ${priceLine}
-                ${actionLine}
-                <p><a href="${partnerPortalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">Open partnerportal</a></p>
-                <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-              </div>
-            `;
+              ? `Klant akkoord (geen actie nodig): ${item.block_name} (${program.reference_number || ""})`
+              : `Klant akkoord op je voorstel: ${item.block_name} (${program.reference_number || ""})`;
+            // Huisstijl via wrapEmailHtml; partner wordt getutoyeerd (ook in kop en onderwerp).
+            const emailHtml = await wrapEmailHtml(`
+              <h2 style="color:#0F4C5C;margin:0 0 16px;">Klant geeft akkoord op je voorstel</h2>
+              <p>Hoi ${sanitizeHtml(item.provider_name)},</p>
+              <p>Goed nieuws: de klant heeft definitief akkoord gegeven op je aangepaste voorstel voor <strong>${sanitizeHtml(item.block_name)}</strong> (aanvraag ${sanitizeHtml(program.reference_number || "")}).</p>
+              ${priceLine}
+              ${actionLine}
+              <p><a href="${partnerPortalUrl}" style="display:inline-block;background:#0F4C5C;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;">Open partnerportaal</a></p>
+              <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
+            `, supabase);
             const mailjetResponse = await sendEmailViaMailjet([
               {
                 From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
@@ -443,33 +401,49 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (partnerEmail && item.provider_id !== "bureau") {
       const partnerPortalUrl = `${baseUrl}/partner/login`;
 
-      const formattedDates = (program.selected_dates as string[])
-        .map((d: string) => formatDateNL(d))
-        .join(", ");
+      const selectedDates: string[] = Array.isArray(program.selected_dates) ? (program.selected_dates as string[]) : [];
+      const formattedDates = selectedDates.map((d: string) => formatDateNL(d)).join(", ");
+      const referenceNumber = String(program.reference_number || "");
+      const billingNote = partnerBillingNote(item);
 
-      // Try DB template
+      // DB-template met de drie onderdeelsoorten (_shared/itemHandling.ts):
+      // bevestiging en mededeling krijgen geen prijsvraag, facturatie alleen
+      // bij een onderdeel op de bureaufactuur. Referentie in onderwerp en tekst.
       const template = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_PARTNER, {
         partner_name: sanitizeHtml(item.provider_name),
         customer_name: sanitizeHtml(program.customer_name),
         customer_company: sanitizeHtml(program.customer_company) || "",
-        customer_email: sanitizeHtml(program.customer_email),
-        customer_phone: sanitizeHtml(program.customer_phone),
         dates: formattedDates,
         number_of_people: String(program.number_of_people),
         block_name: sanitizeHtml(item.block_name),
-        preferred_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
         effective_time: getEffectiveItemTime(item) ? sanitizeHtml(getEffectiveItemTime(item)!) : "",
         portal_url: partnerPortalUrl,
+        reference_number: sanitizeHtml(referenceNumber),
+        partner_handling: item.partner_handling || "quote",
+        billing_route: item.billing_route || "bureau",
+        is_confirm_only: isConfirmOnlyItem(item) ? "1" : "",
+        is_inform: isInformationalItem(item) ? "1" : "",
+        bureau_invoice: expectsPartnerInvoice(item) ? "1" : "",
+        billing_note: billingNote ? sanitizeHtml(billingNote) : "",
+      }, {
+        block_name: item.block_name,
+        reference_number: referenceNumber,
       });
 
-      const emailHtml = template?.body || generatePartnerNotificationEmailFallback(
-        item.provider_name,
-        item,
-        program,
-        partnerPortalUrl
-      );
-
-      const emailSubject = template?.subject || `Nieuwe aanvraag: ${program.customer_name} - ${program.reference_number || ""}`;
+      // Noodrem als de template niet laadt: dezelfde gedeelde tekst als
+      // send-items-to-partners (inhoudelijk gelijk, in de huisstijl).
+      const fallback = template ? null : buildPartnerRequestMail({
+        partnerName: item.provider_name,
+        referenceNumber: program.reference_number,
+        customerLabel: program.customer_company || program.customer_name,
+        dates: selectedDates,
+        numberOfPeople: program.number_of_people,
+        items: [item],
+        portalUrl: partnerPortalUrl,
+        customerSigned: !!program.terms_accepted_at,
+      });
+      const emailHtml = template?.body ?? await wrapEmailHtml(fallback!.html, supabase);
+      const emailSubject = template?.subject ?? fallback!.subject;
 
       const recipientEmail = getRecipientEmail(partnerEmail, origin);
 

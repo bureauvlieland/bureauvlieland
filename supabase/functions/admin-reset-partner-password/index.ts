@@ -1,7 +1,14 @@
 // Admin "reset password": send the partner a fresh one-time set-password link.
 // No plaintext password is generated or stored anywhere.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { sanitizeHtml, getSubjectPrefix, getRecipientEmail } from "../_shared/email-templates.ts";
+import {
+  sanitizeHtml,
+  getSubjectPrefix,
+  getRecipientEmail,
+  getRenderedTemplate,
+  wrapEmailHtml,
+  TemplateIds,
+} from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -13,32 +20,19 @@ const corsHeaders = {
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
-function getResetHtml(partnerName: string, setPasswordLink: string): string {
+// Noodrem als de DB-template partner_password_reset niet laadt: dezelfde
+// tekst als de admin-variant van die template (migratie 20261121160000).
+function getResetFallbackHtml(partnerName: string, setPasswordLink: string): string {
   return `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
-  <div style="background: #1e3a5f; padding: 24px; text-align: center;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Bureau Vlieland</h1>
-  </div>
-  <div style="padding: 24px;">
-    <p>Beste ${sanitizeHtml(partnerName)},</p>
-    <p>De beheerder heeft een nieuwe link voor u aangemaakt om uw wachtwoord in te stellen voor het Partner Portaal.</p>
-    <div style="text-align: center; margin: 32px 0;">
-      <a href="${setPasswordLink}" style="background: #1e3a5f; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-        Nieuw wachtwoord instellen
-      </a>
-    </div>
-    <p style="font-size: 13px; color: #666;">Werkt de knop niet? Kopieer deze link:<br>
-      <span style="word-break: break-all;">${setPasswordLink}</span>
-    </p>
-    <p style="font-size: 13px; color: #666;">Deze link is persoonlijk en beperkt geldig.</p>
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-    <p style="color: #666; font-size: 14px;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-  </div>
-</body>
-</html>
+<h2 style="color:#0F4C5C;margin:0 0 16px;">Nieuwe link voor je wachtwoord</h2>
+<p>Hoi ${sanitizeHtml(partnerName)},</p>
+<p>Bureau Vlieland heeft een nieuwe link voor je aangemaakt om je wachtwoord voor het partnerportaal in te stellen. Klik op de knop om een nieuw wachtwoord in te stellen:</p>
+<div style="text-align:center;margin:32px 0;">
+  <a href="${setPasswordLink}" style="display:inline-block;background-color:#0F4C5C;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;">Wachtwoord instellen</a>
+</div>
+<p style="font-size:14px;color:#666;">Deze link is persoonlijk en 1 uur geldig.</p>
+<p style="font-size:12px;color:#999;word-break:break-all;">Werkt de knop niet? Kopieer dan deze link:<br><a href="${setPasswordLink}" style="color:#0F4C5C;">${setPasswordLink}</a></p>
+<p style="margin:24px 0 0;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
   `;
 }
 
@@ -113,7 +107,19 @@ Deno.serve(async (req) => {
     const subjectPrefix = getSubjectPrefix(origin);
     const originalRecipient = partner.contact_email || partner.email;
     const recipientEmail = getRecipientEmail(originalRecipient, origin);
-    const subject = `${subjectPrefix}Nieuwe link om uw wachtwoord in te stellen — Bureau Vlieland Partner Portaal`;
+    // Dezelfde DB-template als send-partner-reset-email, met de admin-variant
+    // ({{#if admin_initiated}}): één tekst voor één sleutel.
+    const rendered = await getRenderedTemplate(TemplateIds.PARTNER_PASSWORD_RESET, {
+      partner_name: sanitizeHtml(partner.name),
+      reset_link: setPasswordLink,
+      admin_initiated: "1",
+    }, {
+      partner_name: partner.name,
+      reset_link: setPasswordLink,
+      admin_initiated: "1",
+    });
+    const subject = `${subjectPrefix}${rendered?.subject ?? "Nieuwe link om je wachtwoord in te stellen — partnerportaal Bureau Vlieland"}`;
+    const htmlPart = rendered?.body ?? await wrapEmailHtml(getResetFallbackHtml(partner.name, setPasswordLink), adminClient);
 
     let emailSent = false;
     let emailError: string | null = null;
@@ -127,13 +133,15 @@ Deno.serve(async (req) => {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: partner.name }],
             Subject: subject,
-            HTMLPart: getResetHtml(partner.name, setPasswordLink),
+            HTMLPart: htmlPart,
             TextPart:
-`Beste ${partner.name},
+`Hoi ${partner.name},
 
-De beheerder heeft een nieuwe link voor u aangemaakt om uw wachtwoord in te stellen voor het Partner Portaal:
+Bureau Vlieland heeft een nieuwe link voor je aangemaakt om je wachtwoord voor het partnerportaal in te stellen:
 
 ${setPasswordLink}
+
+Deze link is persoonlijk en 1 uur geldig.
 
 Met vriendelijke groet,
 Bureau Vlieland`,

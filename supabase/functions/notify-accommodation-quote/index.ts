@@ -210,6 +210,7 @@ Deno.serve(async (req) => {
     // Prepare template variables
     const templateVariables = {
       customer_name: sanitizeHtml(request.customer_name),
+      reference_number: request.reference_number || "",
       accommodation_name: sanitizeHtml(quote.accommodation_name),
       partner_name: sanitizeHtml(partner.name),
       arrival_date: formatDateNL(request.arrival_date),

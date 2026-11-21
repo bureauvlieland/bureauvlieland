@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
     const stamp = new Date().toISOString();
     const subject = `Proefverzending e-mailketen — ${stamp}`;
     const html = `<p>Dit is een proefverzending om de terugkoppeling van de mailprovider te controleren.</p>
-      <p>Open deze mail; daarna hoort in <strong>Admin → E-mail gezondheid</strong> binnen enkele minuten
+      <p>Open deze mail; daarna hoort in <strong>Admin → Email health</strong> binnen enkele minuten
       "afgeleverd" en "geopend" te verschijnen bij deze verzending (${stamp}).</p>`;
 
     const result = await sendMailjet({

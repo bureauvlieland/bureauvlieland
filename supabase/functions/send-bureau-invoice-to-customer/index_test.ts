@@ -1,10 +1,13 @@
 import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { handler } from "./index.ts";
 
+// Eerst de omgeving, dan pas de module: index.ts leest de Mailjet-sleutels op
+// moduleniveau, en een statische import wordt vóór deze regels uitgevoerd.
 Deno.env.set("SUPABASE_URL", "http://test-supabase.local");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-key");
 Deno.env.set("MAILJET_API_KEY", "mj-key");
 Deno.env.set("MAILJET_SECRET_KEY", "mj-secret");
+
+const { handler } = await import("./index.ts");
 
 function createRequest(body: unknown, opts?: { auth?: string; origin?: string }): Request {
   const headers: Record<string, string> = { "Content-Type": "application/json" };

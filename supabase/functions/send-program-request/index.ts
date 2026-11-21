@@ -217,7 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
       partner_items: partnerItemsHtml,
       self_arranged_items: selfArrangedItemsHtml,
       notes: safeNotes ? safeNotes.replace(/\n/g, '<br>') : '',
-    });
+    }, { customer_name: requestData.name, number_of_people: String(requestData.numberOfPeople) });
 
     const customerTemplate = await getRenderedTemplate(TemplateIds.PROGRAM_REQUEST_CUSTOMER, {
       customer_name: safeName,

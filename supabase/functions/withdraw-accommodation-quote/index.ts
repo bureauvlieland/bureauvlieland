@@ -1,6 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
-import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
+import {
+  getRecipientEmail,
+  getSubjectPrefix,
+  buildReplyTo,
+  formatDateNL,
+  sanitizeHtml,
+  wrapEmailHtml,
+  SENDER_EMAIL,
+  SENDER_NAME,
+} from "../_shared/email-templates.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -83,26 +92,25 @@ Deno.serve(async (req) => {
 
     // Optionally notify partner
     if (notifyPartner && partnerEmail && MAILJET_API_KEY && MAILJET_SECRET_KEY) {
-      const arrivalDate = new Date(accRequest.arrival_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
-      const departureDate = new Date(accRequest.departure_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+      const arrivalDate = formatDateNL(accRequest.arrival_date);
+      const departureDate = formatDateNL(accRequest.departure_date);
+      const ref = accRequest.reference_number || "";
+      const customerLabel = accRequest.customer_company || accRequest.customer_name || "de klant";
 
-      const emailBody = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #1a1a2e;">Offerteaanvraag ingetrokken</h2>
-          <p>Beste ${partner.name},</p>
-          <p>Hierbij laten wij u weten dat de offerteaanvraag voor logies van <strong>${arrivalDate}</strong> tot <strong>${departureDate}</strong> voor <strong>${accRequest.number_of_guests} personen</strong> is ingetrokken.</p>
-          <p>U hoeft hier geen verdere actie op te ondernemen.</p>
-          <p>Mocht u vragen hebben, neem dan gerust contact met ons op.</p>
-          <br/>
-          <p>Met vriendelijke groet,<br/>Bureau Vlieland</p>
-        </div>
+      const inner = `
+        <h2 style="color:#0F4C5C;margin:0 0 16px;">Offerteaanvraag ingetrokken</h2>
+        <p>Hoi ${sanitizeHtml(partner.name)},</p>
+        <p>De offerteaanvraag${ref ? ` <strong>${sanitizeHtml(ref)}</strong>` : ""} voor het verblijf van ${sanitizeHtml(customerLabel)} van <strong>${arrivalDate}</strong> tot <strong>${departureDate}</strong> (${accRequest.number_of_guests} personen) is ingetrokken. Je hoeft hier niets meer mee te doen.</p>
+        <p>Heb je vragen, reageer dan gerust op deze mail.</p>
+        <p style="margin-top:24px;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
       `;
+      const emailBody = await wrapEmailHtml(inner, supabase);
 
-      const subject = `${getSubjectPrefix(origin)}Offerteaanvraag ingetrokken${accRequest.reference_number ? ` — ${accRequest.reference_number}` : ""}`;
+      const subject = `${getSubjectPrefix(origin)}Offerteaanvraag ingetrokken: ${customerLabel}${ref ? ` (${ref})` : ""}`;
 
       try {
         const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
-        await fetch("https://api.mailjet.com/v3.1/send", {
+        const mjRes = await fetch("https://api.mailjet.com/v3.1/send", {
           method: "POST",
           headers: {
             Authorization: `Basic ${auth}`,
@@ -110,17 +118,19 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
-              From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
+              From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
               To: [{ Email: getRecipientEmail(partnerEmail, origin), Name: partner.name }],
-              ...(buildReplyTo(accRequest.reference_number) ? { ReplyTo: buildReplyTo(accRequest.reference_number) } : {}),
+              ...(buildReplyTo(ref) ? { ReplyTo: buildReplyTo(ref) } : {}),
               Subject: subject,
               HTMLPart: emailBody,
             }],
           }),
         });
+        const mjText = await mjRes.text();
+        try { mailjetMessageId = extractMessageIds(mjText)[0] ?? null; } catch { /* geen JSON */ }
 
         await logEmail({
-      mailjet_message_id: mailjetMessageId ?? undefined,
+          mailjet_message_id: mailjetMessageId ?? undefined,
           email_type: "accommodation_quote_withdrawn",
           subject,
           recipient_email: partnerEmail,
@@ -128,7 +138,8 @@ Deno.serve(async (req) => {
           related_accommodation_id: accRequest.id,
           related_request_id: accRequest.linked_program_id,
           related_partner_id: partner.id,
-          status: "sent",
+          status: mjRes.ok ? "sent" : "failed",
+          error_message: mjRes.ok ? undefined : mjText.slice(0, 1000),
           sent_by: "system",
           metadata: {
             template_name: "accommodation_quote_withdrawn",
@@ -175,7 +186,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error in withdraw-accommodation-quote:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

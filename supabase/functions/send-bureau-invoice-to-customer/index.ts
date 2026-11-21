@@ -6,6 +6,7 @@ import {
   getRecipientEmail,
   getSubjectPrefix,
   isTestMode,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { extractMessageIds, findRecentIdempotentSend } from "../_shared/mailjet-send.ts";
@@ -160,9 +161,9 @@ export async function handler(req: Request): Promise<Response> {
         `Wij verzoeken u vriendelijk het bedrag van <strong>${formatCurrency(body.amountInclVat)}</strong> ` +
         `binnen de op de factuur vermelde betaaltermijn over te maken onder vermelding van het factuurnummer.`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
-        <h2 style="color: #1e3a5f; margin-bottom: 16px;">Factuur ${escapeHtml(body.invoiceNumber)}</h2>
+    // Binnenkant; de huisstijlwrapper levert logo en voettekst (adres, KvK, IBAN).
+    const innerHtml = `
+        <h2 style="color: #0F4C5C; margin-bottom: 16px;">Factuur ${escapeHtml(body.invoiceNumber)}</h2>
         <p>${greeting}</p>
         <p>${messageBody}</p>
 
@@ -186,17 +187,12 @@ export async function handler(req: Request): Promise<Response> {
           </tr>` : ""}
         </table>
 
-        <p>Heeft u vragen over deze factuur? Neem gerust contact met ons op via een reply op deze e-mail.</p>
+        <p>Heeft u vragen over deze factuur? Beantwoord dan gewoon deze e-mail.</p>
 
         <p style="margin-top: 24px;">Met vriendelijke groet,<br/><strong>Bureau Vlieland</strong></p>
-
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-        <p style="color: #999; font-size: 11px;">
-          Bureau Vlieland · hallo@bureauvlieland.nl · 0562 700 208
-          ${isTestMode(origin) ? "<br/><strong>[TEST MODE]</strong> origineel adres: " + escapeHtml(fallbackRecipient || "") : ""}
-        </p>
-      </div>
+        ${isTestMode(origin) ? `<p style="color: #999; font-size: 11px;"><strong>[TEST MODE]</strong> origineel adres: ${escapeHtml(fallbackRecipient || "")}</p>` : ""}
     `;
+    const html = await wrapEmailHtml(innerHtml, supabase);
 
     if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
       console.error("Mailjet credentials not configured");

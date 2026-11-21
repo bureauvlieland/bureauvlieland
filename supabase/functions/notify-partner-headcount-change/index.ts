@@ -1,14 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  sanitizeHtml,
   formatDateNL,
   getPortalBaseUrl,
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { buildPartnerHeadcountMail } from "../_shared/partnerHeadcountMail.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -40,9 +41,6 @@ const sendEmailViaMailjet = async (messages: unknown[]) => {
   }
   return await response.json();
 };
-
-const formatEur = (n: number) =>
-  `€${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -192,45 +190,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ? program.selected_dates.map(formatDateNL).join(", ")
       : "";
     const ref = program.reference_number || "";
-    const noteHtml =
-      typeof note === "string" && note.trim().length > 0
-        ? `<p style="margin: 8px 0 0; color: #475569;"><em>Toelichting Bureau Vlieland: ${sanitizeHtml(note.trim())}</em></p>`
-        : "";
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-          Aantal gasten gewijzigd — totaal bijgewerkt
-        </h2>
-        <p>Hoi ${sanitizeHtml(partner?.name || item.provider_name)},</p>
-        <p>
-          Het aantal gasten voor onderstaand onderdeel is door de klant aangepast.
-          De met jou afgesproken <strong>prijs per persoon blijft staan</strong>;
-          alleen het totaal beweegt mee met het nieuwe aantal. Je hoeft hier verder
-          niets voor te doen — we informeren je puur ter info.
-        </p>
-        <div style="background: #f0f9ff; padding: 20px; border-left: 4px solid #0284c7; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 0 0 8px;"><strong>Onderdeel:</strong> ${sanitizeHtml(item.block_name)}</p>
-          ${dates ? `<p style="margin: 0 0 8px;"><strong>Datum(s):</strong> ${dates}</p>` : ""}
-          <p style="margin: 0 0 8px;"><strong>Nieuw aantal gasten:</strong> ${effectivePeople}</p>
-          <p style="margin: 0 0 8px;"><strong>Afgesproken prijs:</strong> ${formatEur(unitPrice)} ${isPerDay ? "p.p.p.d." : "p.p."}</p>
-          <p style="margin: 0 0 8px;"><strong>Nieuw totaal:</strong> ${formatEur(newTotal)} <span style="color: #64748b;">(was ${formatEur(oldTotal)})</span></p>
-          ${noteHtml}
-        </div>
-        <p>
-          <a href="${partnerPortalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-            Bekijk in partnerportaal →
-          </a>
-        </p>
-        <p style="color: #475569; font-size: 14px;">
-          Lopen er nog wijzigingen aan jouw kant? Laat het ons gerust weten — reply op deze mail werkt prima.
-        </p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-        <p style="color: #666; font-size: 13px;">Referentie: ${ref || "-"}</p>
-      </div>
-    `;
-
-    const subject = `${subjectPrefix}Aantal gasten gewijzigd — ${item.block_name}${ref ? ` (${ref})` : ""}`;
+    // Gedeelde tekst met notify-headcount-change-bulk
+    // (_shared/partnerHeadcountMail.ts), in de huisstijl.
+    const mail = buildPartnerHeadcountMail({
+      partnerName: partner?.name || item.provider_name,
+      customerLabel: program.customer_company || program.customer_name,
+      reference: ref,
+      dates,
+      oldPeople: null,
+      newPeople: effectivePeople,
+      items: [{
+        blockName: item.block_name,
+        people: effectivePeople,
+        unitPrice,
+        priceType: item.price_type,
+        newTotal,
+        oldTotal,
+        overridePeople: item.override_people,
+      }],
+      note: typeof note === "string" ? note : null,
+      portalUrl: partnerPortalUrl,
+      subjectPrefix,
+    });
+    const subject = mail.subject;
+    const html = await wrapEmailHtml(mail.html, supabase);
 
     try {
       await sendEmailViaMailjet([

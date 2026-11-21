@@ -17,9 +17,10 @@
 // meer. Een melding legt "al bekend" vast op de doorverwijzing; de vergoeding
 // valt dan weg (zie src/lib/weddingReferrals.ts) en het bureau krijgt een taak
 // én een mail (naar het voorbeeld van _shared/lodging-bureau-alert.ts), zodat
-// de melding niet blijft liggen tot iemand de Werkbank opent. De mail wordt
-// gelogd op het project en de partner en, bij een project, in het
-// communicatiedossier.
+// de melding niet blijft liggen tot iemand de Werkbank opent. De mail gaat
+// naar het instelbare bureauadres (resolveBureauAddress, net als de andere
+// bureau-meldingen) en wordt gelogd op het project en de partner en, bij een
+// project, in het communicatiedossier.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
@@ -28,6 +29,7 @@ import { sendMailjet, type MailjetMessage, type SendMailjetResult } from "../_sh
 import { logEmail, type EmailLogEntry } from "../_shared/email-logger.ts";
 import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix, sanitizeHtml } from "../_shared/email-templates.ts";
 import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
+import { resolveBureauAddress } from "../_shared/bureau-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,6 +132,12 @@ export interface ClaimContext {
   log: (entry: EmailLogEntry) => Promise<void>;
   /** Origin van de pagina (testmodus: ander adres en [TEST] in het onderwerp). */
   origin?: string;
+  /**
+   * Het bureauadres waar de melding heen gaat: in productie uit
+   * `resolveBureauAddress` (instelling bureau_admin_email, terugval hallo@),
+   * in de test een vaste waarde.
+   */
+  bureauAddress: string;
 }
 
 /** email_type van de bureaumail; ook het label in src/types/projectCommunication.ts. */
@@ -203,7 +211,7 @@ export function bureauMailHtml(input: BureauMailInput): string {
 async function mailBureau(ctx: ClaimContext, input: BureauMailInput): Promise<void> {
   const subject = bureauMailSubject(input);
   const html = bureauMailHtml(input);
-  const to = getRecipientEmail(GENERAL_CONTACT_EMAIL, input.origin);
+  const to = getRecipientEmail(ctx.bureauAddress || GENERAL_CONTACT_EMAIL, input.origin);
   const idempotencyKey = `wedding-referral-claim-bureau-${input.referral.id}`;
   const message: MailjetMessage = {
     From: { Email: GENERAL_CONTACT_EMAIL, Name: "Bureau Vlieland" },
@@ -391,6 +399,7 @@ export async function handler(req: Request): Promise<Response> {
         sendMailjet({ messages: [message], source: "wedding-referral-claim", idempotencyKey, checkSuppression: false }),
       log: logEmail,
       origin: req.headers.get("origin") ?? undefined,
+      bureauAddress: await resolveBureauAddress(supabase),
     });
     return json(result.status, result.body);
   } catch (error) {

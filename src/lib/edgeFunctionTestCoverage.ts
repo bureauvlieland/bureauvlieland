@@ -80,6 +80,12 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "update-customer-program": "deno",
   "send-change-digest": "deno",
   "send-bureau-daily-digest": "deno",
+  "auto-close-monitor": "deno",
+  "critical-selftest": "deno",
+  "finalize-collective-invoice": "deno",
+  "notify-new-chat": "deno",
+  "notify-new-chat-reply": "deno",
+  "send-catering-request": "deno",
   "approve-accommodation-headcount": "deno",
 };
 

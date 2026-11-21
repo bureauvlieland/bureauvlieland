@@ -160,7 +160,7 @@ Je bent uitgenodigd voor het Bureau Vlieland Partner Portaal.
 Activeer je account en stel je wachtwoord in via deze persoonlijke link:
 ${setPasswordLink}
 
-Inloggen kan daarna op: ${portalLink}/login
+Inloggen kan daarna op: ${portalLink}
 
 Vragen? Neem contact op via hallo@bureauvlieland.nl
 

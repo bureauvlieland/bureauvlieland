@@ -696,8 +696,9 @@ export const handler = async (req: Request): Promise<Response> => {
           if (!existingTodo) {
             const customerName = request.customer_company || request.customer_name;
             await supabase.from("admin_todos").insert({
-              title: `Klant ${customerName} moet voorwaarden accepteren`,
-              description: `Alle activiteiten zijn bevestigd. Wachtend op acceptatie van de algemene voorwaarden door de klant.`,
+              // Akkoord en ondertekenen zijn sinds 26 oktober één handeling in het klantportaal.
+              title: `Vraag ${customerName} akkoord te geven en te ondertekenen in het klantportaal`,
+              description: `Alle onderdelen zijn bevestigd. De klant heeft nog niet getekend; na het akkoord met handtekening is de boeking definitief.`,
               priority: "normal",
               status: "todo",
               related_request_id: item.request_id,
@@ -804,9 +805,17 @@ export const handler = async (req: Request): Promise<Response> => {
         proposed_date: proposedDate || "",
         portal_link: portalUrl,
         actor_line: renderActorLine(actor),
+        // Dossiernummer voor het onderwerp van de status_*-templates.
+        reference_number: programRequest.reference_number || "",
       };
 
-      const template = await getRenderedTemplate(templateId, templateVariables);
+      // Onderwerp met platte (niet HTML-ontsmette) namen.
+      const template = await getRenderedTemplate(templateId, templateVariables, {
+        ...templateVariables,
+        customer_name: programRequest.customer_name,
+        activity_name: item.block_name,
+        partner_name: partner.name,
+      });
       
       const emailHtml = template?.body || generateFallbackStatusEmailHtml(
         programRequest.customer_name,

@@ -76,6 +76,8 @@ function context(store: Record<string, Row[]>, now: Date, overrides: Partial<Cla
     log: async (entry) => {
       logged.push(entry);
     },
+    // In productie uit de instelling bureau_admin_email (resolveBureauAddress).
+    bureauAddress: "hallo@bureauvlieland.nl",
     ...overrides,
   };
   return { ctx, stub, store: stub.store, sent, logged };
@@ -279,6 +281,14 @@ Deno.test("melden: het bureau krijgt een mail, gelogd op project en partner en i
   assertEquals(dossier.subject, mail.Subject);
   assertStringIncludes(String(dossier.content), "Paal 50 meldt via de link dat Anna & Bram al bekend was.");
   assertStringIncludes(String(dossier.content), "Mail van 10 september");
+});
+
+Deno.test("melden: de bureaumail gaat naar het ingestelde bureauadres uit de context", async () => {
+  const c = context(metProject(), DRIE_DAGEN_LATER, { bureauAddress: "kantoor@example.test" });
+  const r = await handleClaim(meld(), c.ctx);
+  assertEquals(r.status, 200, JSON.stringify(r.body));
+  assertEquals(c.sent[0].To[0].Email, "kantoor@example.test");
+  assertEquals(c.logged[0].recipient_email, "kantoor@example.test");
 });
 
 Deno.test("melden: zonder project (sales-inboxmail) gaat de mail wel, zonder projectkoppeling of dossierregel", async () => {

@@ -6,6 +6,9 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  formatCurrencyNL,
+  formatDateNL,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { PURCHASE_INVOICE_INBOX } from "../_shared/bureau-contact.ts";
@@ -135,12 +138,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
         const prog = programMap.get(inv.request_id);
         const ref = prog?.reference_number ?? "—";
         const klant = prog?.customer_company || prog?.customer_name || "—";
-        const dateStr = inv.invoice_date
-          ? new Date(inv.invoice_date).toLocaleDateString("nl-NL")
-          : "—";
-        const amount = inv.amount_incl_vat != null
-          ? `€${Number(inv.amount_incl_vat).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}`
-          : "—";
+        const dateStr = inv.invoice_date ? formatDateNL(inv.invoice_date) : "—";
+        const amount = inv.amount_incl_vat != null ? formatCurrencyNL(Number(inv.amount_incl_vat)) : "—";
         return `<tr>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;"><strong>${sanitizeHtml(inv.invoice_number)}</strong></td>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${dateStr}</td>
@@ -156,12 +155,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
         pInvoices.map((inv: any) => programMap.get(inv.request_id)?.reference_number).filter(Boolean),
       )] as string[];
       const replyTo = refs.length === 1 ? buildReplyTo(refs[0]) : undefined;
-      const html = `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
-          <h2 style="color:#9b1c1c;border-bottom:2px solid #9b1c1c;padding-bottom:10px;">Actie vereist — PDF ontbreekt</h2>
+      // Huisstijl via wrapEmailHtml (logo, voettekst met KvK en IBAN).
+      const html = await wrapEmailHtml(`
+          <h2 style="color:#0F4C5C;margin:0 0 16px;">Actie vereist: pdf ontbreekt</h2>
           <p>Hoi ${sanitizeHtml(partner.name)},</p>
-          <p>Je hebt ${n} factu${n === 1 ? "ur" : "ren"} bij Bureau Vlieland geregistreerd zonder PDF-bijlage.
-          <strong>We kunnen je factu${n === 1 ? "ur" : "ren"} niet in behandeling nemen en niet doorsturen naar onze boekhouding zolang de PDF ontbreekt.</strong></p>
+          <p>Je hebt ${n} factu${n === 1 ? "ur" : "ren"} bij Bureau Vlieland geregistreerd zonder pdf-bijlage.
+          <strong>We kunnen je factu${n === 1 ? "ur" : "ren"} niet in behandeling nemen en niet doorsturen naar onze boekhouding zolang de pdf ontbreekt.</strong></p>
 
           <div style="background:#fef2f2;padding:16px;border-radius:8px;margin:20px 0;border-left:4px solid #9b1c1c;">
             <p style="margin:0;"><strong>Wat moet je doen?</strong><br>
@@ -181,16 +180,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
           </table>
 
           <p style="text-align:center;margin:24px 0;">
-            <a href="${portalUrl}" style="display:inline-block;background:#9b1c1c;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Bekijk je facturen in het portaal →</a>
+            <a href="${portalUrl}" style="display:inline-block;background:#0F4C5C;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Bekijk je facturen in het portaal</a>
           </p>
 
-          <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;">
-          <p style="color:#666;font-size:14px;">Vragen? Reageer op deze e-mail of bel ons op 0562 700 208.</p>
+          <p style="color:#666;font-size:14px;">Vragen? Reageer op deze mail of bel ons op 0562 700 208.</p>
           <p style="margin-top:24px;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
-        </div>`;
+      `, supabase);
 
       const recipient = getRecipientEmail(email, origin);
-      const subject = `${subjectPrefix}Actie vereist: PDF ontbreekt bij je inkoopfactu${n === 1 ? "ur" : "ren"}`;
+      const subject = `${subjectPrefix}Actie vereist: pdf ontbreekt bij je inkoopfactu${n === 1 ? "ur" : "ren"}`;
 
       const msgIdx = messages.length;
       messages.push({

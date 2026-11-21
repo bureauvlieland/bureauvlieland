@@ -10,13 +10,17 @@
 //
 // Bij een probleem wordt een e-mail gestuurd naar het admin-adres (
 // `bureau_admin_email` uit app_settings, fallback ADMIN_ALERT_EMAIL env,
-// dan administratie@bureauvlieland.nl). Elke run wordt maar één keer
+// dan het algemene bureauadres). De tekst staat in texts.ts: eerst wat het
+// voor het bureau betekent en wat te doen, daaronder de techniek. Elke run
+// wordt maar één keer
 // gealert (alerted_at op de run-rij). Voor `missing_run` wordt een
 // synthetische rij ingevoegd zodat we niet elke minuut mailen.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
+import { buildAutoCloseEmail, type Health } from "./texts.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,8 +30,6 @@ const corsHeaders = {
 const STALE_HOURS = 26; // verwachte cadans is ~dagelijks
 const STUCK_MIN = 30;
 const DEDUPE_HOURS = 12; // niet vaker mailen dan elke 12u over hetzelfde probleem
-
-type Health = "healthy" | "missing_run" | "errors" | "stuck";
 
 interface RunRow {
   id: string;
@@ -54,38 +56,8 @@ async function getAdminEmail(supabase: any): Promise<string> {
   } catch {
     // ignore
   }
-  return Deno.env.get("ADMIN_ALERT_EMAIL") ?? "administratie@bureauvlieland.nl";
-}
-
-function buildEmail(health: Health, run: RunRow | null): { subject: string; html: string } {
-  const base = "Auto-close monitor · Bureau Vlieland";
-  const url = "https://bureauvlieland.nl/admin/email-health";
-  if (health === "missing_run") {
-    return {
-      subject: `[ALERT] ${base}: geen run in >${STALE_HOURS} uur`,
-      html: `<p>De <code>auto-close-past-execution</code> cron heeft in de laatste ${STALE_HOURS} uur geen enkele run geregistreerd.</p>
-             <p>Controleer de cron in de backend of draai de functie handmatig via <a href="${url}">${url}</a>.</p>`,
-    };
-  }
-  if (health === "errors") {
-    return {
-      subject: `[ALERT] ${base}: laatste run had errors`,
-      html: `<p>Laatste run (id <code>${run?.id}</code>, gestart ${run?.started_at}) eindigde met status <strong>${run?.status}</strong>.</p>
-             <p><strong>Fout:</strong> ${run?.error_message ?? "(zie result JSON)"}</p>
-             <pre style="background:#f5f5f5;padding:8px;font-size:12px;white-space:pre-wrap;">${
-               JSON.stringify(run?.result ?? {}, null, 2)
-             }</pre>
-             <p>Bekijk details op <a href="${url}">${url}</a>.</p>`,
-    };
-  }
-  if (health === "stuck") {
-    return {
-      subject: `[ALERT] ${base}: run staat vast op 'running'`,
-      html: `<p>Run <code>${run?.id}</code> is gestart op ${run?.started_at} en staat al langer dan ${STUCK_MIN} minuten op status <strong>running</strong>.</p>
-             <p>Waarschijnlijk is de edge function gecrasht zonder afronding. Check logs.</p>`,
-    };
-  }
-  return { subject: "", html: "" };
+  // Eén terugvaladres voor alle systeemalarmen.
+  return Deno.env.get("ADMIN_ALERT_EMAIL") ?? GENERAL_CONTACT_EMAIL;
 }
 
 async function alreadyAlertedForMissing(supabase: any): Promise<boolean> {
@@ -159,7 +131,10 @@ Deno.serve(async (req) => {
 
       if (!alertSkipped) {
         const to = await getAdminEmail(supabase);
-        const { subject, html } = buildEmail(effectiveHealth, latest);
+        const { subject, html } = buildAutoCloseEmail(effectiveHealth, latest, {
+          staleHours: STALE_HOURS,
+          stuckMinutes: STUCK_MIN,
+        });
         const finalSubject = forceAlert ? `[TEST] ${subject}` : subject;
         const send = await sendMailjet({
           source: "auto-close-monitor",

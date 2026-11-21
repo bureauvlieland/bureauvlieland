@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { resolveBureauAddress } from "../_shared/bureau-event.ts";
-import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, TemplateIds } from "../_shared/email-templates.ts";
+import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, getPortalBaseUrl, TemplateIds } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { chatConversationUrl, sourceLabelFor } from "./labels.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,43 +71,62 @@ Deno.serve(async (req) => {
       .limit(1)
       .single();
 
-    const isAccommodationChat = !!conv.accommodation_id;
-    let sourceLabel = conv.source === "partner_portal" ? "Partnerportaal" : "Klantportaal";
+    const sourceLabel = sourceLabelFor(conv);
     const visitorName = conv.visitor_name || "Bezoeker";
     const visitorEmail = conv.visitor_email || "onbekend";
     const messagePreview = latestMsg?.content?.substring(0, 200) || "";
 
-    // Build subject with accommodation context
-    let subjectExtra = "";
-    if (isAccommodationChat && conv.accommodation_id) {
-      sourceLabel = "Logiespartner";
+    // Dossiernummer (LOG- of BV-) als variabele voor onderwerp en tekst:
+    // logieschat → logiesaanvraag; chat vanuit een project → dat project;
+    // klantportaal → het project achter het portaaltoken.
+    let referenceNumber = "";
+    if (conv.accommodation_id) {
       const { data: accReq } = await supabase
         .from("accommodation_requests")
         .select("reference_number")
         .eq("id", conv.accommodation_id)
-        .single();
-      if (accReq?.reference_number) {
-        subjectExtra = ` (${accReq.reference_number})`;
-      }
+        .maybeSingle();
+      referenceNumber = accReq?.reference_number || "";
+    } else if (conv.request_id) {
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("id", conv.request_id)
+        .maybeSingle();
+      referenceNumber = pr?.reference_number || "";
+    } else if (conv.source === "customer_portal" && conv.source_token) {
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("customer_token", conv.source_token)
+        .maybeSingle();
+      referenceNumber = pr?.reference_number || "";
     }
+
+    // Knop naar het gesprek zelf in het Berichtencentrum (niet de hele chatlijst).
+    const chatUrl = chatConversationUrl(getPortalBaseUrl(origin), conversation_id);
 
     // Try DB template
     const template = await getRenderedTemplate(TemplateIds.CHAT_NOTIFICATION_BUREAU, {
       visitor_name: visitorName,
       visitor_email: visitorEmail,
       source_label: sourceLabel,
+      reference_number: referenceNumber,
       message_preview: messagePreview,
-      chat_url: "https://bureauvlieland.nl/admin/chat",
+      chat_url: chatUrl,
     });
 
-    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `💬 Nieuw chatbericht van ${visitorName} (${sourceLabel})${subjectExtra}`}`;
+    const subjectRef = referenceNumber ? ` — ${referenceNumber}` : "";
+    const emailSubject = `${getSubjectPrefix(origin)}${template?.subject || `Nieuw chatbericht van ${visitorName} (${sourceLabel})${subjectRef}`}`;
     const emailBody = template?.body || `
-      <h3>Nieuw chatbericht${subjectExtra}</h3>
+      <h3>Nieuw chatbericht</h3>
       <p><strong>Van:</strong> ${visitorName} (${visitorEmail})</p>
       <p><strong>Bron:</strong> ${sourceLabel}</p>
+      ${referenceNumber ? `<p><strong>Dossier:</strong> ${referenceNumber}</p>` : ""}
       <p><strong>Bericht:</strong></p>
       <blockquote style="border-left:3px solid #ccc;padding-left:12px;color:#555;">${messagePreview}</blockquote>
-      <p><a href="https://bureauvlieland.nl/admin/chat">Ga naar chat →</a></p>
+      <p><strong>Aan zet:</strong> Bureau Vlieland — beantwoord het bericht.</p>
+      <p><a href="${chatUrl}">Open het gesprek in het Berichtencentrum →</a></p>
     `;
 
     // Send via Mailjet
@@ -166,6 +186,7 @@ Deno.serve(async (req) => {
         actor: "system → bureau (nieuw chatbericht)",
         conversation_id,
         source: conv.source,
+        reference_number: referenceNumber || null,
       },
     });
 

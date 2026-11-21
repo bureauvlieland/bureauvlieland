@@ -5,6 +5,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   formatDateNL,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -90,6 +91,8 @@ export const handler = async (req: Request): Promise<Response> => {
 
       const recipientEmail = getRecipientEmail(r.customer_email, origin);
       const subject = `${getSubjectPrefix(origin)}${tpl.subject}`;
+      // "Reageer gerust op deze e-mail": het antwoord komt via reply+BV-… in het dossier.
+      const replyTo = buildReplyTo(r.reference_number);
 
       const resp = await fetch("https://api.mailjet.com/v3.1/send", {
         method: "POST",
@@ -101,6 +104,7 @@ export const handler = async (req: Request): Promise<Response> => {
           Messages: [{ TrackClicks: "disabled", TrackOpens: "enabled",
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: r.customer_name }],
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: tpl.body,
           }],
@@ -118,6 +122,7 @@ export const handler = async (req: Request): Promise<Response> => {
           related_request_id: r.id,
           status: "sent",
           sent_by: "system:cron",
+          reply_to: replyTo?.Email,
           metadata: {
             template_name: "guest_details_reminder",
             actor: "system → klant (gastgegevens herinnering)",

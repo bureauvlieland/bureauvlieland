@@ -11,6 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,6 +53,53 @@ export function evaluateHeartbeat(input: HeartbeatInput): HeartbeatVerdict {
 const WINDOW_HOURS = 24;
 /** Minimum aantal verstuurde mails voordat stilte verdacht is. */
 export const MIN_SENT_FOR_ALERT = 3;
+
+/** Eén vaste sleutel: zolang het probleem duurt blijft het één taak (geen stapel per dag). */
+export const HEARTBEAT_TODO_ENTITY = "email-webhook";
+
+export interface HeartbeatAlertText {
+  /** Technische reden (één zin). */
+  reason: string;
+  /** Wat het bureau merkt. */
+  meaning: string;
+  /** Wat te doen, in gewone taal. */
+  action: string;
+  subject: string;
+  todoTitle: string;
+  todoDescription: string;
+  html: string;
+}
+
+/** Teksten van alarmmail en Werkbank-taak, los getest. */
+export function buildHeartbeatAlert(input: {
+  verdict: HeartbeatVerdict;
+  sentCount: number;
+  rejectedAttempts: number;
+  windowHours?: number;
+}): HeartbeatAlertText {
+  const window = input.windowHours ?? WINDOW_HOURS;
+  const reason = input.verdict === "misconfigured"
+    ? `Mailjet stuurde ${input.rejectedAttempts} keer een melding die geweigerd werd (verkeerd of ontbrekend token in de webhook-URL).`
+    : `Er zijn ${input.sentCount} mails verstuurd in de laatste ${window} uur, maar geen enkele terugkoppeling van Mailjet ontvangen (de webhook-URL staat vermoedelijk niet ingesteld).`;
+  const meaning =
+    "Wij zien niet meer of mail wordt afgeleverd, geopend of terugkomt; onbereikbare adressen worden niet geblokkeerd en het Berichtencentrum toont geen afleverstatus.";
+  const action =
+    "Open Email health, kopieer de webhook-URL en zet die in Mailjet bij alle event-types (sent, open, click, bounce, blocked, spam, unsub). Lukt dat niet, geef het door aan de ontwikkelaar.";
+  const html = `<p><strong>Wat betekent dit:</strong> ${meaning}</p>
+        <p><strong>Wat te doen:</strong> ${action}</p>
+        <p><a href="https://bureauvlieland.nl/admin/email-health">Open Email health</a></p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="color:#666;font-size:13px;"><strong>Technische details</strong><br>${reason}</p>`;
+  return {
+    reason,
+    meaning,
+    action,
+    subject: "[ALERT] Geen e-mail-terugkoppeling van Mailjet",
+    todoTitle: "E-mail: geen terugkoppeling van Mailjet",
+    todoDescription: `Wat betekent dit: ${meaning}\nWat te doen: ${action}\nTechnisch: ${reason}`,
+    html,
+  };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -110,30 +158,28 @@ Deno.serve(async (req) => {
     let alerted = false;
 
     if (shouldAlert) {
-      const reason =
-        verdict === "misconfigured"
-          ? `Mailjet stuurde ${rejectedAttempts} keer een melding die geweigerd werd (verkeerd of ontbrekend token in de webhook-URL).`
-          : `Er zijn ${sentCount} mails verstuurd in de laatste ${WINDOW_HOURS} uur, maar geen enkele terugkoppeling van Mailjet ontvangen (de webhook-URL staat vermoedelijk niet ingesteld).`;
+      const text = buildHeartbeatAlert({
+        verdict,
+        sentCount: sentCount ?? 0,
+        rejectedAttempts: rejectedAttempts ?? 0,
+      });
 
-      const autoEntityId = `email-webhook-${new Date().toISOString().slice(0, 10)}`;
       const { data: existingTodo } = await admin
         .from("admin_todos")
         .select("id")
         .eq("auto_type", "email_webhook_silent")
-        .eq("auto_entity_id", autoEntityId)
+        .eq("auto_entity_id", HEARTBEAT_TODO_ENTITY)
         .neq("status", "done")
         .maybeSingle();
 
       if (!existingTodo) {
         await admin.from("admin_todos").insert({
-          title: "E-mail: geen terugkoppeling van Mailjet",
-          description:
-            `${reason}\n\nGevolg: geen aflever-, bounce-, spam- of afmeldinformatie en de suppressielijst wordt niet bijgewerkt.\n` +
-            "Fix: kopieer de webhook-URL uit /admin/email-health en zet die in Mailjet bij alle event-types.",
+          title: text.todoTitle,
+          description: text.todoDescription,
           priority: "high",
           status: "todo",
           auto_type: "email_webhook_silent",
-          auto_entity_id: autoEntityId,
+          auto_entity_id: HEARTBEAT_TODO_ENTITY,
         });
       }
 
@@ -146,14 +192,10 @@ Deno.serve(async (req) => {
       const to =
         (typeof rawTo === "string" ? rawTo : rawTo ? String(rawTo) : "") ||
         Deno.env.get("ADMIN_ALERT_EMAIL") ||
-        "hallo@bureauvlieland.nl";
+        GENERAL_CONTACT_EMAIL;
 
-      const html = `<p><strong>De e-mail-feedback van Mailjet ligt stil.</strong></p>
-        <p>${reason}</p>
-        <p>Zonder deze events weten we niet of mail wordt afgeleverd en worden onbereikbare adressen niet geblokkeerd.</p>
-        <p>Herstellen: open <a href="https://bureauvlieland.nl/admin/email-health">Email health</a>, kopieer de webhook-URL en zet die in Mailjet bij alle event-types (sent, open, click, bounce, blocked, spam, unsub).</p>`;
-
-      const subject = "[ALERT] Geen e-mail-terugkoppeling van Mailjet";
+      const html = text.html;
+      const subject = text.subject;
       const send = await sendMailjet({
         source: "email-webhook-heartbeat",
         checkSuppression: false,

@@ -6,6 +6,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  wrapEmailHtml,
   SENDER_EMAIL,
   SENDER_NAME,
 } from "../_shared/email-templates.ts";
@@ -120,11 +121,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const subject = `${subjectPrefix}De link naar uw aanvraag bij Bureau Vlieland (${reference})`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-          Uw aanvraag staat klaar
-        </h2>
+    // Binnenkant; de huisstijlwrapper levert logo en voettekst.
+    const html = await wrapEmailHtml(`
+        <h2 style="color: #0F4C5C; margin: 0 0 16px;">Uw aanvraag staat klaar</h2>
         <p>Beste ${sanitizeHtml(request.customer_name || "")},</p>
         <p>
           U vroeg om de link naar uw lopende aanvraag bij Bureau Vlieland.
@@ -132,21 +131,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
           uw wensen bekijken, aanvullen of aanpassen.
         </p>
         <p style="margin: 24px 0;">
-          <a href="${portalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
+          <a href="${portalUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
             Open mijn programma &rarr;
           </a>
         </p>
         <p style="color: #666; font-size: 13px;">
           Werkt de knop niet? Kopieer dan deze link in uw browser:<br>
-          <a href="${portalUrl}" style="color: #1a365d; word-break: break-all;">${portalUrl}</a>
+          <a href="${portalUrl}" style="color: #0F4C5C; word-break: break-all;">${portalUrl}</a>
         </p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
         <p style="color: #666; font-size: 13px;">
           Referentie: ${sanitizeHtml(reference)}<br>
           Vragen? Bel ons op <strong>0562 700 208</strong> of antwoord op deze mail.
         </p>
-      </div>
-    `;
+    `, supabase);
 
     try {
       await sendEmailViaMailjet([

@@ -799,6 +799,63 @@ Minder ruis:
 
 
 
+Partnermails, één tekst per moment (migratie `20261121160000`):
+
+- `_shared/partnerRequestMail.ts` (getest) bouwt de partneraanvraag met de
+  drie onderdeelsoorten, de facturatiezin alleen bij onderdelen op de
+  bureaufactuur, een intro die weet of de klant al getekend heeft, de
+  herinneringsvariant en de referentie in het onderwerp. `send-items-to-
+  partners`, `accept-quote-proposal` en de noodrem van `approve-quote-item`
+  gebruiken hem; de template `program_request_partner` kreeg dezelfde
+  blokken en variabelen.
+- `send-partner-headsup-t3` rendert de nieuwe template `partner_headsup_t3`
+  en briefing-t ook onderdelen die de partner bevestigde en de klant
+  goedkeurde (voorheen alleen `accepted`); interne prijsnotities gaan niet
+  meer mee.
+- Annuleringsmail aan partners alleen bij bevestigde, geaccepteerde of
+  uitgevoerde onderdelen; de logiesvariant rendert de template met
+  leesbare datums.
+- Aantalwijzigingen: één tekst (`_shared/partnerHeadcountMail.ts`) voor de
+  bulk- en de per-onderdeelvariant.
+- Wachtwoordreset door het bureau en door de partner zelf gebruiken dezelfde
+  template; `/partner/login/login` in de uitnodigingsmails is hersteld;
+  uitnodiging zonder "eerste jaar" en met één zin over logies.
+- Intrekken, logiesaanvraag (huisstijl, Reply-To op LOG-nummer, juiste
+  tabnaam), aantal beoordelen, commissiefactuur en pdf-herinnering in de
+  huisstijl en tutoyerend. `accommodation_selected_partner` met aanhef,
+  referentie, "gekozen door de gast" en een variant als de gast rechtstreeks
+  betaalt. Template voor `reminder_headcount_pending` toegevoegd.
+
+Klant- en bureauteksten (migratie `20261121170000`):
+
+- Dertien templates herschreven: `booking_confirmed_customer` met een
+  voorwaardelijk blok voor onder voorbehoud, `program_request_bureau` zonder
+  fee-regel en met knop naar de Werkbank, `program_request_customer` voor het
+  huidige formulier en vijf werkdagen, `accommodation_quote_notification`
+  zonder onware belofte en met de data, de drie statusmails met "aanbieder",
+  een "wat u nu doet"-zin en referentie, `cancellation_customer` met knop
+  naar `/programma-op-maat`, chatmeldingen met bron en referentie,
+  aankomstmail en gastgegevens-herinnering met Reply-To en referentie.
+- Chatmelding aan het bureau kent de bron (klantportaal, partnerportaal,
+  WhatsApp, website) en linkt naar het gesprek; cateringmelding met
+  dossierlink, referentie, Reply-To en de termijn die de klant is beloofd.
+- Systeemalarmen beginnen met "Wat betekent dit" en "Wat te doen" in gewone
+  taal, de techniek eronder; één terugvaladres; de zelftest noemt per
+  controle het gevolg voor het bureau. Nog niet samengevoegd: de
+  auto-close-monitor en de watchdog bewaken dezelfde taak in twee stijlen.
+- Bruiloftsmelding via dezelfde adresbron als de andere bureau-meldingen.
+- Boekhoudmails met bedragen in Nederlandse notatie; de verzamelfactuurmail
+  heeft nu ook testmodus en logging.
+- `src/lib/__tests__/emailContentGuard.test.ts` bewaakt vanaf nu: geen oude
+  adressen (`inkoop@`, `info@`, `administratie@`), geen "upload" of
+  "registreer" bij "factuur" (behalve in de registratieroute die in fase 4
+  van het inkoopfacturenplan verdwijnt), en elke vaste route in een mail
+  bestaat in `App.tsx`. De eerste run vond een echte 404
+  (`/partner/login/login`).
+- Snapshot `emailTemplateVariables.ts` bijgewerkt op de toestand ná de
+  migraties, zodat de bestaande test blijft bewaken dat elke functie alle
+  variabelen van zijn template aanlevert.
+
 ### Fase 4 (21 november 2026)
 
 - `send-bureau-daily-digest` (opbouw in `digest.ts`, vijf tests): één mail

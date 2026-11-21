@@ -335,7 +335,7 @@ Deno.serve(async (req) => {
       dates: dates,
       cancellation_reason: reason ? sanitizeHtml(reason) : "",
       providers_count: String(providers.size + accommodationPartners.size),
-      programma_url: `${getPortalBaseUrl(origin)}/programma-samenstellen`,
+      reference_number: program.reference_number || "",
     });
 
     emails.push({

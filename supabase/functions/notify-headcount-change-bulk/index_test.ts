@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes, assertMatch } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 Deno.env.set("SUPABASE_URL", "http://test-supabase.local");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "srv");
@@ -6,7 +6,7 @@ Deno.env.set("MAILJET_API_KEY", "mj");
 Deno.env.set("MAILJET_SECRET_KEY", "mj");
 
 const { handler } = await import("./index.ts");
-const { buildLodgingHeadcountMail } = await import("./lodging-mail.ts");
+const src = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
 const url = "http://test-supabase.local/functions/v1/notify-headcount-change-bulk";
 const opts = { sanitizeOps: false, sanitizeResources: false };
 
@@ -29,29 +29,13 @@ Deno.test({ name: "notify-headcount-change-bulk: 400 zonder project of logiesoff
   assertEquals(res.status, 400);
 });
 
-Deno.test("logiespartner-mail vraagt om bevestiging van het nieuwe aantal, in de u-vorm", () => {
-  const { subject, html } = buildLodgingHeadcountMail({
-    partnerName: "Badhotel Bruin",
-    accommodationName: "Badhotel Bruin",
-    customerLabel: "RMD Trainingen",
-    arrival: "5 november 2026",
-    departure: "6 november 2026",
-    oldGuests: 10,
-    newGuests: 8,
-    currentPriceTotal: 1336,
-    reference: "LOG-2608-0001",
-    actionUrl: "https://bureauvlieland.nl/partner/logies/abc?actie=aantal",
-    note: "Twee deelnemers hebben afgezegd.",
-  });
-  assertEquals(subject, "Nieuw aantal gasten bevestigen: 8 in plaats van 10 (LOG-2608-0001)");
-  assertStringIncludes(html, "Nieuw aantal bevestigen");
-  assertStringIncludes(html, "https://bureauvlieland.nl/partner/logies/abc?actie=aantal");
-  assertStringIncludes(html, "van\n        <strong>10</strong> naar <strong>8</strong>");
-  assertStringIncludes(html, "voor 10 gasten");
-  assertStringIncludes(html, "Twee deelnemers hebben afgezegd.");
-  assertStringIncludes(html, "Beste Badhotel Bruin");
-  // u-vorm en geen gedachtestreepjes of pijlen
-  assertMatch(html, /\bu het nieuwe aantal\b/);
-  assertEquals(/\bHoi\b|\bje\b|\bjouw\b/.test(html), false);
-  assertEquals(html.includes("—") || html.includes("→") || subject.includes("—"), false);
+Deno.test("notify-headcount-change-bulk: beide partnermails via de gedeelde helper en de huisstijlwrapper", () => {
+  // De tekst zelf wordt getest in _shared/partnerHeadcountMail.test.ts.
+  assertStringIncludes(src, 'from "../_shared/partnerHeadcountMail.ts"');
+  assertStringIncludes(src, "buildPartnerHeadcountMail({");
+  assertStringIncludes(src, "buildLodgingHeadcountMail({");
+  assertStringIncludes(src, "wrapEmailHtml(mail.html, supabase)");
+  assertStringIncludes(src, "wrapEmailHtml(lodgingMail.html, supabase)");
+  assertEquals(src.includes("Beste ${"), false, "geen u-vorm meer in de partnermail");
+  assertEquals(src.includes("U hoeft"), false);
 });

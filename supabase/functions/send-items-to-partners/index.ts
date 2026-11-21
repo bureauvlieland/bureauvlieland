@@ -1,17 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  sanitizeHtml,
-  formatDateNL,
   getPortalBaseUrl,
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
-  renderEffectiveTimeLine,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
-import { expectsPartnerInvoice, partnerBillingNote, partnerHandlingOf } from "../_shared/itemHandling.ts";
+import { buildPartnerRequestMail } from "../_shared/partnerRequestMail.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -67,86 +65,6 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   }
   return await response.json();
 };
-
-function generatePartnerNotificationEmail(
-  group: PartnerGroup,
-  program: any,
-  portalUrl: string,
-  isReminder = false,
-): string {
-  const formattedDates = (program.selected_dates as string[])
-    .map((d: string) => formatDateNL(d))
-    .join(", ");
-
-  const itemsHtml = group.items
-    .map((item) => {
-      // Afhandeling zonder offerte (zie _shared/itemHandling): zeg het erbij,
-      // zodat de partner niet op zoek gaat naar een prijsveld.
-      const handling = partnerHandlingOf(item);
-      const handlingLine = handling === "confirm"
-        ? `<div style="color:#555;font-size:13px;">Alleen even bevestigen dat dit geregeld is; een prijs of offerte is niet nodig.</div>`
-        : handling === "inform"
-          ? `<div style="color:#555;font-size:13px;">Ter kennisgeving, je hoeft hier niets mee te doen.</div>`
-          : "";
-      const billing = partnerBillingNote(item);
-      const billingLine = billing ? `<div style="color:#555;font-size:13px;">${sanitizeHtml(billing)}</div>` : "";
-      return `<li style="margin-bottom: 12px;">
-        <strong>${sanitizeHtml(item.block_name)}</strong>
-        ${renderEffectiveTimeLine(item, "Tijd")}
-        ${handlingLine}${billingLine}
-      </li>`;
-    })
-    .join("");
-  // Staat geen enkel onderdeel op de bureaufactuur, dan klopt de standaard
-  // facturatie-alinea niet en laten we hem weg.
-  const anyBureauInvoice = group.items.some((item) => expectsPartnerInvoice(item));
-  const allInform = group.items.every((item) => partnerHandlingOf(item) === "inform");
-
-  const customerLabel = sanitizeHtml(program.customer_company || program.customer_name || "");
-  const headline = isReminder
-    ? "Herinnering: aanvraag staat nog open"
-    : "Aanvraag bevestigd door klant";
-  const intro = isReminder
-    ? `<p>Hoi ${sanitizeHtml(group.partnerName)},</p>
-       <p>Een vriendelijke <strong>herinnering</strong>: onderstaande aanvraag staat nog open in je partnerportaal en wacht op een reactie.</p>`
-    : `<p>Hoi ${sanitizeHtml(group.partnerName)},</p>
-       <p>Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben onderstaande onderdelen definitief in het programma opgenomen${allInform ? " en geven ze hierbij ter kennisgeving aan je door." : " en willen je vragen ze te bevestigen via het partnerportaal."}</p>`;
-
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #0F4C5C; border-bottom: 2px solid #0F4C5C; padding-bottom: 10px;">
-        ${headline}
-      </h2>
-      ${intro}
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748; font-size:15px;">Aanvraag</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Referentie:</td><td style="padding: 5px 0;"><strong>${program.reference_number || "-"}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Klant:</td><td style="padding: 5px 0;"><strong>${customerLabel || "-"}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Datum(s):</td><td style="padding: 5px 0;"><strong>${formattedDates}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${program.number_of_people}</strong></td></tr>
-        </table>
-      </div>
-      <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0; color: #276749;">Onderdelen voor jou</h3>
-        <ul style="padding-left: 20px; margin-bottom: 0;">${itemsHtml}</ul>
-      </div>
-      <div style="text-align:center; margin: 24px 0;">
-        <a href="${portalUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600;">
-          ${allInform ? "Bekijk in partnerportaal →" : "Bevestig in partnerportaal →"}
-        </a>
-      </div>
-      ${anyBureauInvoice ? `<p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
-        <strong>Facturatie:</strong> Mail na uitvoering de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${sanitizeHtml(program.reference_number || "")} erop. Wij factureren centraal aan de klant. Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
-      </p>` : `<p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
-        Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
-      </p>`}
-      <p style="margin-top: 24px; color:#666; font-size:13px;">
-        Met vriendelijke groet,<br><strong>Bureau Vlieland</strong>
-      </p>
-    </div>
-  `;
-}
 
 export const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -436,11 +354,24 @@ export const handler = async (req: Request): Promise<Response> => {
       }
 
       const partnerPortalUrl = `${baseUrl}/partner/login`;
-      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl, isReminderForGroup);
+      // Eén tekst voor dit moment (_shared/partnerRequestMail.ts): de drie
+      // onderdeelsoorten, facturatie alleen bij bureaufactuur, en de intro
+      // afhankelijk van of de klant al getekend heeft (override vóór tekenen).
+      const mail = buildPartnerRequestMail({
+        partnerName: group.partnerName,
+        referenceNumber: program.reference_number,
+        customerLabel: program.customer_company || program.customer_name,
+        dates: Array.isArray(program.selected_dates) ? (program.selected_dates as string[]) : [],
+        numberOfPeople: program.number_of_people,
+        items: group.items,
+        portalUrl: partnerPortalUrl,
+        customerSigned: !!program.terms_accepted_at,
+        reminder: isReminderForGroup,
+        subjectPrefix,
+      });
+      const emailHtml = await wrapEmailHtml(mail.html, supabase);
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
-      const subjectLine = isReminderForGroup
-        ? `${subjectPrefix}Herinnering: aanvraag via Bureau Vlieland — ${program.reference_number || ""}`
-        : `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`;
+      const subjectLine = mail.subject;
 
       const messageIdx = emailMessages.length;
       emailMessages.push({
