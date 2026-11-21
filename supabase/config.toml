@@ -14,9 +14,6 @@ additional_redirect_urls = [
   "http://localhost:8080/**",
 ]
 
-[functions.send-quote-request]
-verify_jwt = false
-
 [functions.send-catering-request]
 verify_jwt = false
 
@@ -119,9 +116,6 @@ verify_jwt = false
 [functions.admin-reset-partner-password]
 verify_jwt = false
 
-[functions.send-partner-intro-email]
-verify_jwt = false
-
 [functions.notify-new-chat-reply]
 verify_jwt = false
 
@@ -197,4 +191,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.attach-accommodation-invoice-pdf]
+verify_jwt = false
+
+[functions.send-bureau-daily-digest]
 verify_jwt = false

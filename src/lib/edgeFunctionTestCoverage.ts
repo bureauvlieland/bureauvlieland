@@ -78,6 +78,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "select-accommodation-quote": "deno",
   "send-partner-headsup-t3": "deno",
   "update-customer-program": "deno",
+  "send-bureau-daily-digest": "deno",
   "approve-accommodation-headcount": "deno",
 };
 
@@ -112,7 +113,6 @@ const REGISTRY: Row[] = [
 
   // ── Customer email flows ────────────────────────────────────────────────
   { name: "send-quote-offer", category: "customer_email", critical: true },
-  { name: "send-quote-request", category: "customer_email", critical: true },
   { name: "send-program-request", category: "customer_email", critical: true },
   { name: "send-project-email", category: "customer_email", critical: true },
   { name: "send-wedding-referral", category: "customer_email", critical: true },
@@ -137,15 +137,11 @@ const REGISTRY: Row[] = [
   { name: "send-catering-request", category: "partner_email", critical: true },
   { name: "send-partner-customer-message", category: "partner_email", critical: true },
   { name: "send-partner-headsup-t3", category: "partner_email", critical: false },
-  { name: "send-partner-intro-email", category: "partner_email", critical: false },
   { name: "send-partner-mailing", category: "partner_email", critical: false },
   { name: "send-partner-reset-email", category: "partner_email", critical: true },
   { name: "notify-accommodation-quote", category: "partner_email", critical: true },
   { name: "notify-partner-cancellation", category: "partner_email", critical: true },
   { name: "notify-partner-headcount-change", category: "partner_email", critical: true },
-  { name: "notify-partner-item-deletion", category: "partner_email", critical: true },
-  
-  { name: "notify-partners-informational", category: "partner_email", critical: false },
   { name: "notify-headcount-change-bulk", category: "partner_email", critical: false },
   { name: "notify-date-change", category: "partner_email", critical: false },
   { name: "invite-partner", category: "partner_email", critical: true },
@@ -179,6 +175,7 @@ const REGISTRY: Row[] = [
   { name: "create-request-from-sales-inbox", category: "workflow", critical: true },
   { name: "resolve-customer-token", category: "workflow", critical: true },
   { name: "check-pending-items", category: "workflow", critical: false },
+  { name: "send-bureau-daily-digest", category: "workflow", critical: false },
   { name: "chat-visitor-send", category: "workflow", critical: false },
 
   { name: "customer-review", category: "workflow", critical: false },

@@ -2,6 +2,7 @@
 // Bijwerken wanneer een template wordt gewijzigd; de test emailTemplateVariables.test.ts
 // controleert dat elke edge function alle vereiste variabelen aanlevert.
 // Gegenereerd op 8 september 2026 uit de tabel email_templates (53 templates; zes ongebruikte verwijderd).
+// 21 november 2026: dertien templates die geen code rendert verwijderd (migratie 20261121150000_dode-templates.sql).
 export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
   "accommodation_quote_notification": [
     "accommodation_name",
@@ -254,16 +255,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "partner_name",
     "portal_url"
   ],
-  "partner_briefing_t3": [
-    "block_name",
-    "customer_name",
-    "event_date",
-    "number_of_people",
-    "partner_name",
-    "portal_url",
-    "time_info"
-  ],
-  "partner_intro_portal": [],
   "partner_invitation": [
     "commission_accommodation",
     "commission_activity",
@@ -291,38 +282,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
   "partner_password_reset": [
     "partner_name",
     "reset_link"
-  ],
-  "presales_clarification": [
-    "customer_name",
-    "number_of_people",
-    "reference_number"
-  ],
-  "presales_intake_followup": [
-    "customer_name",
-    "reference_number"
-  ],
-  "presales_partner_question": [
-    "partner_name",
-    "question_body",
-    "reference_number"
-  ],
-  "presales_proposal_intro": [
-    "customer_name",
-    "number_of_people",
-    "reference_number"
-  ],
-  "proforma_commission_notification": [
-    "amount_excl_vat",
-    "commission_amount",
-    "commission_percentage",
-    "completion_text",
-    "customer_name",
-    "deadline_date",
-    "item_name",
-    "partner_name",
-    "partner_portal_link",
-    "quoted_amount_incl",
-    "vat_rate"
   ],
   "program_request_bureau": [
     "bureau_fee",
@@ -371,24 +330,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "portal_url",
     "valid_until"
   ],
-  "quote_request_bureau": [
-    "budget_per_person",
-    "company_name",
-    "customer_email",
-    "customer_name",
-    "customer_phone",
-    "description",
-    "number_of_days",
-    "number_of_people",
-    "start_date"
-  ],
-  "quote_request_customer": [
-    "budget_per_person",
-    "customer_name",
-    "number_of_days",
-    "number_of_people",
-    "start_date"
-  ],
   "reminder_activity_pending": [
     "block_name",
     "customer_name",
@@ -403,24 +344,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "departure_date",
     "number_of_guests",
     "partner_name",
-    "portal_url"
-  ],
-  "sales_followup_offer_3d": [
-    "customer_name",
-    "portal_url",
-    "reference_number"
-  ],
-  "sales_followup_offer_7d": [
-    "customer_name",
-    "portal_url",
-    "reference_number"
-  ],
-  "sales_post_signing_welcome": [
-    "customer_name",
-    "portal_url"
-  ],
-  "sales_pre_signing": [
-    "customer_name",
     "portal_url"
   ],
   "status_alternative": [

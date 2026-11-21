@@ -34,8 +34,6 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   program_request_partner: { label: "Aanvraag naar partner", category: "Aanvraag" },
   catering_request_bureau: { label: "Cateringaanvraag (melding bureau)", category: "Aanvraag" },
   catering_request_customer: { label: "Cateringaanvraag bevestigd aan klant", category: "Aanvraag" },
-  quote_request_bureau: { label: "Offerteaanvraag (melding bureau)", category: "Aanvraag" },
-  quote_request_customer: { label: "Offerteaanvraag bevestigd aan klant", category: "Aanvraag" },
   program_draft_link: { label: "Link naar bewaard concept-programma", category: "Aanvraag" },
 
   // Offerte en akkoord
@@ -96,7 +94,6 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   cancellation_customer: { label: "Annulering bevestigd aan klant", category: "Annulering" },
   cancellation_partner: { label: "Annulering naar partner", category: "Annulering" },
   cancellation_accommodation_partner: { label: "Annulering logies naar partner", category: "Annulering" },
-  partner_item_cancellation: { label: "Onderdeel vervallen (partner)", category: "Annulering" },
   item_cancelled_partner: { label: "Onderdeel geannuleerd door klant (partner)", category: "Annulering" },
 
   // Facturatie
@@ -113,7 +110,6 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
 
   // Partnerbeheer
   partner_invitation: { label: "Uitnodiging partnerportaal", category: "Partner" },
-  partner_intro_portal: { label: "Introductie partnerportaal", category: "Partner" },
   partner_password_reset: { label: "Wachtwoord partnerportaal", category: "Partner" },
   partner_mailing: { label: "Mailing aan partners", category: "Partner" },
 
@@ -122,6 +118,7 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   chat_reply_notification: { label: "Chatantwoord aan bezoeker", category: "Chat" },
 
   // Handmatig vanuit het dossier
+  bureau_daily_digest: { label: "Dagoverzicht bureau", category: "Bureau" },
   partner_item_response_bureau: { label: "Partnerreactie op onderdeel (melding bureau)", category: "Bureau" },
   quote_accepted_bureau: { label: "Klant akkoord op voorstel (melding bureau)", category: "Bureau" },
   terms_signed_bureau: { label: "Klant heeft getekend (melding bureau)", category: "Bureau" },
@@ -146,6 +143,10 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   date_change_partner: { label: "Datumwijziging (partner)", category: "Programma" },
   customer_date_change_bureau: { label: "Datumwijziging klant (melding bureau)", category: "Programma" },
   partner_briefing_t3: { label: "Briefing partner, 3 dagen vooraf", category: "Programma" },
+  quote_request_bureau: { label: "Offerteaanvraag (melding bureau)", category: "Aanvraag" },
+  quote_request_customer: { label: "Offerteaanvraag bevestigd aan klant", category: "Aanvraag" },
+  partner_intro_portal: { label: "Introductie partnerportaal", category: "Partner" },
+  partner_item_cancellation: { label: "Onderdeel vervallen (partner)", category: "Annulering" },
   reminder_item_pending: { label: "Herinnering openstaand onderdeel", category: "Programma" },
   accommodation_request_bureau: { label: "Logiesaanvraag (melding bureau)", category: "Logies" },
   accommodation_people_change: { label: "Aantal gasten gewijzigd (logies)", category: "Logies" },

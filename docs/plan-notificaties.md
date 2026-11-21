@@ -788,6 +788,44 @@ where email_type in ('partner_invoice_reminder_t1','partner_invoice_reminder_t7'
 group by 1,2 having count(*) > 3 order by 3 desc;
 ```
 
+Open-percentage per ontvangersgroep, laatste 30 dagen (doel: partner en
+klant boven 40%):
+
+```sql
+select case
+    when email_type like '%bureau%' or email_type in ('chat_notification','cron_watchdog_alert',
+      'purchase_invoice_forward','bureau_invoice_forward','commission_invoice_forward','bureau_daily_digest')
+      then 'bureau/boekhouding'
+    when email_type like '%partner%' or email_type in ('program_request_partner','booking_confirmed_partner',
+      'item_added_partner','counter_proposal_partner','accommodation_quote_request_partner',
+      'accommodation_selected_partner','accommodation_rejected_partner','cancellation_partner',
+      'cancellation_accommodation_partner','partner_invitation','partner_password_reset')
+      then 'partner'
+    else 'klant' end as groep,
+  count(*) n,
+  round(100.0 * count(*) filter (where status in ('opened','clicked')) / count(*)) pct_geopend,
+  count(*) filter (where status in ('failed','bounced','blocked','dlq')) mislukt
+from email_log
+where created_at >= now() - interval '30 days'
+group by 1 order by 2 desc;
+```
+
+Taken aangemaakt tegenover gesloten door de reconciler, per type, laatste 30
+dagen (churn = veel aangemaakt én snel automatisch gesloten):
+
+```sql
+select auto_type,
+  count(*) aangemaakt,
+  count(*) filter (where completion_reason is not null and completion_reason not in ('seen')) auto_gesloten,
+  count(*) filter (where completion_reason = 'seen') gezien,
+  count(*) filter (where status = 'dismissed') weggeklikt,
+  round(percentile_cont(0.5) within group (order by extract(epoch from (completed_at - created_at)) / 3600)
+    filter (where completed_at is not null)) mediaan_uren_open
+from admin_todos
+where created_at >= now() - interval '30 days'
+group by 1 order by 2 desc;
+```
+
 Werkbank-churn: taken per type, hoe snel ze dichtgaan en door wie:
 
 ```sql
@@ -797,6 +835,14 @@ select auto_type, count(*) n,
 from admin_todos
 where created_at >= now() - interval '30 days'
 group by 1 order by 2 desc;
+```
+
+Dagoverzicht: komt hij elke dag? (verwacht één rij per dag)
+
+```sql
+select created_at::date dag, status, metadata->>'summary' samenvatting
+from email_log where email_type = 'bureau_daily_digest'
+order by 1 desc limit 14;
 ```
 
 Nulmeting 21 november 2026: 1.172 mails in 180 dagen (partner 26% geopend,

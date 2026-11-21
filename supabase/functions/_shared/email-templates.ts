@@ -312,10 +312,6 @@ export const TemplateIds = {
   CANCELLATION_PARTNER: "cancellation_partner",
   CANCELLATION_ACCOMMODATION_PARTNER: "cancellation_accommodation_partner",
   
-  // Quote request emails
-  QUOTE_REQUEST_BUREAU: "quote_request_bureau",
-  QUOTE_REQUEST_CUSTOMER: "quote_request_customer",
-  
   // Partner invitation
   PARTNER_INVITATION: "partner_invitation",
   
@@ -338,9 +334,6 @@ export const TemplateIds = {
   // Referentiepagina: akkoord vragen (docs/plan-reviews-oogsten.md, fase 3)
   REFERENCE_CASE_APPROVAL: "reference_case_approval",
 
-  // Proforma commission notification
-  PROFORMA_COMMISSION: "proforma_commission_notification",
-
   // Quote expired notification for partner
   QUOTE_EXPIRED_PARTNER: "quote_expired_partner",
 
@@ -350,7 +343,6 @@ export const TemplateIds = {
 
   // Partner management
   PARTNER_PASSWORD_RESET: "partner_password_reset",
-  PARTNER_INTRO_PORTAL: "partner_intro_portal",
 
   // Customer accommodation message
   CUSTOMER_ACCOMMODATION_MESSAGE: "customer_accommodation_message",

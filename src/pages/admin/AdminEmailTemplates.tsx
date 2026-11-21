@@ -40,8 +40,6 @@ const templateCategories: Record<string, string> = {
   program_request_bureau: "Programma",
   program_request_customer: "Programma",
   program_request_partner: "Programma",
-  quote_request_bureau: "Offerte",
-  quote_request_customer: "Offerte",
   status_confirmed: "Status",
   status_unavailable: "Status",
   status_alternative: "Status",
@@ -50,7 +48,6 @@ const templateCategories: Record<string, string> = {
   cancellation_customer: "Annulering",
   cancellation_partner: "Annulering",
   partner_invitation: "Partner",
-  proforma_commission_notification: "Commissie",
   accommodation_request_customer: "Logies",
   accommodation_quote_notification: "Logies",
   accommodation_selected_partner: "Logies",
@@ -58,7 +55,6 @@ const templateCategories: Record<string, string> = {
   reminder_activity_pending: "Herinnering",
   reminder_quote_pending: "Herinnering",
   partner_activity_unconfirmed_t7: "Herinnering",
-  partner_briefing_t3: "Partner",
   partner_invoice_reminder_t1: "Commissie",
   partner_invoice_reminder_t7: "Commissie",
 };
@@ -142,7 +138,7 @@ const AdminEmailTemplates = () => {
     return acc;
   }, {} as Record<string, EmailTemplate[]>);
 
-  const categoryOrder = ["Programma", "Offerte", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Commissie", "Overig"];
+  const categoryOrder = ["Programma", "Status", "Wijziging", "Annulering", "Herinnering", "Logies", "Partner", "Commissie", "Overig"];
 
   return (
     <>
