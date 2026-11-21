@@ -62,6 +62,17 @@ Geopend-percentage: bureau 40%, klant 32%, partner 26%. Dat is laag voor
 transactiemail (normaal 50 tot 70%), en bij partners betekent het dat drie van
 de vier mails ongelezen blijven.
 
+### Samenhang met de nieuwe factuurroute
+
+Sinds 17 november mailen partners hun factuur-pdf naar de inkoop-inbox in
+plaats van hem in het portaal te registreren (`plan-inkoopfacturen-via-inbox.md`,
+fase 1 gebouwd; fase 2 tot 4 gepland). Dat raakt vijf notificaties: de
+bureau-mail en twee taken bij portaalregistratie en de herinnering "factuur
+zonder pdf" verdwijnen met die route; de herinneringen T+3 en T+7 blijven
+en worden juist belangrijker, maar moeten dan wel weten dat een mail in de
+inbox ook een factuur is (zie 3.3, punt 9). De ontvangstbevestiging aan de
+partner uit fase 2 van dat plan is de notificatie die daar nog bij hoort.
+
 ## 2. Inventaris
 
 ### 2.1 E-mails aan de klant
@@ -111,9 +122,9 @@ de vier mails ongelezen blijven.
 | `quote_expired_partner` | cron, offerte verlopen | 0 | — | Houden |
 | `accommodation_selected_partner` / `_rejected_partner` / `_quote_withdrawn` | klant kiest, jij trekt in | 4 | 50% | Houden |
 | `accommodation_headcount_confirmed_partner` / `_rejected_partner` | jij beoordeelt aantal | — | — | Houden |
-| `partner_invoice_reminder_t1` (feitelijk T+3) | cron, uitgevoerd en geen factuur, **elke 7 dagen opnieuw** | 43 | 23% | **Kapot** (zie 3.3) |
+| `partner_invoice_reminder_t1` (feitelijk T+3) | cron, uitgevoerd en geen factuur, **elke 7 dagen opnieuw** | 43 | 23% | **Kapot** (zie 3.3). Tekst is sinds 17 november "mail de pdf naar de inbox"; blijft de kern van de nieuwe factuurroute |
 | `partner_invoice_reminder_t7` | cron, idem na 7 dagen, **elke 7 dagen opnieuw** | 27 | 33% | **Kapot** (zie 3.3) |
-| `partner_missing_pdf_reminder` | cron en handmatig, factuur zonder pdf | 45 | 18% | Fortuna kreeg er 7; samenvoegen met de factuurreeks |
+| `partner_missing_pdf_reminder` | cron en handmatig, in het portaal geregistreerde factuur zonder pdf | 45 | 18% | **Vervalt** met de portaalregistratie (`plan-inkoopfacturen-via-inbox.md` §3.7, fase 4); Fortuna kreeg er 7 |
 | `commission_invoice_sent` | jij verstuurt commissiefactuur | — | — | Houden |
 | `partner_invitation`, `partner_intro_portal`, `partner_password_reset`, `partner_mailing` | beheer | 25 | 40% | Houden |
 | `customer_accommodation_message` | klant schrijft logiespartner | — | — | Houden |
@@ -126,7 +137,7 @@ de vier mails ongelezen blijven.
 | `program_request_bureau` / `catering_request_bureau` / `quote_request_bureau` | nieuwe aanvraag op de site | 7 | Houden: dit is het moment waarop snelheid geld oplevert. **Maar:** er is óók een `new_program_request`-taak, en daar staan er 40 open |
 | `chat_notification` | nieuw chatbericht (max 1 per 5 min per gesprek) | 52 | Houden |
 | `customer_counter_proposal_bureau` | klant doet tegenvoorstel | 2 | Houden, maar als onderdeel van één patroon (zie 4) |
-| `partner_invoice_registered_bureau` | partner registreert factuur | 33 | **Schrappen als mail**: er is een `purchase_invoice_inbox`-taak voor, 21 gingen naar `erwin@` en 12 naar `hallo@` (adres wisselde) |
+| `partner_invoice_registered_bureau` | partner registreert factuur in het portaal | 33 | **Vervalt vanzelf**: de portaalregistratie staat sinds 17 november uit (`partner_invoice_registration_enabled`) en `register-partner-invoice` gaat weg in fase 4 van `plan-inkoopfacturen-via-inbox.md`. De inkoop-inbox maakt een taak `purchase_invoice_inbox`; dat is genoeg |
 | `lodging_quote_submitted/revised/declined_bureau`, `lodging_headcount_confirmed_bureau` | logiespartner reageert | ? | Houden: dit is precies de melding die je voor activiteiten mist. Logies heeft hem al |
 | `wedding_referral_claim_bureau` | partner meldt "klant al bekend" | 0 | Houden |
 | `cron_watchdog_alert` | cron, taken falen | 23 | Houden, maar 16 van de 23 waren "1 taak faalt" en de zelftest heeft nog 10 open taken; onderzoeken wat er structureel faalt |
@@ -180,7 +191,8 @@ Volumes over 180 dagen, met het gemiddelde aantal uren tot afsluiten.
 | `post_execution_invoice_check` | 7 dagen na uitvoering geen factuur | 9 | 0 | 198 | Dubbel met `commission_missing_invoice` |
 | `commission_missing_invoice` | partnerfactuur ontbreekt | 85 | 20 | 239 | **45 in 30 dagen, elke 15 uur dicht en weer open**: churn, zelfde oorzaak als 3.3 |
 | `commission_unlinked_invoice` | factuur niet gekoppeld | 63 | 11 | 205 | Houden |
-| `commission_pending` / `invoicing_ready` | facturatie kan | 51 | 3 | 23 tot 287 | Houden |
+| `commission_pending` / `purchase_invoice_pending` | partner registreerde factuur in het portaal | 66 | 5 | 23 tot 205 | **Vervallen** met `register-partner-invoice` (fase 4 inkoopfacturenplan); de inbox-route maakt `purchase_invoice_inbox` |
+| `invoicing_ready` | klant tekent of jij geeft vrij | 18 | 1 | 287 | Houden |
 | `critical_selftest_failure` | zelftest faalt | 19 | 10 | 141 | 10 open: of het is structureel kapot of het alarm is te gevoelig |
 
 ### 2.5 Wat partners en klanten in hun portaal zien
@@ -216,6 +228,11 @@ hier het enige actieve kanaal.
    Werkbank die je moet openen. Geen enkel kanaal bereikt je telefoon.
 6. **Partner markeert als uitgevoerd** (16 keer in 180 dagen): geen melding op
    dat moment; pas een dag later een taak `post_execution_feedback`.
+7. **Partner mailt zijn factuur-pdf en hoort niets terug.** De
+   ontvangstbevestiging en de afwijzing ("geen leesbare pdf") staan gepland
+   in fase 2 van `plan-inkoopfacturen-via-inbox.md` (§3.3) en zijn nog niet
+   gebouwd. Tot die tijd ziet de partner het alleen in het portaal, en 9 van
+   de 51 partners kijken daar.
 
 ### 3.2 Wat overkill of ruis is
 
@@ -284,6 +301,16 @@ hier het enige actieve kanaal.
    `cron-watchdog/index.ts:107` zet `status: "open"`, maar de tabel staat
    alleen `todo`, `in_progress`, `done` en `dismissed` toe. Nul rijen in de
    database. Alleen de mail komt aan.
+9. **De factuurherinnering kijkt niet in de inkoop-inbox.** `hasInvoice` in
+   `check-pending-items` (`:931-943`, via `_shared/partner-invoice-presence.ts`)
+   kent alleen `partner_purchase_invoices`, allocaties en het factuurnummer op
+   het onderdeel. Een pdf die de partner netjes naar
+   `invoices@reply.bureauvlieland.nl` mailde maar die nog in
+   `purchase_invoice_inbox` op verwerking wacht, telt niet. In de nieuwe route
+   is dat precies het normale geval: de partner krijgt dan T+3 en T+7 terwijl
+   hij al gedaan heeft wat we vroegen. Op dit moment staat er niets open in
+   de inbox, dus het is nog niet misgegaan, maar het gaat misgaan zodra je
+   een paar dagen niet verwerkt.
 8. **Twee dingen zijn gebouwd maar nergens getoond**: de partner-teller
    "wijzigingen sinds je laatste bezoek" (`changesSinceLastSeen` in
    `get-partner-dashboard`, kolom `last_dashboard_seen_at`) en de teller van
@@ -327,11 +354,14 @@ Concreet:
    bij publiceren "nu sturen" kiest. Datumwijzigingen blijven direct.
 5. **Annuleringsmail aan partners alleen bij een bevestigd of geaccepteerd
    onderdeel.** Een partner die alleen een aanvraag kreeg, krijgt niets.
-6. **Schrappen**: `partner_invoice_registered_bureau` (mail),
-   `customer_status_email_due` (taak, dubbel), `post_execution_feedback`
+6. **Schrappen**: `customer_status_email_due` (taak, dubbel), `post_execution_feedback`
    (taak, dubbel met nazorg), `post_execution_invoice_check` (taak, dubbel met
    commissiecontrole), `new_request_received` (dubbel met
    `new_program_request`), het laatste `inbound_email`-exemplaar.
+   `partner_invoice_registered_bureau`, `partner_missing_pdf_reminder`,
+   `commission_pending` en `purchase_invoice_pending` hoeven hier niet apart:
+   die verdwijnen met de portaalregistratie in fase 4 van het
+   inkoopfacturenplan.
 7. **`new_program_request` sluit automatisch** zodra de offerte verstuurd is
    of de aanvraag gearchiveerd. De 40 open exemplaren eenmalig sluiten.
 8. **Een dagelijkse samenvatting om 7:30** naar `bureau_admin_email`: wat er
@@ -363,6 +393,12 @@ Concreet:
   T+14 een taak `commission_missing_invoice` met prioriteit high in plaats
   van verdere mail. Hetzelfde patroon voor `reminder_activity_pending` en
   `reminder_quote_pending`.
+- `partner-invoice-presence.ts` leert de inkoop-inbox kennen: een
+  onverwerkte of in verwerking zijnde mail in `purchase_invoice_inbox` van het
+  afzendadres van de partner, of met het BV-nummer van het project in
+  onderwerp of tekst, telt als "factuur binnen". Dezelfde bron die
+  `get-partner-dashboard` al gebruikt voor "Ontvangen op …, wordt verwerkt",
+  zodat portaal en herinnering hetzelfde zeggen.
 - Eenmalige migratie: de 40 open `new_program_request`-taken sluiten waar de
   aanvraag al een offerte of archiefstatus heeft; het laatste
   `inbound_email`-exemplaar sluiten.
@@ -395,7 +431,6 @@ Concreet:
   sturen" in `PublishChangesDialog`.
 - Annuleringsmail aan partners alleen bij `confirmed`/`accepted`/
   `executed`-onderdelen.
-- `partner_invoice_registered_bureau` als mail uit; blijft taak.
 - Dubbele taken samenvoegen: `customer_status_email_due` in
   `customer_status_update_due`, `post_execution_feedback` in
   `customer_aftersales`, `post_execution_invoice_check` in
