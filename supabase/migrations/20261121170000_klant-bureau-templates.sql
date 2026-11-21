@@ -62,8 +62,8 @@ set subject = 'Nieuwe programma-aanvraag van {{customer_name}} ({{number_of_peop
       '<p style="background:#f8f9fa;padding:10px 14px;border-left:3px solid #0F4C5C;font-size:13px;color:#334155;"><strong>Facturatie:</strong> Bureau Vlieland factureert centraal alle onderdelen aan de klant (bureau-centraal model). De onderstaande splitsing gaat over wie het onderdeel <em>uitvoert</em>, niet over wie factureert.</p>',
       ''
     )
-    || '<p style="margin-top:20px;"><strong>Aan zet:</strong> Bureau Vlieland — beoordeel de aanvraag en stuur binnen 5 werkdagen een voorstel.</p><p style="margin:16px 0;"><a href="https://bureauvlieland.nl/admin/werkbank" style="display:inline-block;padding:12px 20px;background:#0F4C5C;color:#ffffff;text-decoration:none;border-radius:6px;">Open de Werkbank</a></p>',
-    variables = '["customer_name","customer_company","customer_email","customer_phone","number_of_people","selected_date","bureau_items","partner_items","self_arranged_items","notes"]'::jsonb,
+    || '<p style="margin-top:20px;"><strong>Aan zet:</strong> Bureau Vlieland — beoordeel de aanvraag en stuur binnen 5 werkdagen een voorstel.</p><p style="margin:16px 0;"><a href="{{admin_url}}" style="display:inline-block;padding:12px 20px;background:#0F4C5C;color:#ffffff;text-decoration:none;border-radius:6px;">Open de Werkbank</a></p>',
+    variables = '["customer_name","customer_company","customer_email","customer_phone","number_of_people","selected_date","bureau_items","partner_items","self_arranged_items","notes","admin_url"]'::jsonb,
     updated_at = now()
 where id = 'program_request_bureau'
   and position('Open de Werkbank' in body_html) = 0;
@@ -255,12 +255,12 @@ set subject = 'Uw programma-aanvraag is geannuleerd{{#if reference_number}} ({{r
           'Wilt u op een later moment toch naar Vlieland? U kunt altijd een nieuwe aanvraag doen.'
         ),
         '<a href="{{programma_url}}" style="display:inline-block;padding:14px 32px;background-color:#0F4C5C;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:6px;">Nieuw programma samenstellen</a>',
-        '<a href="https://bureauvlieland.nl/programma-op-maat" style="display:inline-block;padding:14px 32px;background-color:#0F4C5C;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:6px;">Nieuwe aanvraag doen</a>'
+        '<a href="{{programma_url}}" style="display:inline-block;padding:14px 32px;background-color:#0F4C5C;color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;border-radius:6px;">Nieuwe aanvraag doen</a>'
       ),
       '<h2 style="color:#0F4C5C;margin:0 0 16px;">Aanvraag geannuleerd</h2>',
       '<h2 style="color:#0F4C5C;margin:0 0 16px;">Uw aanvraag is geannuleerd</h2>'
     ),
-    variables = '["customer_name","dates","cancellation_reason","reference_number"]'::jsonb,
+    variables = '["customer_name","dates","cancellation_reason","reference_number","programma_url"]'::jsonb,
     updated_at = now()
 where id = 'cancellation_customer';
 

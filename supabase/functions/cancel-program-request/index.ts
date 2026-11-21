@@ -336,6 +336,9 @@ Deno.serve(async (req) => {
       cancellation_reason: reason ? sanitizeHtml(reason) : "",
       providers_count: String(providers.size + accommodationPartners.size),
       reference_number: program.reference_number || "",
+      // Knop "Nieuwe aanvraag doen": de template mag geen vaste URL bevatten
+      // (trigger email_templates_block_hardcoded_urls), dus de route komt uit de code.
+      programma_url: `${getPortalBaseUrl(origin)}/programma-op-maat`,
     });
 
     emails.push({
