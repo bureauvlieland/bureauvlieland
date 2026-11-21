@@ -31,7 +31,11 @@ export type AutoTodoType =
   | "customer_aftersales"
   | "customer_review_low"
   | "reference_case_approved"
-  | "reference_case_feedback";
+  | "reference_case_feedback"
+  | "commission_invoice_reply"
+  | "partner_item_executed"
+  | "customer_quote_accepted"
+  | "customer_terms_signed";
 
 interface AutoTodoConfig {
   type: AutoTodoType;
@@ -376,5 +380,26 @@ export const autoTodoTypeConfig: Record<AutoTodoType, {
     label: "Referentie: wens klant",
     color: "text-amber-700",
     bgColor: "bg-amber-100",
+  },
+  // cluster Binnengekomen (plan-notificaties fase 2)
+  commission_invoice_reply: {
+    label: "Antwoord op factuurverzoek",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+  },
+  partner_item_executed: {
+    label: "Partner: uitgevoerd",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+  },
+  customer_quote_accepted: {
+    label: "Klant akkoord",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
+  },
+  customer_terms_signed: {
+    label: "Klant getekend",
+    color: "text-emerald-700",
+    bgColor: "bg-emerald-100",
   },
 };

@@ -732,6 +732,18 @@ onderdeelsoorten in de partnertemplates.
   als `partner_status_update`, en sluit `new_program_request` ook bij een
   gearchiveerde aanvraag.
 - Labelkaart: drie nieuwe bureau-mailtypes.
+- Werkbank: sectie "Binnengekomen" bovenaan de inbox
+  (`InboundEvents.tsx`, `collectInboundEvents` in `inboxAssemble.ts`,
+  getest): alle open taken uit het cluster, nieuwste eerst, met dossierlink,
+  leeftijd en knop "Gezien" (sluit met reden `seen`, ongedaan te maken).
+  Inbound-taken worden niet meer gedempt door de rustperiode na recent
+  contact: het recente contact ís de gebeurtenis. Het clusterlabel heet
+  "Binnengekomen" in plaats van "Inbound".
+- Zijbalk: menu-item "Binnengekomen" met eigen teller
+  (`useInboundEventCount`), direct onder Werkbank; de link opent de inbox en
+  scrolt naar de sectie.
+- Labels en clusterkaart aangevuld met de nieuwe taaktypen en
+  `commission_invoice_reply`.
 
 
 ## Beslissingen voor Erwin
