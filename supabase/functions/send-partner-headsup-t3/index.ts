@@ -289,7 +289,7 @@ Deno.serve(async (req) => {
   ${
     request.invoicing_mode === "bureau_central"
       ? `<p style="font-size:13px; color:#475569; background:#f1f5f9; padding:10px 12px; border-radius:6px;">
-          <strong>Facturatie via Bureau Vlieland.</strong> Je factureert Bureau Vlieland (niet de klant) en uploadt je factuur via de knop "Factuur registreren" in het partnerportaal.
+          <strong>Facturatie via Bureau Vlieland.</strong> Mail na uitvoering de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${escapeHtml(request.reference_number || "")} erop. Wij factureren centraal aan de klant.
         </p>`
       : ""
   }

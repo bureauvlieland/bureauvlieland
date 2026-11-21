@@ -4,6 +4,7 @@ import { z } from "npm:zod@3.22.4";
 import { SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -69,7 +70,7 @@ const buildEmailHtml = (recoveryUrl: string, itemCount: number) => `
           </p>
         </td></tr>
         <tr><td style="padding:24px 32px;background:#f4f1ea;font-size:12px;color:#7a6a4f;line-height:1.5;">
-          Bureau Vlieland · Vlieland · info@bureauvlieland.nl
+          Bureau Vlieland · Vlieland · ${GENERAL_CONTACT_EMAIL}
         </td></tr>
       </table>
     </td></tr>

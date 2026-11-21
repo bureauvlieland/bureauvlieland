@@ -16,6 +16,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,6 +174,24 @@ Deno.serve(async (req) => {
             HTMLPart: html,
             TextPart: html.replace(/<[^>]+>/g, ""),
           }],
+        });
+        // Alarmmail in email_log, zodat het Berichtencentrum hem ook ziet.
+        await logEmail({
+          email_type: "auto_close_monitor_alert",
+          subject: finalSubject,
+          recipient_email: to,
+          status: send.ok ? "sent" : "failed",
+          error_message: send.ok ? undefined : send.error,
+          mailjet_message_id: send.ok ? send.messageId ?? undefined : undefined,
+          sent_by: "auto-close-monitor",
+          html_body: html,
+          metadata: {
+            template_name: "auto_close_monitor_alert",
+            actor: "system → bureau (auto-close monitor)",
+            health: effectiveHealth,
+            run_id: latest?.id ?? null,
+            test_alert: forceAlert,
+          },
         });
         if (send.ok) {
           alertSent = true;

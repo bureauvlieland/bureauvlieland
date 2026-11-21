@@ -5,8 +5,10 @@ import {
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { PURCHASE_INVOICE_INBOX } from "../_shared/bureau-contact.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -54,7 +56,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const subjectPrefix = getSubjectPrefix(origin);
     const testMode = isTestMode(origin);
-    const portalUrl = `${getPortalBaseUrl(origin)}/partner/financieel?missingPdf=1#gefactureerd`;
+    const portalUrl = `${getPortalBaseUrl(origin)}/partner/facturatie`;
 
     // 1. Vind alle inkoopfacturen zonder PDF
     let query = supabase
@@ -148,16 +150,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }).join("");
 
       const n = pInvoices.length;
+      // Antwoordadres: alleen als alle facturen van deze partner bij één
+      // project horen; anders landt een antwoord in het verkeerde dossier.
+      const refs = [...new Set(
+        pInvoices.map((inv: any) => programMap.get(inv.request_id)?.reference_number).filter(Boolean),
+      )] as string[];
+      const replyTo = refs.length === 1 ? buildReplyTo(refs[0]) : undefined;
       const html = `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#333;">
           <h2 style="color:#9b1c1c;border-bottom:2px solid #9b1c1c;padding-bottom:10px;">Actie vereist — PDF ontbreekt</h2>
-          <p>Beste ${sanitizeHtml(partner.name)},</p>
+          <p>Hoi ${sanitizeHtml(partner.name)},</p>
           <p>Je hebt ${n} factu${n === 1 ? "ur" : "ren"} bij Bureau Vlieland geregistreerd zonder PDF-bijlage.
           <strong>We kunnen je factu${n === 1 ? "ur" : "ren"} niet in behandeling nemen en niet doorsturen naar onze boekhouding zolang de PDF ontbreekt.</strong></p>
 
           <div style="background:#fef2f2;padding:16px;border-radius:8px;margin:20px 0;border-left:4px solid #9b1c1c;">
             <p style="margin:0;"><strong>Wat moet je doen?</strong><br>
-            Log in op je partnerportaal → Financieel → tab <em>Gefactureerd</em> en klik bij elke regel met "PDF ontbreekt" op <em>PDF toevoegen</em>.</p>
+            Mail de pdf van elke factuur naar <a href="mailto:${PURCHASE_INVOICE_INBOX}">${PURCHASE_INVOICE_INBOX}</a> en zet onze referentie (het BV-nummer uit de tabel hieronder) op de factuur of in het onderwerp. Dan koppelen wij hem automatisch aan het juiste project.</p>
           </div>
 
           <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
@@ -173,7 +181,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           </table>
 
           <p style="text-align:center;margin:24px 0;">
-            <a href="${portalUrl}" style="display:inline-block;background:#9b1c1c;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">PDF's nu toevoegen →</a>
+            <a href="${portalUrl}" style="display:inline-block;background:#9b1c1c;color:#fff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;">Bekijk je facturen in het portaal →</a>
           </p>
 
           <hr style="border:none;border-top:1px solid #e2e8f0;margin:30px 0;">
@@ -190,6 +198,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         To: [{ Email: recipient, Name: partner.name }],
         Subject: subject,
         HTMLPart: html,
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
       });
 
       for (const inv of pInvoices) {
@@ -202,6 +211,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           related_partner_id: pid,
           status: "pending",
           sent_by: mode === "auto" ? "system" : "admin",
+          reply_to: replyTo?.Email,
           metadata: {
             template_name: TEMPLATE_NAME,
             actor: mode === "auto" ? "system (cron)" : "admin (handmatig)",

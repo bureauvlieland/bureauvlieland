@@ -1,9 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getSubjectPrefix, getRecipientEmail, getRenderedTemplate, wrapEmailHtml, getPortalBaseUrl } from "../_shared/email-templates.ts";
 
-// Een herinnering van hetzelfde type voor hetzelfde onderdeel/adres hooguit
-// eens per zoveel dagen (voorheen: nooit een tweede keer).
-const REMINDER_REPEAT_DAYS = 7;
+// Herhalende herinneringen (activiteit open, logiesofferte open, aantal niet
+// bevestigd): elke zoveel dagen opnieuw, tot een plafond. Vaste reeksen
+// (factuur T+3/T+7/T+14) gaan elk precies één keer; zie _shared/reminderPolicy.ts.
+const REPEATING_REMINDER_POLICY = { maxSends: 3, repeatDays: 7 } as const;
+import { decideReminder, type ReminderPolicy } from "../_shared/reminderPolicy.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { cooldownFor, fetchLastContactByProject, fetchReferredRequestIds } from "../_shared/project-activity.ts";
 import { buildInvoicePresenceIndex, hasPartnerInvoiceSignal } from "../_shared/partner-invoice-presence.ts";
@@ -126,31 +128,37 @@ Deno.serve(async (req) => {
         related_request_id?: string;
         related_item_id?: string;
       };
+      /** Standaard: dit type gaat één keer per onderdeel en adres. */
+      policy?: ReminderPolicy;
     }) {
-      // Check deduplication
-      const dedupeFilter: Record<string, string> = {
-        email_type: opts.logExtra.email_type,
-        recipient_email: opts.recipientEmail,
-      };
-      if (opts.logExtra.related_item_id) {
-        dedupeFilter.related_item_id = opts.logExtra.related_item_id;
-      }
-      
-      const repeatSince = new Date(Date.now() - REMINDER_REPEAT_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      // Dedupe op (type, adres, onderdeel) over de hele email_log, niet alleen
+      // de laatste zeven dagen. Voorheen stond hier .maybeSingle(); zodra er
+      // twee rijen stonden gaf die een fout, data werd null en de mail ging
+      // tóch (tot vijf keer per dag). Zie docs/plan-notificaties.md, 3.3.
+      const maxSends = Math.max(1, opts.policy?.maxSends ?? 1);
       const dedupeQuery = supabase
         .from("email_log")
-        .select("id")
+        .select("created_at")
         .eq("email_type", opts.logExtra.email_type)
         .eq("recipient_email", opts.recipientEmail)
-        .gte("created_at", repeatSince);
-      
+        .order("created_at", { ascending: false })
+        .limit(maxSends);
       if (opts.logExtra.related_item_id) {
         dedupeQuery.eq("related_item_id", opts.logExtra.related_item_id);
       }
 
-      const { data: alreadySent } = await dedupeQuery.maybeSingle();
-      if (alreadySent) {
-        console.log(`Skipping ${opts.logExtra.email_type} — al verstuurd aan ${opts.recipientEmail} in de laatste ${REMINDER_REPEAT_DAYS} dagen`);
+      const { data: priorSends, error: dedupeError } = await dedupeQuery;
+      if (dedupeError) {
+        // Liever één herinnering te weinig dan een lus.
+        console.error(`Dedupe-check mislukt voor ${opts.logExtra.email_type}; mail overgeslagen`, dedupeError);
+        return;
+      }
+      const decision = decideReminder(
+        (priorSends ?? []).map((r: { created_at: string }) => r.created_at),
+        opts.policy,
+      );
+      if (!decision.send) {
+        console.log(`Skipping ${opts.logExtra.email_type} aan ${opts.recipientEmail}: ${decision.reason}`);
         return;
       }
 
@@ -331,6 +339,7 @@ Deno.serve(async (req) => {
               related_request_id: request.id,
               related_item_id: item.id,
             },
+            policy: REPEATING_REMINDER_POLICY,
           });
         }
       }
@@ -447,6 +456,7 @@ Deno.serve(async (req) => {
               related_partner_id: quote.partner_id,
               related_item_id: quote.id,
             },
+            policy: REPEATING_REMINDER_POLICY,
           });
         }
       }
@@ -574,6 +584,7 @@ Deno.serve(async (req) => {
                 related_request_id: linkedProgramId ?? undefined,
                 related_item_id: quote.id,
               },
+              policy: REPEATING_REMINDER_POLICY,
             });
           }
         }
@@ -787,10 +798,13 @@ Deno.serve(async (req) => {
         }
 
         const partner = quote.partner as any;
-        const req = quote.request as any;
+        // Niet `req` noemen: dat is de HTTP-request (getRecipientEmail en
+        // getSubjectPrefix lezen req.headers). De schaduwvariabele gooide een
+        // TypeError die de catch inslikte, zodat deze mail nooit wegging.
+        const quoteRequest = quote.request as any;
         const partnerName = partner?.name || "Onbekend";
         const partnerEmail = partner?.email;
-        const customerName = req?.customer_company || req?.customer_name || "Onbekend";
+        const customerName = quoteRequest?.customer_company || quoteRequest?.customer_name || "Onbekend";
 
         // Send email to partner
         if (partnerEmail) {
@@ -853,7 +867,7 @@ Deno.serve(async (req) => {
                   subject,
                   recipient_email: partnerEmail,
                   recipient_name: partnerName,
-                  related_accommodation_id: (req as any)?.id || undefined,
+                  related_accommodation_id: quote.request_id || undefined,
                   related_partner_id: quote.partner_id,
                   status: "sent",
                   sent_by: "system:cron",
@@ -890,7 +904,7 @@ Deno.serve(async (req) => {
               priority: "normal",
               status: "todo",
               related_partner_id: quote.partner_id,
-              related_request_id: req?.linked_program_id || null,
+              related_request_id: linkedProgramId,
               auto_type: "quote_expired_partner",
               auto_entity_id: quote.id,
             });
@@ -909,11 +923,13 @@ Deno.serve(async (req) => {
     const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const twentyOneDaysAgo = new Date(now.getTime() - 21 * 24 * 60 * 60 * 1000).toISOString();
 
     // Get executed items (incl. fields needed for partner invoice reminders)
     const { data: executedItems } = await supabase
       .from("program_request_items")
-      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, quoted_price, proforma_amount_excl_vat, invoiced_number, invoiced_amount, partner_dismissed_at")
+      .select("id, block_name, provider_name, provider_id, request_id, executed_at, block_type, block_category, quoted_price, proforma_amount_excl_vat, invoiced_number, invoiced_amount, partner_dismissed_at")
       .not("executed_at", "is", null)
       .neq("status", "cancelled");
 
@@ -926,27 +942,12 @@ Deno.serve(async (req) => {
         .in("id", execRequestIds);
       const execReqMap = new Map((execRequests || []).map(r => [r.id, r]));
 
-      // Factuur-aanwezigheid via dezelfde signalen als de Commissie Werklijst:
-      // directe koppeling, verzamelfactuur-allocatie of factuurnummer op het item.
-      const execItemIds = executedItems.map(i => i.id);
-      const { data: existingInvoices } = await supabase
-        .from("partner_purchase_invoices")
-        .select("item_id, partner_id, invoice_number");
-      const { data: existingAllocations } = await supabase
-        .from("partner_purchase_invoice_allocations")
-        .select("item_id")
-        .in("item_id", execItemIds);
-      const invoicePresence = buildInvoicePresenceIndex({
-        invoices: existingInvoices || [],
-        allocations: existingAllocations || [],
-      });
-      const hasInvoice = (item: any) => hasPartnerInvoiceSignal(item, invoicePresence);
-
-
-      // Pre-fetch partner contacts for executed items (skip bureau items)
+      // Pre-fetch partner contacts for executed items. Bureau-onderdelen
+      // (provider 'bureau', ook met block_type 'activity') doen niet mee:
+      // die stuurden anders factuurherinneringen aan hallo@ zelf.
       const execPartnerIds = [...new Set(
         executedItems
-          .filter(i => i.provider_id && i.block_type !== "bureau")
+          .filter(i => i.provider_id && !isBureauItem(i))
           .map(i => i.provider_id as string)
       )];
       const execPartners = execPartnerIds.length > 0
@@ -956,6 +957,34 @@ Deno.serve(async (req) => {
             .in("id", execPartnerIds)).data || []
         : [];
       const partnerMap = new Map(execPartners.map((p: any) => [p.id, p]));
+
+      // Factuur-aanwezigheid via dezelfde signalen als de Commissie Werklijst
+      // (directe koppeling, allocatie, factuurnummer op het item, factuur op
+      // projectniveau) plus de inkoop-inbox: een nog onverwerkte mail van de
+      // partner of met het BV-nummer telt als "factuur binnen", net als in het
+      // partnerportaal. Zie _shared/partner-invoice-presence.ts.
+      const execItemIds = executedItems.map(i => i.id);
+      const { data: existingInvoices } = await supabase
+        .from("partner_purchase_invoices")
+        .select("item_id, partner_id, invoice_number, request_id");
+      const { data: existingAllocations } = await supabase
+        .from("partner_purchase_invoice_allocations")
+        .select("item_id")
+        .in("item_id", execItemIds);
+      const { data: openInboxMails } = await supabase
+        .from("purchase_invoice_inbox")
+        .select("from_email, subject, body_text, scan_result, status")
+        .not("status", "in", "(processed,discarded)")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      const invoicePresence = buildInvoicePresenceIndex({
+        invoices: existingInvoices || [],
+        allocations: existingAllocations || [],
+        inboxMails: openInboxMails || [],
+        partners: execPartners as { id: string; email?: string | null; contact_email?: string | null }[],
+      });
+      const hasInvoice = (item: any) =>
+        hasPartnerInvoiceSignal(item, invoicePresence, execReqMap.get(item.request_id)?.reference_number ?? null);
 
       const formatEuro = (n: number | null | undefined) =>
         typeof n === "number"
@@ -1011,12 +1040,14 @@ Deno.serve(async (req) => {
 
         // Partner invoice reminder T+3: 3 dagen na uitvoering, nog geen factuur.
         // (Was T+1 — te kort dag; verschoven naar T+3 zodat partner ruimte heeft.)
+        // Elke stap van de reeks (T+3, T+7, T+14) gaat precies één keer; de
+        // dedupe in sendReminderEmail bewaakt dat.
         if (
           canSendEmail &&
           invoicingReleased &&
           item.executed_at && item.executed_at <= threeDaysAgo &&
           !hasInvoice(item) &&
-          item.block_type !== "bureau"
+          !isBureauItem(item)
         ) {
           const partner = partnerMap.get(item.provider_id as string) as any;
           if (partner) {
@@ -1089,7 +1120,7 @@ Deno.serve(async (req) => {
           }
 
           // Partner invoice escalation T+7
-          if (canSendEmail && invoicingReleased && item.block_type !== "bureau") {
+          if (canSendEmail && invoicingReleased && !isBureauItem(item)) {
             const partner = partnerMap.get(item.provider_id as string) as any;
             if (partner) {
               const partnerEmail = partner.contact_email || partner.email;
@@ -1117,6 +1148,54 @@ Deno.serve(async (req) => {
                 },
               });
             }
+          }
+        }
+
+        // Laatste herinnering T+14, daarna geen mail meer aan de partner. Vanaf
+        // T+21 zonder factuur wordt de commissietaak van het bureau (aangemaakt
+        // door flag-missing-partner-invoices) hoog: dan is bellen aan de orde.
+        if (
+          invoicingReleased &&
+          item.executed_at && item.executed_at <= fourteenDaysAgo &&
+          !hasInvoice(item) &&
+          !isBureauItem(item)
+        ) {
+          const partner = partnerMap.get(item.provider_id as string) as any;
+          if (canSendEmail && partner) {
+            const partnerEmail = partner.contact_email || partner.email;
+            const partnerName = partner.name || item.provider_name || "partner";
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
+            await sendReminderEmail({
+              templateId: "partner_invoice_reminder_t14",
+              recipientEmail: partnerEmail,
+              recipientName: partnerName,
+              subject: `Laatste herinnering: factuur voor "${item.block_name}" (${customerName}, ${referenceNumber})`,
+              variables: {
+                partner_name: partnerName,
+                block_name: item.block_name,
+                customer_name: customerName,
+                reference_number: referenceNumber,
+                amount_excl_vat: amountExcl,
+                portal_url: `${portalBase}/partner/facturatie`,
+              },
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Twee weken geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd en we hebben je factuur nog niet ontvangen. Dit is onze laatste herinnering per mail; daarna nemen we persoonlijk contact op.</p><p>Mail de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${referenceNumber} erop. Wij factureren centraal aan de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              logExtra: {
+                email_type: "partner_invoice_reminder_t14",
+                related_partner_id: item.provider_id as string,
+                related_request_id: item.request_id,
+                related_item_id: item.id,
+              },
+            });
+          }
+
+          if (item.executed_at <= twentyOneDaysAgo) {
+            await supabase
+              .from("admin_todos")
+              .update({ priority: "high" })
+              .eq("auto_type", "commission_missing_invoice")
+              .eq("auto_entity_id", item.id)
+              .in("status", ["todo", "in_progress"])
+              .neq("priority", "high");
           }
         }
       }

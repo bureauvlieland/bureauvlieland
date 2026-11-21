@@ -524,8 +524,9 @@ Deno.serve(async (req) => {
         const allInvolved = Array.from(providerItems.values()).map((p) => p.name);
         let partnersNotified = false;
         let notifyIssues: string[] = [];
+        // Gekozen logiesoffertes; ook gebruikt voor has_accommodation in de klantmail.
+        let selectedQuoteIds: string[] = [];
         try {
-          let selectedQuoteIds: string[] = [];
           if (program.linked_accommodation_id) {
             const { data: selectedQuotes } = await supabase
               .from("accommodation_quotes")
@@ -581,6 +582,9 @@ Deno.serve(async (req) => {
           customer_name: sanitizeHtml(program.customer_name),
           new_dates: newDates,
           providers_note: "betrokken aanbieder(s)",
+          // Template toont "en logiespartner(s)" alleen als er een gekozen logiesofferte is.
+          has_accommodation: selectedQuoteIds.length > 0 ? "true" : "",
+          reference_number: sanitizeHtml(program.reference_number || ""),
           portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         });
 
@@ -1433,6 +1437,7 @@ Deno.serve(async (req) => {
           items_list: itemsList,
           selected_dates: selectedDates,
           number_of_people: String(program.number_of_people),
+          reference_number: sanitizeHtml(program.reference_number || ""),
           portal_url: "https://bureauvlieland.nl/partner",
         });
 
@@ -1452,9 +1457,7 @@ Deno.serve(async (req) => {
               </div>
 
               <p style="background:#f8f9fa; padding:12px 16px; border-left:3px solid #1e3a5f; border-radius:4px;">
-                <strong>Facturatie:</strong> Bureau Vlieland factureert centraal aan de klant — stuur jouw factuur dus niet rechtstreeks naar de klant.
-                Je factureert ná uitvoering aan Bureau Vlieland: upload de factuur in je partnerportaal of mail de PDF naar
-                <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>. Vermeld het referentienummer voor snelle verwerking.
+                <strong>Facturatie:</strong> Mail na uitvoering de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${sanitizeHtml(program.reference_number || "")} erop. Wij factureren centraal aan de klant.
               </p>
 
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -1673,8 +1676,11 @@ Deno.serve(async (req) => {
               .join(", ");
             
             const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
-            const timeInfo = change.preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${change.preferredTime}</p>` : "";
-            const notesInfo = change.notes ? `<p><strong>Opmerking:</strong> ${sanitizeHtml(change.notes)}</p>` : "";
+            // Platte waarden: de template zet zelf de labels "Voorkeurstijd:" en "Opmerking:".
+            const preferredTime = change.preferredTime ? sanitizeHtml(change.preferredTime) : "";
+            const itemNotes = change.notes ? sanitizeHtml(change.notes) : "";
+            const timeInfo = preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${preferredTime}</p>` : "";
+            const notesInfo = itemNotes ? `<p><strong>Opmerking:</strong> ${itemNotes}</p>` : "";
 
             const template = await getRenderedTemplate(TemplateIds.ITEM_ADDED_PARTNER, {
               partner_name: sanitizeHtml(block.provider.name),
@@ -1682,8 +1688,9 @@ Deno.serve(async (req) => {
               block_name: sanitizeHtml(block.name),
               selected_dates: selectedDates,
               number_of_people: String(program.number_of_people),
-              preferred_time: timeInfo,
-              notes: notesInfo,
+              preferred_time: preferredTime,
+              notes: itemNotes,
+              reference_number: sanitizeHtml(program.reference_number || ""),
               customer_full_name: sanitizeHtml(program.customer_name),
               customer_company: sanitizeHtml(program.customer_company || "-"),
               customer_email: sanitizeHtml(program.customer_email),
@@ -1693,9 +1700,9 @@ Deno.serve(async (req) => {
             const emailSubject = template?.subject || `Nieuwe activiteit toegevoegd - ${customerLabel}`;
             const emailBody = template?.body || `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2>Nieuwe activiteit toegevoegd</h2>
-                  <p>Beste ${sanitizeHtml(block.provider.name)},</p>
-                  <p>De klant heeft een nieuwe activiteit aan hun programma toegevoegd:</p>
+                  <h2>Nieuw onderdeel toegevoegd</h2>
+                  <p>Hoi ${sanitizeHtml(block.provider.name)},</p>
+                  <p>De klant <strong>${customerLabel}</strong> heeft via Bureau Vlieland een extra onderdeel aan het programma toegevoegd. We willen je vragen de aanvraag te beoordelen via het partnerportaal en het daar te bevestigen of af te wijzen.</p>
                   
                   <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
                     <h3 style="margin-top: 0;">${sanitizeHtml(block.name)}</h3>
@@ -1705,18 +1712,8 @@ Deno.serve(async (req) => {
                     ${notesInfo}
                   </div>
                   
-                  <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-                  
-                  <h3>Klantgegevens</h3>
-                  <table style="width: 100%;">
-                    <tr><td style="padding: 4px 0;"><strong>Naam:</strong></td><td>${sanitizeHtml(program.customer_name)}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(program.customer_company || "-")}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(program.customer_email)}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Telefoon:</strong></td><td>${sanitizeHtml(program.customer_phone)}</td></tr>
-                  </table>
-                  
                   <p style="margin-top: 24px; color: #666;">
-                    Reageer via de Partner Portal of neem direct contact op met de klant.
+                    Vragen of een alternatief voorstel? Reageer via het partnerportaal of antwoord op deze mail — Bureau Vlieland staat tussen jou en de klant in.
                   </p>
                   
                   <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -1855,7 +1852,7 @@ Deno.serve(async (req) => {
             }
             if (change.previousResponse) {
               const prev = formatPreviousResponse(change.previousResponse);
-              detail += `<br><span style="color: #92400e;">${prev ? `Uw eerdere voorstel (${prev}) vervalt. ` : "Uw eerdere reactie vervalt. "}Graag opnieuw reageren in het partnerportaal.</span>`;
+              detail += `<br><span style="color: #92400e;">${prev ? `Je eerdere voorstel (${prev}) vervalt. ` : "Je eerdere reactie vervalt. "}Graag opnieuw reageren in het partnerportaal.</span>`;
             }
             return `<li>${detail}</li>`;
           })
@@ -1883,28 +1880,21 @@ Deno.serve(async (req) => {
         const emailBody = template?.body || `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Wijziging in programma-aanvraag</h2>
-              <p>Beste ${sanitizeHtml(provider.providerName)},</p>
-              <p>De klant heeft wijzigingen doorgevoerd voor de aanvraag:</p>
+              <p>Hoi ${sanitizeHtml(provider.providerName)},</p>
+              <p>Er zijn wijzigingen in het programma van <strong>${customerLabel}</strong>, een aanvraag waarvoor jij eerder benaderd bent.</p>
               
               <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                <h3 style="margin-top: 0;">Wijzigingen:</h3>
+                <h3 style="margin-top: 0;">Wijzigingen</h3>
                 <ul>${changesHtml}</ul>
               </div>
               
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-              
-              <h3>Klantgegevens</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 4px 0;"><strong>Naam:</strong></td><td>${sanitizeHtml(program.customer_name)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(program.customer_company || "-")}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(program.customer_email)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Telefoon:</strong></td><td>${sanitizeHtml(program.customer_phone)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Datum:</strong></td><td>${selectedDates}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Personen:</strong></td><td>${program.number_of_people}</td></tr>
-              </table>
+              <div style="background: #f7fafc; padding: 12px 16px; border-radius: 6px; margin: 16px 0;">
+                <p style="margin: 4px 0;"><strong>Datum(s):</strong> ${selectedDates}</p>
+                <p style="margin: 4px 0;"><strong>Aantal personen:</strong> ${program.number_of_people}</p>
+              </div>
               
               <p style="margin-top: 24px; color: #666;">
-                Reageer via de Partner Portal of neem direct contact op met de klant.
+                Bevestig de wijziging via het partnerportaal. Vragen? Antwoord op deze mail — Bureau Vlieland verzorgt de communicatie met de klant.
               </p>
               
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>

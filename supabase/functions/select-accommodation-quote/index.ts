@@ -37,6 +37,29 @@ async function readMessageId(resp: Response): Promise<string | null> {
   }
 }
 
+/**
+ * Voeg een html-blok toe aan het einde van de inhoud van een door wrapEmailHtml
+ * gewrapte mail (binnen de kaart, vóór de voettekstrij). Zonder wrapper komt het
+ * blok vóór </body>, of anders gewoon achteraan.
+ */
+export function insertIntoEmailCard(html: string, block: string): string {
+  if (html.includes("<!--BV_WRAPPED-->")) {
+    // De voettekstrij van de wrapper begint met een <tr> gevolgd door een <td>
+    // met background-color:#fafafa; het blok komt in de inhoudscel daarvóór.
+    const footerRow = html.search(/<tr>\s*<td style="background-color:#fafafa;/);
+    if (footerRow !== -1) {
+      const contentCellEnd = html.lastIndexOf("</td>", footerRow);
+      if (contentCellEnd !== -1) {
+        return `${html.slice(0, contentCellEnd)}${block}${html.slice(contentCellEnd)}`;
+      }
+    }
+  }
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${block}</body>`);
+  }
+  return `${html}${block}`;
+}
+
 Deno.serve(async (req) => {
   let mailjetMessageId: string | null = null;
   if (req.method === "OPTIONS") {
@@ -460,7 +483,7 @@ Deno.serve(async (req) => {
               <li><strong>Telefoon:</strong> 0562 700 208</li>
             </ul>
             
-            <p>Bureau Vlieland neemt contact met je op over de verdere afhandeling.</p>
+            <p>Bureau Vlieland is het aanspreekpunt voor de gast en regelt de verdere afhandeling met je. Vragen over deze boeking? Reageer op deze mail.</p>
 
             <p style="margin-top: 24px;">
               <a href="${partnerPortalUrl}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ga naar partnerportaal →</a>
@@ -583,9 +606,9 @@ Deno.serve(async (req) => {
       if (customerEmail) {
         let customerHtml = customerTemplate?.body || `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #1e3a5f;">Je logies is bevestigd!</h1>
+            <h1 style="color: #0F4C5C;">Uw logies is geboekt</h1>
             <p>Beste ${sanitizeHtml(request.customer_name)},</p>
-            <p>Goed nieuws! Je verblijft bij <strong>${sanitizeHtml(quote.accommodation_name)}</strong>.</p>
+            <p>Goed nieuws! U verblijft bij <strong>${sanitizeHtml(quote.accommodation_name)}</strong>. Uw reservering is definitief.</p>
             
             <h2>Verblijfsgegevens</h2>
             <ul>
@@ -604,9 +627,10 @@ Deno.serve(async (req) => {
 
             ${request.reference_number ? `<p><strong>Referentie:</strong> ${sanitizeHtml(request.reference_number)}</p>` : ""}
 
-            
+            <p>Bureau Vlieland is uw aanspreekpunt en regelt de verdere afhandeling met de accommodatie. Heeft u vragen over uw verblijf, beantwoord dan gewoon deze mail.</p>
+
             <p style="margin-top: 24px;">
-              <a href="${portalLink}" style="display: inline-block; background-color: #1e3a5f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk je programma →</a>
+              <a href="${portalLink}" style="display: inline-block; background-color: #0F4C5C; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Bekijk uw programma →</a>
             </p>
 
             <p style="margin-top: 24px;">Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -616,14 +640,12 @@ Deno.serve(async (req) => {
           </div>
         `;
 
-        // Garandeer dat het deel-akkoord-blok altijd in de mail staat,
-        // ook als het DB-template de variabele (nog) niet bevat.
+        // Garandeer dat het voorwaarden-akkoordblok altijd in de mail staat,
+        // ook als het DB-template de variabele (nog) niet bevat. Het blok moet
+        // dan binnen de witte kaart van wrapEmailHtml komen (de inhoudscel is
+        // het <td> vóór de voettekstrij), niet achter de voettekst onder </body>.
         if (termsAcceptedBlock && !customerHtml.includes(trimmedSignature)) {
-          if (customerHtml.includes("</body>")) {
-            customerHtml = customerHtml.replace("</body>", `${termsAcceptedBlock}</body>`);
-          } else {
-            customerHtml = `${customerHtml}${termsAcceptedBlock}`;
-          }
+          customerHtml = insertIntoEmailCard(customerHtml, termsAcceptedBlock);
         }
 
         try {
@@ -638,7 +660,7 @@ Deno.serve(async (req) => {
                 From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
                 To: [{ Email: customerEmail }],
                 ...(replyTo ? { ReplyTo: replyTo } : {}),
-                Subject: `${subjectPrefix}${customerTemplate?.subject || "Je logies is bevestigd"}`,
+                Subject: `${subjectPrefix}${customerTemplate?.subject || "Uw logies is geboekt"}`,
                 HTMLPart: customerHtml,
               }],
             }),
@@ -648,7 +670,7 @@ Deno.serve(async (req) => {
           await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
-            subject: customerTemplate?.subject || `Je logies is bevestigd`,
+            subject: customerTemplate?.subject || `Uw logies is geboekt`,
             recipient_email: customerEmail,
             recipient_name: request.customer_name,
             related_accommodation_id: request.id,
@@ -666,7 +688,7 @@ Deno.serve(async (req) => {
           await logEmail({
       mailjet_message_id: mailjetMessageId ?? undefined,
             email_type: EmailTypes.ACCOMMODATION_SELECTED_CUSTOMER,
-            subject: `Je logies is bevestigd`,
+            subject: `Uw logies is geboekt`,
             recipient_email: customerEmail,
             recipient_name: request.customer_name,
             related_accommodation_id: request.id,

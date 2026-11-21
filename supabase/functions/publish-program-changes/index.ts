@@ -4,6 +4,7 @@ import {
   SENDER_NAME,
   buildReplyTo,
   getRenderedTemplate,
+  sanitizeHtml,
   TemplateIds,
   getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
@@ -890,17 +891,24 @@ Deno.serve(async (req) => {
       const noteLi = adminNote
         ? `<li style="margin-top:8px;list-style:none;padding:8px 12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;"><strong>Toelichting:</strong> ${adminNote.replace(/\n/g, "<br>")}</li>`
         : "";
-      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
-        partner_name: partner.name,
-        customer_name: program.customer_name,
-        customer_company: program.customer_company || "",
+      // Namen uit de database gaan HTML-ontsmet de template in; het onderwerp
+      // is platte tekst en krijgt de onbewerkte waarden.
+      const partnerTemplateVars = {
+        partner_name: sanitizeHtml(partner.name),
+        customer_name: sanitizeHtml(program.customer_name),
+        customer_company: sanitizeHtml(program.customer_company || ""),
         customer_email: "", // privacy: PII niet delen
         customer_phone: "",
         dates,
         selected_dates: dates,
         number_of_people: program.number_of_people,
         changes_list: itemsHtml + noteLi,
-
+      };
+      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, partnerTemplateVars, {
+        ...partnerTemplateVars,
+        partner_name: partner.name,
+        customer_name: program.customer_name,
+        customer_company: program.customer_company || "",
       });
       if (!rendered) continue;
       const to = recipientFor(partnerEmail, origin);

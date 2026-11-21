@@ -73,6 +73,11 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "wedding-referral-claim": "deno",
   "notify-headcount-change-bulk": "deno",
   "confirm-accommodation-headcount": "deno",
+  "inbound-email": "deno",
+  "publish-program-changes": "deno",
+  "select-accommodation-quote": "deno",
+  "send-partner-headsup-t3": "deno",
+  "update-customer-program": "deno",
   "approve-accommodation-headcount": "deno",
 };
 

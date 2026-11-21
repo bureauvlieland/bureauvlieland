@@ -267,7 +267,9 @@ const CustomerProgram = () => {
     }
 
     if (includesProposal) {
-      const accepted = await acceptQuoteProposal();
+      // De handtekening hierboven leverde al een bevestigingsmail op; het
+      // akkoord op het voorstel stuurt dan geen tweede klantmail.
+      const accepted = await acceptQuoteProposal({ signedInSameStep: true });
       if (!accepted) {
         toast({
           title: "Ondertekend, maar het akkoord is nog niet verwerkt",

@@ -27,6 +27,10 @@ const AcceptQuoteSchema = z.object({
   request_id: z.string().optional(),
   admin_override: z.boolean().optional(),
   origin: z.string().optional(),
+  // Akkoord en ondertekenen in één klik: update-customer-program stuurt dan
+  // al booking_confirmed_customer; de klantmail quote_accepted_customer blijft
+  // dan achterwege. Partnermails en taken gaan gewoon door.
+  skipCustomerEmail: z.boolean().optional(),
 }).refine(d => d.token || d.request_id, {
   message: "token of request_id is verplicht",
 });
@@ -138,6 +142,7 @@ function generatePartnerNotificationEmail(
     .join("");
 
   const customerLabel = sanitizeHtml(program.customer_company || program.customer_name || "");
+  const reference = String(program.reference_number || "");
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
       <h2 style="color: #0F4C5C; border-bottom: 2px solid #0F4C5C; padding-bottom: 10px;">
@@ -172,7 +177,7 @@ function generatePartnerNotificationEmail(
       </div>
 
       <p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
-        <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a> (of upload in het partnerportaal). Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
+        <strong>Facturatie:</strong> Mail na uitvoering de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${sanitizeHtml(reference)} erop. Wij factureren centraal aan de klant. Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
       </p>
 
       <p style="margin-top: 24px; color:#666; font-size:13px;">
@@ -260,7 +265,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { token, request_id, admin_override, origin } = validationResult.data;
+    const { token, request_id, admin_override, origin, skipCustomerEmail } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
     const isAdmin = !!admin_override;
@@ -415,72 +420,79 @@ Deno.serve(async (req: Request): Promise<Response> => {
         notes: `Klant heeft het voorstel geaccordeerd. ${approvedItems?.length || 0} onderdeel(en) wachten op verwerking door Bureau Vlieland.`,
       });
 
-      const custBaseUrl = getPortalBaseUrl(origin);
-      const custPortalUrl = `${custBaseUrl}/mijn-programma/${program.customer_token}`;
-      const customerEmailHtml = generateCustomerConfirmationEmail(
-        program,
-        custPortalUrl
-      );
-      const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
+      // Klantmail "Uw akkoord is ontvangen". Bij akkoord-en-ondertekenen in één
+      // klik heeft update-customer-program net booking_confirmed_customer gestuurd;
+      // dan slaan we deze over (skipCustomerEmail) zodat de klant één mail krijgt.
+      if (skipCustomerEmail) {
+        console.log(`Klantmail quote_accepted_customer overgeslagen (skipCustomerEmail) voor ${program.reference_number}`);
+      } else {
+        const custBaseUrl = getPortalBaseUrl(origin);
+        const custPortalUrl = `${custBaseUrl}/mijn-programma/${program.customer_token}`;
+        const customerEmailHtml = generateCustomerConfirmationEmail(
+          program,
+          custPortalUrl
+        );
+        const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
 
-      try {
-        const customerMailjetResponse = await sendEmailViaMailjet([
-          {
-            From: {
-              Email: "hallo@bureauvlieland.nl",
-              Name: "Bureau Vlieland",
-            },
-            To: [
-              {
-                Email: customerRecipientEmail,
-                Name: program.customer_name,
+        try {
+          const customerMailjetResponse = await sendEmailViaMailjet([
+            {
+              From: {
+                Email: "hallo@bureauvlieland.nl",
+                Name: "Bureau Vlieland",
               },
-            ],
-            ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-            Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-            HTMLPart: customerEmailHtml,
-          },
-        ]);
+              To: [
+                {
+                  Email: customerRecipientEmail,
+                  Name: program.customer_name,
+                },
+              ],
+              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+              Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+              HTMLPart: customerEmailHtml,
+            },
+          ]);
 
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "sent",
-          mailjet_message_id:
-            customerMailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
-          sent_by: "system",
-          metadata: {
-            template_name: "quote_accepted_customer",
-            actor: "klant → bureau (akkoord bevestiging)",
-            approved_item_count: approvedItems?.length || 0,
-            test_mode: testMode,
-          },
-        });
+          await logEmail({
+            email_type: "quote_accepted_customer",
+            subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            recipient_email: customerRecipientEmail,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            status: "sent",
+            mailjet_message_id:
+              customerMailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
+            sent_by: "system",
+            metadata: {
+              template_name: "quote_accepted_customer",
+              actor: "klant → bureau (akkoord bevestiging)",
+              approved_item_count: approvedItems?.length || 0,
+              test_mode: testMode,
+            },
+          });
 
-        console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
-      } catch (customerEmailError) {
-        console.error("Error sending customer confirmation:", customerEmailError);
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "failed",
-          error_message:
-            customerEmailError instanceof Error
-              ? customerEmailError.message
-              : "Unknown error",
-          sent_by: "system",
-          metadata: {
-            template_name: "quote_accepted_customer",
-            actor: "klant → bureau (akkoord bevestiging)",
-            failure: true,
-          },
-        });
+          console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
+        } catch (customerEmailError) {
+          console.error("Error sending customer confirmation:", customerEmailError);
+          await logEmail({
+            email_type: "quote_accepted_customer",
+            subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            recipient_email: customerRecipientEmail,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            status: "failed",
+            error_message:
+              customerEmailError instanceof Error
+                ? customerEmailError.message
+                : "Unknown error",
+            sent_by: "system",
+            metadata: {
+              template_name: "quote_accepted_customer",
+              actor: "klant → bureau (akkoord bevestiging)",
+              failure: true,
+            },
+          });
+        }
       }
 
       console.log(`Customer quote acceptance completed for ${program.reference_number}`);

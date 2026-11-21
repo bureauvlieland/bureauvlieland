@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
     const customerHtml = `
       <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;color:#111;">
         <h2 style="color:#1a365d;margin-bottom:8px;">Beste ${safe.name},</h2>
-        <p>Hartelijk dank voor uw catering-aanvraag bij Bureau Vlieland. Wij hebben uw aanvraag in goede orde ontvangen en nemen binnen <strong>2 werkdagen</strong> contact met u op met een definitieve offerte.</p>
+        <p>Hartelijk dank voor uw catering-aanvraag bij Bureau Vlieland. Wij hebben uw aanvraag in goede orde ontvangen en nemen binnen <strong>5 werkdagen</strong> contact met u op met een definitieve offerte.</p>
 
         <h3 style="color:#1a365d;margin-top:24px;">Uw aanvraag</h3>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
