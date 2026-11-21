@@ -40,8 +40,14 @@ function collectAllAutoTypes(): Set<string> {
 // nog afsluit (oude naam blijft ondersteund voor bestaande open todos).
 const UNIVERSAL = new Set([
   "customer_cancellation",
-  "new_program_request", // legacy-alias van new_request_received
-  "stale_pending_change", // legacy: oude naam, huidige creator gebruikt andere flag
+  "new_program_request", // aangemaakt door de DB-trigger create_todo_for_new_program_request
+  "stale_pending_change", // aangemaakt door de DB-functie scan_stale_pending_changes
+  // Samengevoegd in fase 3 (docs/plan-notificaties.md): niet meer aangemaakt,
+  // reconcile sluit open exemplaren met completion_reason 'samengevoegd_fase3'.
+  "customer_status_email_due", // → customer_status_update_due
+  "post_execution_feedback", // → customer_aftersales
+  "post_execution_invoice_check", // → commission_missing_invoice
+  "new_request_received", // → new_program_request
 ]);
 
 function extractSwitchCases(src: string): string[] {
@@ -67,6 +73,25 @@ describe("reconcile-admin-todos ↔ auto_type creators", () => {
       missing,
       `reconcile sluit types die nooit aangemaakt worden (typo?): ${missing.join(", ")}`,
     ).toEqual([]);
+  });
+
+  it("de vier samengevoegde sleutels worden nergens meer aangemaakt", () => {
+    for (const t of [
+      "customer_status_email_due",
+      "post_execution_feedback",
+      "post_execution_invoice_check",
+      "new_request_received",
+    ]) {
+      expect(created.has(t), `${t} wordt nog aangemaakt`).toBe(false);
+    }
+  });
+
+  it("elke sluiting krijgt een completion_reason", () => {
+    expect(reconcile).toMatch(/completion_reason: reason/);
+    expect(reconcile).toMatch(/markClosed\(t\.id, "samengevoegd_fase3"\)/);
+    // Geen sluiting zonder reden: de enige update op admin_todos schrijft de reden mee.
+    const updates = reconcile.match(/\.from\("admin_todos"\)\s*\.update\(/g) ?? [];
+    expect(updates.length).toBe(1);
   });
 
   it("reconcile bevat expliciete lookup-error guards (geen 'silent close on fetch failure')", () => {

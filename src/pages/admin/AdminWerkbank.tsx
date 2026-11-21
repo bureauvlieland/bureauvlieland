@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,7 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // Card components moved into ProjectDetailPanel
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Hotel, Archive, Layers, RefreshCw, ArrowLeft, Moon } from "lucide-react";
+import { Search, Hotel, Archive, Layers, RefreshCw, ArrowLeft, Moon, MoreHorizontal, Eraser } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 import { useReconcileTodos } from "@/hooks/useReconcileTodos";
 import { useFinanceTodoCount } from "@/hooks/useFinanceTodoCount";
 import {
@@ -298,6 +307,29 @@ export default function AdminWerkbank() {
     });
   };
 
+  // Opschonen: de grondige variant (cleanup-stale-todos) sluit verouderde en
+  // dubbele taken. Overgenomen uit de verwijderde legacy-takenpagina.
+  const queryClient = useQueryClient();
+  const cleanup = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("cleanup-stale-todos");
+      if (error) throw error;
+      return (data ?? { cleaned: 0, details: {} }) as { cleaned: number; details: Record<string, number> };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["werkbank-inbox"] });
+      queryClient.invalidateQueries({ queryKey: ["werkbank-projects"] });
+      queryClient.invalidateQueries({ queryKey: ["werkbank-detail-todos"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+      toast.success(
+        data.cleaned === 0
+          ? "Niets op te schonen: alle taken zijn actueel."
+          : `${data.cleaned} verouderde of dubbele taken afgerond.`,
+      );
+    },
+    onError: (e: Error) => toast.error(e?.message ?? "Opschonen mislukt"),
+  });
+
   return (
     <AdminLayout>
       <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -334,6 +366,33 @@ export default function AdminWerkbank() {
               <RefreshCw className={cn("h-4 w-4", reconcile.isPending && "animate-spin")} />
               Actualiseer
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Meer acties" aria-label="Meer acties">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Onderhoud</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={cleanup.isPending}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    cleanup.mutate();
+                  }}
+                  className="gap-2"
+                >
+                  <Eraser className={cn("h-4 w-4", cleanup.isPending && "animate-pulse")} />
+                  <div className="min-w-0">
+                    <div>Opschonen</div>
+                    <div className="text-xs text-muted-foreground">
+                      Sluit verouderde en dubbele taken in één keer.
+                    </div>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

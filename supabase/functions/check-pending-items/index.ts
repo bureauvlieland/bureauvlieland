@@ -413,7 +413,7 @@ Deno.serve(async (req) => {
           .from("admin_todos")
           .insert({
             title: `Partner ${partnerName} heeft niet gereageerd op logiesverzoek ${customerName}`,
-            description: `De offerteaanvraag is ${daysSince} dagen geleden verstuurd, maar de partner heeft nog niet gereageerd.`,
+            description: `De offerteaanvraag is ${daysSince} dagen geleden verstuurd, maar de partner heeft nog niet gereageerd. Bel of mail de partner en vraag of de offerte nog komt.`,
             priority: daysSince > partnerQuoteDays * 2 ? "high" : "normal",
             status: "todo",
             related_partner_id: quote.partner_id,
@@ -734,7 +734,7 @@ Deno.serve(async (req) => {
           .from("admin_todos")
           .insert({
             title: `Aanvraag ${customerName} is inactief`,
-            description: `Stand bij aanmaken: ${daysSince} dagen geen activiteit van/naar klant of partner. Zie kaart voor actuele leeftijd.`,
+            description: `Stand bij aanmaken: ${daysSince} dagen geen contact van of naar klant of partner. Neem contact op met de klant: is de aanvraag nog actueel? Zo niet, archiveer de aanvraag.`,
             priority: daysSince > customerRequestDays * 2 ? "high" : "normal",
             status: "todo",
             related_request_id: req.id,
@@ -915,12 +915,11 @@ Deno.serve(async (req) => {
     }
 
     // ============================================================
-    // POST-EXECUTION CHECKS: feedback + invoice verification
+    // POST-EXECUTION CHECKS: factuurherinneringen aan partners (T+3/T+7/T+14)
     // ============================================================
     console.log("Checking post-execution items...");
 
     const now = new Date();
-    const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString();
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -1000,43 +999,9 @@ Deno.serve(async (req) => {
         // tot die tijd geen factuurherinneringen naar de partner.
         const invoicingReleased = isPartnerInvoicingReleased(req);
 
-        // Post-execution feedback: 1 day after executed_at
-        if (item.executed_at && item.executed_at <= oneDayAgo) {
-          const { data: existingFeedback } = await supabase
-            .from("admin_todos")
-            .select("id")
-            .eq("auto_type", "post_execution_feedback")
-            .eq("auto_entity_id", item.id)
-            .neq("status", "done")
-            .maybeSingle();
-
-          if (!existingFeedback) {
-            // Check if already created and done (don't recreate)
-            const { data: doneFeedback } = await supabase
-              .from("admin_todos")
-              .select("id")
-              .eq("auto_type", "post_execution_feedback")
-              .eq("auto_entity_id", item.id)
-              .eq("status", "done")
-              .maybeSingle();
-
-            if (!doneFeedback) {
-              const { error: fbError } = await supabase
-                .from("admin_todos")
-                .insert({
-                  title: `Feedback vragen aan ${customerName} voor "${item.block_name}"`,
-                  description: `De activiteit "${item.block_name}" (${item.provider_name}) is uitgevoerd. Overweeg feedback te vragen aan de klant.`,
-                  priority: "low",
-                  status: "todo",
-                  related_request_id: item.request_id,
-                  related_partner_id: item.provider_id,
-                  auto_type: "post_execution_feedback",
-                  auto_entity_id: item.id,
-                });
-              if (!fbError) totalCreated++;
-            }
-          }
-        }
+        // Geen losse feedback-taak per onderdeel meer: de aftersales-taak per
+        // programma (customer_aftersales, verderop) dekt dat moment. Zie
+        // docs/plan-notificaties.md, fase 3 (post_execution_feedback samengevoegd).
 
         // Partner invoice reminder T+3: 3 dagen na uitvoering, nog geen factuur.
         // (Was T+1 — te kort dag; verschoven naar T+3 zodat partner ruimte heeft.)
@@ -1079,75 +1044,44 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Post-execution invoice check: 7 days after executed_at, no purchase invoice
-        if (item.executed_at && item.executed_at <= sevenDaysAgo && !hasInvoice(item)) {
-          const { data: existingCheck } = await supabase
-            .from("admin_todos")
-            .select("id")
-            .eq("auto_type", "post_execution_invoice_check")
-            .eq("auto_entity_id", item.id)
-            .neq("status", "done")
-            .maybeSingle();
-
-          if (!existingCheck) {
-            const { data: doneCheck } = await supabase
-              .from("admin_todos")
-              .select("id")
-              .eq("auto_type", "post_execution_invoice_check")
-              .eq("auto_entity_id", item.id)
-              .eq("status", "done")
-              .maybeSingle();
-
-            if (!doneCheck) {
-              const { error: icError } = await supabase
-                .from("admin_todos")
-                .insert({
-                  title: invoicingReleased
-                    ? `Factuur partner ${item.provider_name} nog niet ontvangen voor "${item.block_name}"`
-                    : `${item.provider_name} kan niet factureren voor "${item.block_name}": geef project vrij`,
-                  description: invoicingReleased
-                    ? `De activiteit is meer dan 7 dagen geleden uitgevoerd maar er is nog geen inkoopfactuur geregistreerd.`
-                    : `De activiteit is meer dan 7 dagen geleden uitgevoerd, maar de klant heeft de voorwaarden niet getekend en het project is niet vrijgegeven. De partner kan daardoor niet factureren. Gebruik "Markeer als klaar voor facturatie" op het project.`,
-                  priority: invoicingReleased ? "normal" : "high",
-                  status: "todo",
-                  related_request_id: item.request_id,
-                  related_partner_id: item.provider_id,
-                  auto_type: "post_execution_invoice_check",
-                  auto_entity_id: item.id,
-                });
-              if (!icError) totalCreated++;
-            }
-          }
-
+        // Geen eigen bureau-taak meer op T+7 (post_execution_invoice_check):
+        // flag-missing-partner-invoices maakt per onderdeel de ene taak
+        // commission_missing_invoice, ook in de variant "project nog niet
+        // vrijgegeven". Hier alleen nog de tweede herinnering aan de partner.
+        if (
+          canSendEmail &&
+          invoicingReleased &&
+          item.executed_at && item.executed_at <= sevenDaysAgo &&
+          !hasInvoice(item) &&
+          !isBureauItem(item)
+        ) {
           // Partner invoice escalation T+7
-          if (canSendEmail && invoicingReleased && !isBureauItem(item)) {
-            const partner = partnerMap.get(item.provider_id as string) as any;
-            if (partner) {
-              const partnerEmail = partner.contact_email || partner.email;
-              const partnerName = partner.name || item.provider_name || "partner";
-              const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
-              await sendReminderEmail({
-                templateId: "partner_invoice_reminder_t7",
-                recipientEmail: partnerEmail,
-                recipientName: partnerName,
-                subject: `Herinnering: factuur ontbreekt nog voor "${item.block_name}" (${customerName})`,
-                variables: {
-                  partner_name: partnerName,
-                  block_name: item.block_name,
-                  customer_name: customerName,
-                  reference_number: referenceNumber,
-                  amount_excl_vat: amountExcl,
-                  portal_url: `${portalBase}/partner/facturatie`,
-                },
-                fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je de pdf deze week alsnog mailen naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
-                logExtra: {
-                  email_type: "partner_invoice_reminder_t7",
-                  related_partner_id: item.provider_id as string,
-                  related_request_id: item.request_id,
-                  related_item_id: item.id,
-                },
-              });
-            }
+          const partner = partnerMap.get(item.provider_id as string) as any;
+          if (partner) {
+            const partnerEmail = partner.contact_email || partner.email;
+            const partnerName = partner.name || item.provider_name || "partner";
+            const amountExcl = formatEuro(item.proforma_amount_excl_vat ?? item.invoiced_amount ?? item.quoted_price ?? null);
+            await sendReminderEmail({
+              templateId: "partner_invoice_reminder_t7",
+              recipientEmail: partnerEmail,
+              recipientName: partnerName,
+              subject: `Herinnering: factuur ontbreekt nog voor "${item.block_name}" (${customerName})`,
+              variables: {
+                partner_name: partnerName,
+                block_name: item.block_name,
+                customer_name: customerName,
+                reference_number: referenceNumber,
+                amount_excl_vat: amountExcl,
+                portal_url: `${portalBase}/partner/facturatie`,
+              },
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je de pdf deze week alsnog mailen naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              logExtra: {
+                email_type: "partner_invoice_reminder_t7",
+                related_partner_id: item.provider_id as string,
+                related_request_id: item.request_id,
+                related_item_id: item.id,
+              },
+            });
           }
         }
 
@@ -1621,10 +1555,13 @@ Deno.serve(async (req) => {
         );
         if (daysSinceContact < effectivePendingDays) continue;
 
+        // Eén taaksoort voor "klant verdient een status-update", in twee
+        // situaties: offerte verstuurd zonder akkoord (hier) en akkoord zonder
+        // recente update (check 11). customer_status_email_due bestaat niet meer.
         const { data: existingTodo } = await supabase
           .from("admin_todos")
           .select("id")
-          .eq("auto_type", "customer_status_email_due")
+          .eq("auto_type", "customer_status_update_due")
           .eq("auto_entity_id", prog.id)
           .neq("status", "done")
           .maybeSingle();
@@ -1642,12 +1579,12 @@ Deno.serve(async (req) => {
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `${customerLabel} heeft nog geen akkoord op offerte`,
-            description: `Stand bij aanmaken: ${contactLabel}. Overweeg een status-mail om de klant te herinneren aan akkoord, voorwaarden en facturatiegegevens.${leadFactor > 1 ? ` (Ruimere termijn toegepast: event over ${daysUntilEvent} dagen.)` : ""}`,
+            title: `${customerLabel} heeft nog geen akkoord op het voorstel — stuur een status-mail`,
+            description: `Stand bij aanmaken: ${contactLabel}. Stuur een status-mail om de klant te herinneren aan akkoord, ondertekening en facturatiegegevens.${leadFactor > 1 ? ` (Ruimere termijn toegepast: programma over ${daysUntilEvent} dagen.)` : ""}`,
             priority: daysSinceContact > effectivePendingDays * 2 ? "high" : "normal",
             status: "todo",
             related_request_id: prog.id,
-            auto_type: "customer_status_email_due",
+            auto_type: "customer_status_update_due",
             auto_entity_id: prog.id,
           });
 
@@ -1725,8 +1662,8 @@ Deno.serve(async (req) => {
         const { error: todoError } = await supabase
           .from("admin_todos")
           .insert({
-            title: `${customerLabel} heeft geen recente status-update ontvangen`,
-            description: `Stand bij aanmaken: ${daysSince} dagen geen update naar de klant. Er staan nog onderdelen open bij partners. Overweeg een status-mail te sturen.`,
+            title: `${customerLabel} heeft geen recente status-update ontvangen — stuur een status-mail`,
+            description: `Stand bij aanmaken: ${daysSince} dagen geen update naar de klant. Er staan nog onderdelen open bij partners. Stuur een korte status-mail over waar het programma staat.`,
             priority: "normal",
             status: "todo",
             related_request_id: prog.id,
@@ -2004,7 +1941,7 @@ Deno.serve(async (req) => {
             .insert({
               title: `Verzorging ontbreekt bij gekozen logies${q.accommodation_name ? ` (${q.accommodation_name})` : ""}`,
               description:
-                "De gekozen logies-offerte heeft geen verzorging (logies, logies & ontbijt, halfpension, ...). De klant ziet daardoor niet wat in de prijs zit. Vul dit aan in de offerte-sheet.",
+                "De gekozen logiesofferte heeft geen verzorging (logies, logies & ontbijt, halfpension, ...). De klant ziet daardoor niet wat in de prijs zit. Vul de verzorging aan bij de logiesofferte op het project.",
               priority: "normal",
               status: "todo",
               related_request_id: relatedRequestId,

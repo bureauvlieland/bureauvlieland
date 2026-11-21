@@ -89,7 +89,15 @@ export interface RawInboxTodo {
 }
 
 /** auto_types die geen klantwerk zijn maar een melding van het systeem zelf. */
-export const SYSTEM_AUTO_TYPES = new Set<string>(["critical_selftest_failure"]);
+/**
+ * Systeemmeldingen zonder dossier: zelftest, cron-watchdog, webhook-heartbeat.
+ * De Werkbank toont ze als "Systeemmelding" met een eigen uitleg.
+ */
+export const SYSTEM_AUTO_TYPES = new Set<string>([
+  "critical_selftest_failure",
+  "system_cron_failure",
+  "email_webhook_silent",
+]);
 
 export function isSystemTodo(todo: { auto_type: string | null }): boolean {
   return !!todo.auto_type && SYSTEM_AUTO_TYPES.has(todo.auto_type);
