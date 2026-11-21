@@ -78,6 +78,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "select-accommodation-quote": "deno",
   "send-partner-headsup-t3": "deno",
   "update-customer-program": "deno",
+  "send-change-digest": "deno",
   "send-bureau-daily-digest": "deno",
   "approve-accommodation-headcount": "deno",
 };
@@ -160,6 +161,7 @@ const REGISTRY: Row[] = [
   { name: "publish-program-changes", category: "workflow", critical: true },
   { name: "customer-add-optional-component", category: "workflow", critical: true },
   { name: "update-customer-program", category: "workflow", critical: true },
+  { name: "send-change-digest", category: "customer_email", critical: true },
   { name: "update-partner-item-status", category: "workflow", critical: true },
   { name: "update-partner-email", category: "workflow", critical: false },
   { name: "update-partner-password-set", category: "workflow", critical: false },
