@@ -80,6 +80,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "update-customer-program": "deno",
   "send-change-digest": "deno",
   "send-bureau-daily-digest": "deno",
+  "send-template-test-batch": "deno",
   "auto-close-monitor": "deno",
   "critical-selftest": "deno",
   "finalize-collective-invoice": "deno",
@@ -184,6 +185,7 @@ const REGISTRY: Row[] = [
   { name: "resolve-customer-token", category: "workflow", critical: true },
   { name: "check-pending-items", category: "workflow", critical: false },
   { name: "send-bureau-daily-digest", category: "workflow", critical: false },
+  { name: "send-template-test-batch", category: "utility", critical: false },
   { name: "chat-visitor-send", category: "workflow", critical: false },
 
   { name: "customer-review", category: "workflow", critical: false },
