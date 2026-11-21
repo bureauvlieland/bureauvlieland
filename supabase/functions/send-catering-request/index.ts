@@ -1,9 +1,19 @@
 // Catering request notification — sends customer confirmation + internal notice
 import { z } from "npm:zod@3.22.4";
-import { sanitizeHtml, isTestMode, getSubjectPrefix, SENDER_EMAIL, SENDER_NAME, getBureauAdminEmail } from "../_shared/email-templates.ts";
+import {
+  isTestMode,
+  getSubjectPrefix,
+  getPortalBaseUrl,
+  buildReplyTo,
+  wrapEmailHtml,
+  SENDER_EMAIL,
+  SENDER_NAME,
+  getBureauAdminEmail,
+} from "../_shared/email-templates.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { buildBureauHtml, buildCustomerHtml, bureauSubject, customerSubject, type CateringMailInput } from "./mail.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,9 +61,6 @@ const PayloadSchema = z.object({
   origin: z.string().optional(),
 });
 
-const fmtEur = (n: number | null | undefined) =>
-  typeof n === "number" ? `€ ${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Op aanvraag";
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -82,97 +89,37 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const bureauEmail = await getBureauAdminEmail(supabase);
 
-    const safe = {
-      name: sanitizeHtml(p.contact.name),
-      company: sanitizeHtml(p.contact.company || ""),
-      email: sanitizeHtml(p.contact.email),
-      phone: sanitizeHtml(p.contact.phone),
-      notes: sanitizeHtml(p.contact.notes || ""),
-      dietary: sanitizeHtml(p.contact.dietary || ""),
-      type: sanitizeHtml(p.cateringType),
-      date: sanitizeHtml(p.date),
-      startTime: sanitizeHtml(p.startTime || ""),
-      location: sanitizeHtml(p.locationText),
-      ref: sanitizeHtml(p.referenceNumber || ""),
+    const mailInput: CateringMailInput = {
+      requestId: p.requestId,
+      referenceNumber: p.referenceNumber || "",
+      contact: {
+        name: p.contact.name,
+        company: p.contact.company || "",
+        email: p.contact.email,
+        phone: p.contact.phone,
+        notes: p.contact.notes || "",
+        dietary: p.contact.dietary || "",
+      },
+      cateringType: p.cateringType,
+      date: p.date,
+      startTime: p.startTime || "",
+      locationText: p.locationText,
+      hasHorecaOnSite: p.hasHorecaOnSite,
+      guests: p.guests,
+      items: p.items,
+      indicativeTotal: p.indicativeTotal ?? null,
+      baseUrl: getPortalBaseUrl(p.origin),
     };
 
-    const horeca = p.hasHorecaOnSite === true ? "Ja" : p.hasHorecaOnSite === false ? "Nee" : "Onbekend";
-
-    const itemsHtml = p.items.length
-      ? `<ul style="padding-left:18px;margin:8px 0;">${p.items
-          .map(
-            (i) => `<li style="margin-bottom:6px;">
-              <strong>${sanitizeHtml(i.name)}</strong>${i.role ? ` <span style="color:#666;font-size:12px;">(${sanitizeHtml(i.role)})</span>` : ""}
-              ${i.provider ? `<br><span style="color:#666;font-size:12px;">${sanitizeHtml(i.provider)}</span>` : ""}
-              ${i.priceIndication ? `<br><span style="color:#666;font-size:12px;">${sanitizeHtml(i.priceIndication)}</span>` : ""}
-            </li>`,
-          )
-          .join("")}</ul>`
-      : `<p style="color:#666;">Maatwerk — invulling volgt in afstemming.</p>`;
-
-    const indicative = fmtEur(p.indicativeTotal ?? null);
-
-    // CUSTOMER (formal "u")
-    const customerHtml = `
-      <div style="font-family:Arial,sans-serif;max-width:620px;margin:0 auto;color:#111;">
-        <h2 style="color:#1a365d;margin-bottom:8px;">Beste ${safe.name},</h2>
-        <p>Hartelijk dank voor uw catering-aanvraag bij Bureau Vlieland. Wij hebben uw aanvraag in goede orde ontvangen en nemen binnen <strong>2 werkdagen</strong> contact met u op met een definitieve offerte.</p>
-
-        <h3 style="color:#1a365d;margin-top:24px;">Uw aanvraag</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:14px;">
-          <tr><td style="padding:6px 0;color:#555;width:160px;">Type</td><td style="padding:6px 0;"><strong>${safe.type}</strong></td></tr>
-          <tr><td style="padding:6px 0;color:#555;">Datum</td><td style="padding:6px 0;">${safe.date}${safe.startTime ? ` om ${safe.startTime}` : ""}</td></tr>
-          <tr><td style="padding:6px 0;color:#555;">Aantal gasten</td><td style="padding:6px 0;">${p.guests}</td></tr>
-          <tr><td style="padding:6px 0;color:#555;">Locatie</td><td style="padding:6px 0;">${safe.location}</td></tr>
-          <tr><td style="padding:6px 0;color:#555;">Horeca op locatie</td><td style="padding:6px 0;">${horeca}</td></tr>
-          ${safe.ref ? `<tr><td style="padding:6px 0;color:#555;">Referentie</td><td style="padding:6px 0;">${safe.ref}</td></tr>` : ""}
-        </table>
-
-        <h3 style="color:#1a365d;margin-top:24px;">Samenstelling</h3>
-        ${itemsHtml}
-
-        <p style="background:#f7fafc;padding:12px 14px;border-left:3px solid #1a365d;margin-top:16px;">
-          <strong>Indicatieve prijs:</strong> ${indicative} (incl. BTW)<br>
-          <span style="font-size:12px;color:#555;">Drank is altijd een p.m.-post en wordt na afloop op nacalculatie verrekend. Definitieve prijs altijd in offerte.</span>
-        </p>
-
-        ${safe.dietary ? `<h3 style="color:#1a365d;margin-top:24px;">Dieetwensen</h3><p>${safe.dietary.replace(/\n/g, "<br>")}</p>` : ""}
-        ${safe.notes ? `<h3 style="color:#1a365d;margin-top:24px;">Uw opmerkingen</h3><p>${safe.notes.replace(/\n/g, "<br>")}</p>` : ""}
-
-        <p style="margin-top:24px;">Heeft u nog vragen? Beantwoord deze e-mail of bel ons op <strong>0562 700 208</strong>.</p>
-        <p>Met vriendelijke groet,<br><strong>Erwin & Team Bureau Vlieland</strong></p>
-      </div>
-    `;
-
-    // INTERNAL
-    const internalHtml = `
-      <div style="font-family:Arial,sans-serif;max-width:680px;">
-        <h2 style="color:#1a365d;">Nieuwe catering-aanvraag${safe.ref ? ` — ${safe.ref}` : ""}</h2>
-        <h3>Klant</h3>
-        <p>
-          <strong>${safe.name}</strong>${safe.company ? ` — ${safe.company}` : ""}<br>
-          ${safe.email} · ${safe.phone}
-        </p>
-        <h3>Catering</h3>
-        <ul>
-          <li><strong>Type:</strong> ${safe.type}</li>
-          <li><strong>Datum:</strong> ${safe.date}${safe.startTime ? ` om ${safe.startTime}` : ""}</li>
-          <li><strong>Gasten:</strong> ${p.guests}</li>
-          <li><strong>Locatie:</strong> ${safe.location}</li>
-          <li><strong>Horeca op locatie:</strong> ${horeca}</li>
-          <li><strong>Indicatieve prijs (incl. BTW):</strong> ${indicative}</li>
-        </ul>
-        <h3>Samenstelling</h3>
-        ${itemsHtml}
-        ${safe.dietary ? `<h3>Dieet</h3><p>${safe.dietary.replace(/\n/g, "<br>")}</p>` : ""}
-        ${safe.notes ? `<h3>Opmerkingen klant</h3><p>${safe.notes.replace(/\n/g, "<br>")}</p>` : ""}
-        <p style="margin-top:16px;"><a href="https://bureauvlieland.nl/admin/projecten" style="color:#1a365d;">→ Open in admin</a></p>
-      </div>
-    `;
+    // Beide mails in de huisstijlwrapper (logo, voettekst met KvK en IBAN).
+    const customerHtml = await wrapEmailHtml(buildCustomerHtml(mailInput), supabase);
+    const internalHtml = await wrapEmailHtml(buildBureauHtml(mailInput), supabase);
 
     const customerRecipient = testMode ? bureauEmail : p.contact.email;
-    const customerSubject = `${prefix}Bevestiging catering-aanvraag — Bureau Vlieland`;
-    const bureauSubject = `${prefix}Nieuwe catering-aanvraag — ${safe.type} · ${p.guests}p · ${safe.date}`;
+    const customerSubjectText = `${prefix}${customerSubject(mailInput.referenceNumber)}`;
+    const bureauSubjectText = `${prefix}${bureauSubject(mailInput)}`;
+    // Antwoorden komen via reply+BV-… in het dossier terecht.
+    const replyTo = buildReplyTo(p.referenceNumber);
 
     // Twee losse verzendingen via de gedeelde verzender (blokkadelijst,
     // exacte MessageID), elk gelogd volgens het e-mail-logging-contract.
@@ -184,7 +131,8 @@ Deno.serve(async (req: Request) => {
       messages: [{
         From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
         To: [{ Email: customerRecipient, Name: p.contact.name }],
-        Subject: customerSubject,
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
+        Subject: customerSubjectText,
         HTMLPart: customerHtml,
       }],
     });
@@ -193,7 +141,8 @@ Deno.serve(async (req: Request) => {
       messages: [{
         From: { Email: SENDER_EMAIL, Name: "Bureau Vlieland Website" },
         To: [{ Email: bureauEmail, Name: "Bureau Vlieland" }],
-        Subject: bureauSubject,
+        ...(replyTo ? { ReplyTo: replyTo } : {}),
+        Subject: bureauSubjectText,
         HTMLPart: internalHtml,
       }],
     });
@@ -201,7 +150,7 @@ Deno.serve(async (req: Request) => {
     await Promise.all([
       logEmail({
         email_type: "catering_request_customer",
-        subject: customerSubject,
+        subject: customerSubjectText,
         recipient_email: customerRecipient,
         recipient_name: p.contact.name,
         related_request_id: p.requestId,
@@ -210,6 +159,7 @@ Deno.serve(async (req: Request) => {
         mailjet_message_id: customerResult.ok ? (customerResult.messageId ?? undefined) : undefined,
         sent_by: "system",
         html_body: customerHtml,
+        reply_to: replyTo?.Email,
         metadata: {
           template_name: "catering_request_customer",
           actor: "system → klant (bevestiging catering-aanvraag)",
@@ -220,7 +170,7 @@ Deno.serve(async (req: Request) => {
       }),
       logEmail({
         email_type: "catering_request_bureau",
-        subject: bureauSubject,
+        subject: bureauSubjectText,
         recipient_email: bureauEmail,
         recipient_name: "Bureau Vlieland",
         related_request_id: p.requestId,
@@ -229,6 +179,7 @@ Deno.serve(async (req: Request) => {
         mailjet_message_id: bureauResult.ok ? (bureauResult.messageId ?? undefined) : undefined,
         sent_by: "system",
         html_body: internalHtml,
+        reply_to: replyTo?.Email,
         metadata: {
           template_name: "catering_request_bureau",
           actor: "klant → bureau (catering-aanvraag)",

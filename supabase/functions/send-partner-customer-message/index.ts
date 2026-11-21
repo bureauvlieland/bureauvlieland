@@ -7,6 +7,7 @@ import {
   sanitizeHtml,
   getRecipientEmail,
   getSubjectPrefix,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
@@ -129,24 +130,19 @@ Deno.serve(async (req) => {
 
     const portalUrl = `https://bureauvlieland.nl/mijn-programma/${program.customer_token}`;
 
-    const htmlBody = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #1e3a5f; padding: 24px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${sanitizeHtml(quote.accommodation_name)}</h1>
+    // Binnenkant; de huisstijlwrapper levert logo en voettekst.
+    const htmlBody = await wrapEmailHtml(`
+        <h2 style="color: #0F4C5C; margin: 0 0 16px;">Bericht van ${sanitizeHtml(quote.accommodation_name)}</h2>
+        <p>Beste ${sanitizeHtml(customerDisplayName)},</p>
+        <p><strong>${sanitizeHtml(quote.accommodation_name)}</strong> heeft een bericht voor u over uw verblijf:</p>
+        <div style="background: #f8fafc; border-left: 4px solid #0F4C5C; padding: 16px; margin: 16px 0; border-radius: 4px;">
+          <p style="margin: 0 0 8px; font-weight: 600;">${sanitizeHtml(subject)}</p>
+          <p style="margin: 0;">${sanitizedMessage}</p>
         </div>
-        <div style="padding: 24px; line-height: 1.6; color: #333;">
-          <p>Beste ${sanitizeHtml(customerDisplayName)},</p>
-          <p><strong>${sanitizeHtml(quote.accommodation_name)}</strong> heeft een bericht voor u over uw verblijf:</p>
-          <div style="background: #f8fafc; border-left: 4px solid #1e3a5f; padding: 16px; margin: 16px 0; border-radius: 4px;">
-            <p style="margin: 0 0 8px; font-weight: 600;">${sanitizeHtml(subject)}</p>
-            <p style="margin: 0;">${sanitizedMessage}</p>
-          </div>
-          <p style="font-size: 14px; color: #666; padding: 12px; background: #fef9e7; border-left: 3px solid #f59e0b; border-radius: 4px;">
-            <strong>U kunt direct antwoorden op deze e-mail.</strong> Uw reactie komt automatisch terecht bij ${sanitizeHtml(quote.accommodation_name)} en wordt gelogd in uw <a href="${portalUrl}" style="color:#0066cc;">programma-overzicht</a>.
-          </p>
-        </div>
-      </div>
-    `;
+        <p style="font-size: 14px; color: #666; padding: 12px; background: #fef9e7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+          <strong>U kunt direct antwoorden op deze e-mail.</strong> Uw reactie komt bij Bureau Vlieland in uw dossier en wij zorgen dat ${sanitizeHtml(quote.accommodation_name)} hem krijgt. U vindt dit bericht ook in uw <a href="${portalUrl}" style="color:#0F4C5C;">programma-overzicht</a>.
+        </p>
+    `, admin);
 
     const auth = btoa(`${MAILJET_API_KEY}:${MAILJET_SECRET_KEY}`);
     const response = await fetch("https://api.mailjet.com/v3.1/send", {

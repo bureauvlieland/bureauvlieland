@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { isSystemTodo, loadInbox, type InboxItem, type InboxReason } from "@/lib/getInbox";
+import { isSystemTodo, loadInbox, loadInboundEvents, type InboxItem, type InboxReason } from "@/lib/getInbox";
+import { InboundEvents } from "@/components/admin/werkbank/InboundEvents";
 import type { ProjectKind } from "@/lib/getProject";
 import { useInboxTodoActions, SNOOZE_DAYS, type InboxTodoAction } from "@/hooks/useInboxTodoActions";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { COMMUNICATION_STATE_META } from "@/lib/projectCommunication";
 import { CLUSTER_META, type TodoCluster } from "@/lib/projectActivity";
+import { todoPriorityLabel } from "@/lib/autoTodoCreator";
 import {
   AlertTriangle,
   Check,
@@ -77,6 +79,13 @@ export function InboxList({
   const { data, isLoading } = useQuery({
     queryKey: ["werkbank-inbox", showSnoozed ? "with-snoozed" : "no-snoozed"],
     queryFn: () => loadInbox({ includeSnoozed: showSnoozed }),
+    refetchInterval: 60_000,
+  });
+  // Binnengekomen gebeurtenissen (cluster inbound) komen apart binnen: ze
+  // worden niet gedempt en staan altijd bovenaan, nieuwste eerst.
+  const { data: inboundEvents = [] } = useQuery({
+    queryKey: ["werkbank-inbound-events"],
+    queryFn: loadInboundEvents,
     refetchInterval: 60_000,
   });
   const { run } = useInboxTodoActions({ onResolved: onTodosResolved });
@@ -150,7 +159,7 @@ export function InboxList({
     );
   }
 
-  if (projectItems.length === 0 && looseItems.length === 0) {
+  if (projectItems.length === 0 && looseItems.length === 0 && inboundEvents.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-muted-foreground">
         {kindFilter === "all"
@@ -164,6 +173,13 @@ export function InboxList({
 
   return (
     <div className="space-y-3 p-2">
+      {/* Binnengekomen gebeurtenissen */}
+      <InboundEvents
+        events={inboundEvents}
+        busy={busy}
+        onSeen={(id) => void apply("seen", [id])}
+      />
+
       {/* Dossiers */}
       <section className="space-y-1.5">
         <SectionHeader label="Dossiers" count={projectItems.length} />
@@ -523,7 +539,7 @@ function LooseRow({
       />
       <button onClick={onClick} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5">
-          <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[head.priority] ?? PRIORITY_DOT.normal)} title={`Prioriteit: ${head.priority}`} />
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[head.priority] ?? PRIORITY_DOT.normal)} title={`Prioriteit: ${todoPriorityLabel(head.priority)}`} />
           <span className="truncate text-sm font-medium">{head.title}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">

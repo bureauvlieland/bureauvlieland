@@ -9,6 +9,7 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   formatDateNL,
+  buildReplyTo,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -124,6 +125,7 @@ Deno.serve(async (req) => {
 
       const recipientEmail = getRecipientEmail(r.customer_email, origin);
       const subject = `${getSubjectPrefix(origin)}${tpl.subject}`;
+      const replyTo = buildReplyTo(r.reference_number);
       const filename = `Programma-${r.reference_number || r.id}.docx`;
 
       const resp = await fetch("https://api.mailjet.com/v3.1/send", {
@@ -137,6 +139,8 @@ Deno.serve(async (req) => {
             From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
             To: [{ Email: recipientEmail, Name: r.customer_name }],
             Cc: [{ Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" }],
+            // "antwoord op deze mail" in de tekst: het antwoord komt via reply+BV-… in het dossier.
+            ...(replyTo ? { ReplyTo: replyTo } : {}),
             Subject: subject,
             HTMLPart: tpl.body,
             Attachments: [{
@@ -166,6 +170,7 @@ Deno.serve(async (req) => {
         error_message: resp.ok ? undefined : respText.slice(0, 1000),
         mailjet_message_id: mjMessageId ?? undefined,
         sent_by: "system:cron",
+        reply_to: replyTo?.Email,
         metadata: {
           template_name: EMAIL_TYPE,
           actor: "system → klant (aankomstherinnering)",

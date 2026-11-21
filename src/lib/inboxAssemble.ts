@@ -89,7 +89,15 @@ export interface RawInboxTodo {
 }
 
 /** auto_types die geen klantwerk zijn maar een melding van het systeem zelf. */
-export const SYSTEM_AUTO_TYPES = new Set<string>(["critical_selftest_failure"]);
+/**
+ * Systeemmeldingen zonder dossier: zelftest, cron-watchdog, webhook-heartbeat.
+ * De Werkbank toont ze als "Systeemmelding" met een eigen uitleg.
+ */
+export const SYSTEM_AUTO_TYPES = new Set<string>([
+  "critical_selftest_failure",
+  "system_cron_failure",
+  "email_webhook_silent",
+]);
 
 export function isSystemTodo(todo: { auto_type: string | null }): boolean {
   return !!todo.auto_type && SYSTEM_AUTO_TYPES.has(todo.auto_type);
@@ -114,6 +122,71 @@ export function looseRowId(todoId: string): string {
 
 export function todoIdFromLooseRowId(rowId: string): string {
   return rowId.replace(/^_orphan_/, "");
+}
+
+/**
+ * Eén binnengekomen gebeurtenis (cluster "Binnengekomen"): partner reageert,
+ * klant geeft akkoord, klant tekent, mail in de inbox. Het bureau klikt ze weg
+ * met "gezien"; ze worden nooit door de cooldown gedempt.
+ */
+export interface InboundEvent {
+  id: string;
+  title: string;
+  autoType: string;
+  /** ISO; null als de taak geen created_at heeft (dan onderaan) */
+  createdAt: string | null;
+  priority: InboxTodo["priority"];
+  projectId: string | null;
+  /** "BV-1234 · Klantnaam" of null bij een losse gebeurtenis of onbekend dossier */
+  projectLabel: string | null;
+}
+
+/** Boven dit aantal vouwt de Werkbank de rest achter "Toon alles". */
+export const INBOUND_VISIBLE_MAX = 20;
+
+/** id van de sectie in de Werkbank; de zijbalk linkt met ?sectie=<id>. */
+export const INBOUND_SECTION_ID = "binnengekomen";
+
+/** "net binnen" / "3 uur geleden" / "2 dagen geleden" */
+export function formatInboundAge(iso: string | null, now: number = Date.now()): string {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const hours = (now - t) / 3_600_000;
+  if (hours < 1) return "net binnen";
+  if (hours < 24) return `${Math.floor(hours)} uur geleden`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "dag" : "dagen"} geleden`;
+}
+
+/**
+ * Alle open taken in cluster "Binnengekomen", nieuwste eerst. Taken aan een
+ * dossier dat niet (meer) in de werklijst staat, blijven staan maar zonder
+ * dossierlabel: de gebeurtenis is er wel geweest.
+ */
+export function collectInboundEvents(todos: RawInboxTodo[], projects: ProjectSummary[]): InboundEvent[] {
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const events: InboundEvent[] = [];
+  for (const t of todos) {
+    if (clusterForAutoType(t.auto_type) !== "inbound" || !t.auto_type) continue;
+    const project = t.related_request_id ? projectById.get(t.related_request_id) ?? null : null;
+    const customer = project ? project.customer.company || project.customer.name : null;
+    events.push({
+      id: t.id,
+      title: t.title,
+      autoType: t.auto_type,
+      createdAt: t.created_at ?? null,
+      priority: (t.priority ?? "normal") as InboxTodo["priority"],
+      projectId: project?.id ?? t.related_request_id ?? null,
+      projectLabel: project ? [project.reference, customer].filter(Boolean).join(" · ") : null,
+    });
+  }
+  return events.sort((a, b) => {
+    if (a.createdAt === b.createdAt) return 0;
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
 }
 
 export interface AssembleInboxInput {

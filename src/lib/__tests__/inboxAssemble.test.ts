@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   assembleInbox,
+  collectInboundEvents,
+  formatInboundAge,
   isSystemTodo,
   looseGroupKey,
   looseRowId,
@@ -285,5 +287,93 @@ describe("doorverwezen bruiloften", () => {
     });
     expect(items.map((i) => i.projectId)).toEqual(["p-normaal"]);
     expect(items[0].todos).toHaveLength(1);
+  });
+});
+
+describe("collectInboundEvents", () => {
+  it("geeft alleen taken uit cluster Binnengekomen terug, nieuwste eerst", () => {
+    const projects = [project("p1", { reference: "BV-2026-001", customer: { name: "Anna", email: "a@x.nl", phone: null, company: "Bedrijf BV" } })];
+    const events = collectInboundEvents(
+      [
+        todo("a", { auto_type: "partner_status_update", related_request_id: "p1", created_at: "2026-10-20T10:00:00Z" }),
+        todo("b", { auto_type: "customer_quote_accepted", related_request_id: "p1", created_at: "2026-10-21T10:00:00Z" }),
+        todo("c", { auto_type: "quote_pending_customer", related_request_id: "p1", created_at: "2026-10-22T10:00:00Z" }),
+        todo("d", { auto_type: null, related_request_id: "p1", created_at: "2026-10-23T10:00:00Z" }),
+      ],
+      projects,
+    );
+    expect(events.map((e) => e.id)).toEqual(["b", "a"]);
+    expect(events[0]).toMatchObject({
+      autoType: "customer_quote_accepted",
+      projectId: "p1",
+      projectLabel: "BV-2026-001 · Bedrijf BV",
+      priority: "normal",
+    });
+  });
+
+  it("neemt de nieuwe gebeurtenistypen en commission_invoice_reply mee", () => {
+    const events = collectInboundEvents(
+      [
+        todo("1", { auto_type: "partner_item_executed" }),
+        todo("2", { auto_type: "customer_terms_signed" }),
+        todo("3", { auto_type: "commission_invoice_reply" }),
+        todo("4", { auto_type: "inbound_email" }),
+      ],
+      [],
+    );
+    expect(events).toHaveLength(4);
+  });
+
+  it("losse gebeurtenis of onbekend dossier krijgt geen dossierlabel", () => {
+    const events = collectInboundEvents(
+      [
+        todo("x", { auto_type: "sales_inbox", related_request_id: null }),
+        todo("y", { auto_type: "inbound_email", related_request_id: "weg" }),
+      ],
+      [],
+    );
+    expect(events.find((e) => e.id === "x")).toMatchObject({ projectId: null, projectLabel: null });
+    expect(events.find((e) => e.id === "y")).toMatchObject({ projectId: "weg", projectLabel: null });
+  });
+
+  it("taken zonder created_at komen onderaan", () => {
+    const events = collectInboundEvents(
+      [
+        todo("oud", { auto_type: "inbound_email", created_at: null }),
+        todo("nieuw", { auto_type: "inbound_email", created_at: "2026-10-25T00:00:00Z" }),
+      ],
+      [],
+    );
+    expect(events.map((e) => e.id)).toEqual(["nieuw", "oud"]);
+  });
+});
+
+describe("Binnengekomen en cooldown", () => {
+  it("inbound-taken worden niet gedempt door recent contact", () => {
+    const p = project("p1");
+    const items = assembleInbox({
+      todos: [
+        todo("i", { auto_type: "customer_terms_signed", related_request_id: "p1", priority: "normal" }),
+        todo("r", { auto_type: "quote_pending_customer", related_request_id: "p1", priority: "normal" }),
+      ],
+      projects: [p],
+      lastContactByProject: new Map([["p1", "2026-10-26T10:00:00Z"]]),
+      today: TODAY,
+      now: NOW,
+    });
+    const row = items.find((i) => i.projectId === "p1")!;
+    expect(row.todos.map((t) => t.id)).toEqual(["i"]);
+    expect(row.suppressedCount).toBe(1);
+  });
+});
+
+describe("formatInboundAge", () => {
+  const now = NOW.getTime();
+  it("net binnen, uren, dagen", () => {
+    expect(formatInboundAge("2026-10-26T11:30:00Z", now)).toBe("net binnen");
+    expect(formatInboundAge("2026-10-26T09:00:00Z", now)).toBe("3 uur geleden");
+    expect(formatInboundAge("2026-10-25T09:00:00Z", now)).toBe("1 dag geleden");
+    expect(formatInboundAge("2026-10-20T09:00:00Z", now)).toBe("6 dagen geleden");
+    expect(formatInboundAge(null, now)).toBe("");
   });
 });

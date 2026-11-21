@@ -1,5 +1,6 @@
-// Reconcile open admin_todos: close ones whose anchor is resolved, then
-// invoke check-pending-items to (re)create new ones.
+// Reconcile open admin_todos: close ones whose anchor is resolved. Het
+// aanmaken van nieuwe taken gebeurt in check-pending-items (eigen dagcron);
+// die wordt hier bewust niet meer aangeroepen.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   fetchLastContactByProject,
@@ -7,6 +8,8 @@ import {
   REFERRAL_PAUSED_AUTO_TYPES,
   REMINDER_TYPES_GUARDED_BY_COOLDOWN,
 } from "../_shared/project-activity.ts";
+import { shouldClosePartnerStatusUpdate } from "../_shared/partnerStatusUpdateTodo.ts";
+import { BUREAU_EVENT_TTL_DAYS } from "../_shared/bureau-event.ts";
 import {
   REQUEST_BOUND_AUTO_TYPES,
   isUuid,
@@ -35,12 +38,17 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Elke sluiting krijgt een reden die ook in admin_todos.completion_reason
+  // terechtkomt (docs/plan-notificaties.md, fase 3: de churn van de
+  // reconciler moet meetbaar zijn). De eerste reden wint.
   const closedIds = new Set<string>();
+  const reasonById = new Map<string, string>();
   const reasons: Record<string, number> = {};
 
   const markClosed = (id: string, reason: string) => {
     if (closedIds.has(id)) return;
     closedIds.add(id);
+    reasonById.set(id, reason);
     reasons[reason] = (reasons[reason] ?? 0) + 1;
   };
 
@@ -85,8 +93,6 @@ Deno.serve(async (req) => {
       } else if (REQUEST_BOUND_AUTO_TYPES.has(type)) {
         if (isUuid(eid)) requestIds.add(eid);
       } else if (
-        type === "post_execution_invoice_check" ||
-        type === "post_execution_feedback" ||
         type === "book_ferry_tickets" ||
         type === "stale_pending_change" ||
         type === "partner_reminder" ||
@@ -104,7 +110,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates, archived_at",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -221,18 +227,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // sales invoices grouped by request (for post_execution_invoice_check fallback)
-    const salesByRequest = new Map<string, number>();
-    if (requestIds.size) {
-      const { data: bi } = await supabase
-        .from("bureau_invoices")
-        .select("request_id")
-        .in("request_id", [...requestIds]);
-      for (const row of (bi ?? []) as { request_id: string }[]) {
-        salesByRequest.set(row.request_id, (salesByRequest.get(row.request_id) ?? 0) + 1);
-      }
-    }
-
     // selected lodging quotes per accommodation request (for customer_inputs_missing)
     const selectedLodging = new Set<string>();
     {
@@ -277,21 +271,16 @@ Deno.serve(async (req) => {
       }
 
       switch (type) {
-        case "post_execution_invoice_check": {
-          const item = eid ? itemMap.get(eid) : null;
-          // Closed when there is at least one bureau_invoice for this request
-          // or project is fully invoiced.
-          const reqRow = item
-            ? requestMap.get(item.request_id) ?? req
-            : req;
-          if (
-            (reqRow && reqRow.completion_status === "fully_invoiced") ||
-            (item && (salesByRequest.get(item.request_id) ?? 0) > 0) ||
-            (t.related_request_id &&
-              (salesByRequest.get(t.related_request_id) ?? 0) > 0)
-          ) {
-            markClosed(t.id, type);
-          }
+        case "customer_status_email_due":
+        case "post_execution_feedback":
+        case "post_execution_invoice_check":
+        case "new_request_received": {
+          // Samengevoegd in fase 3 (docs/plan-notificaties.md): deze sleutels
+          // worden niet meer aangemaakt. customer_status_update_due,
+          // customer_aftersales, commission_missing_invoice en
+          // new_program_request nemen het over. Wat nog openstaat sluit met
+          // een herkenbare reden.
+          markClosed(t.id, "samengevoegd_fase3");
           break;
         }
         case "purchase_invoice_pending":
@@ -422,13 +411,16 @@ Deno.serve(async (req) => {
           }
           break;
         }
-        case "new_request_received":
         case "new_program_request": {
+          // Dicht zodra de aanvraag niet meer nieuw is: offerte verstuurd
+          // (quote_status), gearchiveerd, of niet meer actief.
           if (
             req &&
             req.status &&
             !["new", "submitted", "active"].includes(req.status)
           ) {
+            markClosed(t.id, type);
+          } else if (req && req.archived_at) {
             markClosed(t.id, type);
           } else if (req && req.quote_status && req.quote_status !== "concept") {
             markClosed(t.id, type);
@@ -490,8 +482,7 @@ Deno.serve(async (req) => {
           if (!stillPending) markClosed(t.id, type);
           break;
         }
-        case "partner_reminder":
-        case "partner_status_update": {
+        case "partner_reminder": {
           const item = eid ? itemMap.get(eid) : null;
           if (
             item &&
@@ -501,6 +492,25 @@ Deno.serve(async (req) => {
           ) {
             markClosed(t.id, type);
           }
+          break;
+        }
+        case "partner_item_executed":
+        case "customer_quote_accepted":
+        case "customer_terms_signed": {
+          // Gebeurtenissen van buiten (_shared/bureau-event.ts): blijven staan
+          // tot Erwin ze als gezien afvinkt, vervallen na de bewaartermijn.
+          const age = Date.now() - new Date(t.created_at).getTime();
+          if (age > BUREAU_EVENT_TTL_DAYS * 86400_000) markClosed(t.id, type);
+          break;
+        }
+        case "partner_status_update": {
+          // Een partnerreactie is een gebeurtenis die Erwin moet zien; de
+          // status "confirmed" is juist de reden dat de taak bestaat. Sluit
+          // alleen als het onderdeel verdween of geannuleerd werd, of na
+          // zeven dagen (zoals all_partners_responded). Zie
+          // docs/plan-notificaties.md, "Het korte antwoord".
+          const item = eid ? itemMap.get(eid) : null;
+          if (shouldClosePartnerStatusUpdate(t, item)) markClosed(t.id, type);
           break;
         }
         case "all_partners_responded": {
@@ -598,42 +608,39 @@ Deno.serve(async (req) => {
     }
 
 
+    // Wegschrijven per reden, zodat completion_reason gevuld is.
     let closed = 0;
     if (closedIds.size) {
-      const ids = [...closedIds];
+      const idsByReason = new Map<string, string[]>();
+      for (const id of closedIds) {
+        const reason = reasonById.get(id) ?? "reconcile";
+        const arr = idsByReason.get(reason) ?? [];
+        arr.push(id);
+        idsByReason.set(reason, arr);
+      }
+      const completedAt = new Date().toISOString();
       const chunkSize = 200;
-      for (let i = 0; i < ids.length; i += chunkSize) {
-        const chunk = ids.slice(i, i + chunkSize);
-        const { error: upErr, count } = await supabase
-          .from("admin_todos")
-          .update({ status: "done", completed_at: new Date().toISOString() }, { count: "exact" })
-          .in("id", chunk);
-        if (upErr) throw upErr;
-        closed += count ?? chunk.length;
+      for (const [reason, ids] of idsByReason) {
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          const { error: upErr, count } = await supabase
+            .from("admin_todos")
+            .update(
+              { status: "done", completed_at: completedAt, completion_reason: reason },
+              { count: "exact" },
+            )
+            .in("id", chunk);
+          if (upErr) throw upErr;
+          closed += count ?? chunk.length;
+        }
       }
     }
 
-    // Trigger check-pending-items to (re)create new todos
-    let created = 0;
-    try {
-      const res = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/check-pending-items`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-        },
-      );
-      if (res.ok) {
-        const body = await res.json().catch(() => ({}));
-        created =
-          (body?.created ?? body?.todos_created ?? body?.total ?? 0) as number;
-      }
-    } catch (e) {
-      console.warn("check-pending-items invoke failed", e);
-    }
+    // check-pending-items wordt hier bewust NIET meer aangeroepen. De Werkbank
+    // draait reconcile elke vijf minuten; daardoor liepen de herinnerings-
+    // checks (en hun mails aan partners) de hele dag door in plaats van één
+    // keer per dag via de eigen cron (docs/plan-notificaties.md, 3.3).
+    const created = 0;
 
     console.log("reconcile-admin-todos done", { closed, created, reasons });
 

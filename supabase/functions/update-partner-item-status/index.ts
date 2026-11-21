@@ -12,6 +12,7 @@ import {
   TemplateIds 
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { recordBureauEvent } from "../_shared/bureau-event.ts";
 
 const ACTOR_BY_STATUS: Record<string, string> = {
   confirmed: "partner → klant (activiteit bevestigd)",
@@ -23,6 +24,28 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+/**
+ * Welke klantmail hoort bij een partnerreactie? Precies één:
+ * - stond het onderdeel in `counter_proposed`, dan is de reactie een antwoord
+ *   op het tegenvoorstel van de klant → `counter_proposal_response`;
+ * - anders de gewone statusmail (`status_confirmed` / `_alternative` /
+ *   `_unavailable`), behalve bij een bevestiging-onderdeel dat zonder offerte
+ *   wordt bevestigd (daar is niets voor de klant te doen → geen mail).
+ * Vroeger gingen bij een tegenvoorstel beide mails tegelijk (audit, fase 1).
+ */
+export type CustomerStatusMail = "counter_proposal_response" | "status" | null;
+export function pickCustomerStatusMail(args: {
+  status: string;
+  oldStatus: string | null | undefined;
+  confirmOnly: boolean;
+}): CustomerStatusMail {
+  const { status, oldStatus, confirmOnly } = args;
+  if (status !== "confirmed" && status !== "alternative" && status !== "unavailable") return null;
+  if (oldStatus === "counter_proposed") return "counter_proposal_response";
+  if (confirmOnly && status === "confirmed") return null;
+  return "status";
+}
 
 interface MailSendResult {
   ok: boolean;
@@ -454,35 +477,61 @@ export const handler = async (req: Request): Promise<Response> => {
       
       console.log(`Resolved partner_reminder todo for item ${itemId}`);
 
-      // Create partner_status_update todo for admin to review
-      const statusLabel = status === "confirmed" ? "bevestigd" : status === "unavailable" ? "niet beschikbaar" : "alternatief voorgesteld";
-      const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
-      
-      const { data: existingStatusTodo } = await supabase
-        .from("admin_todos")
-        .select("id")
-        .eq("auto_type", "partner_status_update")
-        .eq("auto_entity_id", itemId)
-        .neq("status", "done")
-        .maybeSingle();
-
-      if (!existingStatusTodo && !(confirmOnly && status === "confirmed")) {
-        await supabase.from("admin_todos").insert({
-          title: `Partner ${partner.name} reageert op "${item.block_name}" — ${statusLabel}`,
-          description: `Partner ${partner.name} heeft "${item.block_name}" ${statusLabel} voor ${programRequest.customer_name}.${quotedPrice ? ` Prijs: €${quotedPrice.toFixed(2)}` : ''}${statusNote ? ` Opmerking: ${statusNote}` : ''}`,
-          priority: status === "unavailable" ? "high" : "normal",
-          status: "todo",
-          related_request_id: item.request_id,
-          related_partner_id: partner.id,
-          auto_type: "partner_status_update",
-          auto_entity_id: itemId,
+      // Gebeurtenis van buiten: Werkbank-taak "Binnengekomen" plus korte
+      // bureau-mail (docs/plan-notificaties.md, fase 2). Een "alleen
+      // bevestigen"-onderdeel dat bevestigd wordt is geen nieuws voor het
+      // bureau en krijgt geen melding.
+      if (!(confirmOnly && status === "confirmed")) {
+        const programRequest = item.program_requests as { customer_name: string; customer_company?: string | null; reference_number: string | null };
+        await recordBureauEvent(supabase, {
+          kind: status === "confirmed"
+            ? "partner_item_confirmed"
+            : status === "unavailable"
+              ? "partner_item_unavailable"
+              : "partner_item_alternative",
+          entityId: itemId,
+          request: {
+            id: item.request_id,
+            reference_number: programRequest.reference_number,
+            customer_name: programRequest.customer_name,
+            customer_company: programRequest.customer_company ?? null,
+          },
+          partner: { id: partner.id, name: partner.name },
+          itemName: item.block_name,
+          quotedPrice: typeof quotedPrice === "number" ? quotedPrice : null,
+          note: statusNote || quotedNotes || null,
+          proposedTime: proposedTime || null,
+          proposedDate: proposedDate || null,
+          origin,
+          versionKey: `${status}-${new Date().toISOString().slice(0, 10)}`,
         });
-        console.log(`Created partner_status_update todo for item ${itemId}`);
       }
     }
 
-    // Check if this is a response to a counter-proposal and send customer notification
-    if (oldStatus === "counter_proposed" && (status === "confirmed" || status === "alternative" || status === "unavailable")) {
+    if (status === "executed") {
+      const programRequest = item.program_requests as { customer_name: string; customer_company?: string | null; reference_number: string | null };
+      await recordBureauEvent(supabase, {
+        kind: "partner_item_executed",
+        entityId: itemId,
+        request: {
+          id: item.request_id,
+          reference_number: programRequest.reference_number,
+          customer_name: programRequest.customer_name,
+          customer_company: programRequest.customer_company ?? null,
+        },
+        partner: { id: partner.id, name: partner.name },
+        itemName: item.block_name,
+        note: statusNote || null,
+        origin,
+      });
+    }
+
+    // Eén klantmail per partnerreactie: óf de reactie op het tegenvoorstel,
+    // óf de gewone statusmail (zie pickCustomerStatusMail).
+    const customerMail = pickCustomerStatusMail({ status, oldStatus, confirmOnly });
+
+    // Reactie op een tegenvoorstel van de klant → counter_proposal_response
+    if (customerMail === "counter_proposal_response") {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
@@ -647,8 +696,9 @@ export const handler = async (req: Request): Promise<Response> => {
           if (!existingTodo) {
             const customerName = request.customer_company || request.customer_name;
             await supabase.from("admin_todos").insert({
-              title: `Klant ${customerName} moet voorwaarden accepteren`,
-              description: `Alle activiteiten zijn bevestigd. Wachtend op acceptatie van de algemene voorwaarden door de klant.`,
+              // Akkoord en ondertekenen zijn sinds 26 oktober één handeling in het klantportaal.
+              title: `Vraag ${customerName} akkoord te geven en te ondertekenen in het klantportaal`,
+              description: `Alle onderdelen zijn bevestigd. De klant heeft nog niet getekend; na het akkoord met handtekening is de boeking definitief.`,
               priority: "normal",
               status: "todo",
               related_request_id: item.request_id,
@@ -723,11 +773,10 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
 
-    const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
-    // Een bevestiging zonder offerte vraagt geen akkoord van de klant; die
-    // krijgt er dus ook geen statusmail over. "Niet beschikbaar" wel.
-    const skipCustomerEmail = confirmOnly && status === "confirmed";
-    if (validEmailStatuses.includes(status) && !skipCustomerEmail) {
+    // Gewone statusmail. Een bevestiging zonder offerte vraagt geen akkoord
+    // van de klant; die krijgt er dus ook geen statusmail over ("Niet
+    // beschikbaar" wel). Na een counter_proposal_response gaat deze niet meer.
+    if (customerMail === "status") {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
@@ -756,9 +805,17 @@ export const handler = async (req: Request): Promise<Response> => {
         proposed_date: proposedDate || "",
         portal_link: portalUrl,
         actor_line: renderActorLine(actor),
+        // Dossiernummer voor het onderwerp van de status_*-templates.
+        reference_number: programRequest.reference_number || "",
       };
 
-      const template = await getRenderedTemplate(templateId, templateVariables);
+      // Onderwerp met platte (niet HTML-ontsmette) namen.
+      const template = await getRenderedTemplate(templateId, templateVariables, {
+        ...templateVariables,
+        customer_name: programRequest.customer_name,
+        activity_name: item.block_name,
+        partner_name: partner.name,
+      });
       
       const emailHtml = template?.body || generateFallbackStatusEmailHtml(
         programRequest.customer_name,

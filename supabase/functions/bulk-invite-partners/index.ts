@@ -120,7 +120,7 @@ async function invitePartner(
 Activeer je account voor het Bureau Vlieland Partner Portaal door eenmalig je wachtwoord in te stellen via deze persoonlijke link:
 ${setPasswordLink}
 
-Inloggen kan daarna op: ${portalLink}/login
+Inloggen kan daarna op: ${portalLink}
 
 Vragen? Neem contact op via hallo@bureauvlieland.nl
 

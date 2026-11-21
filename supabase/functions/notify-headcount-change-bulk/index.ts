@@ -6,10 +6,11 @@ import {
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { sendMailjet, type MailjetMessage } from "../_shared/mailjet-send.ts";
-import { buildLodgingHeadcountMail } from "./lodging-mail.ts";
+import { buildLodgingHeadcountMail, buildPartnerHeadcountMail } from "../_shared/partnerHeadcountMail.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,9 +35,6 @@ const send = async (source: string, message: MailjetMessage): Promise<string | n
   if (!result.ok) throw new Error(result.error || "EMAIL_SERVICE_ERROR");
   return result.messageId ?? null;
 };
-
-const formatEur = (n: number) =>
-  `€${n.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface Payload {
   /** Het programma. Mag ontbreken als alleen logiespartners gemaild worden. */
@@ -112,9 +110,6 @@ export const handler = async (req: Request): Promise<Response> => {
 
     const noteHtmlCustomer = trimmedNote
       ? `<p style="margin: 12px 0 0; color: #475569;"><em>Toelichting Bureau Vlieland: ${sanitizeHtml(trimmedNote)}</em></p>`
-      : "";
-    const noteHtmlPartner = trimmedNote
-      ? `<p style="margin: 8px 0 0; color: #475569;"><em>Toelichting Bureau Vlieland: ${sanitizeHtml(trimmedNote)}</em></p>`
       : "";
 
     const results: Record<string, unknown> = {
@@ -247,57 +242,35 @@ export const handler = async (req: Request): Promise<Response> => {
         const recipient = getRecipientEmail(partnerEmail, origin);
         const partnerPortalUrl = `${baseUrl}/partner/login`;
 
-        const itemRows = grp
-          .items!.map((it) => {
+        // Gedeelde tekst met notify-partner-headcount-change
+        // (_shared/partnerHeadcountMail.ts), in de huisstijl.
+        const mail = buildPartnerHeadcountMail({
+          partnerName: partner?.name || firstItem.provider_name || "",
+          customerLabel: program.customer_company || program.customer_name,
+          reference: ref,
+          dates,
+          oldPeople: old_people,
+          newPeople: new_people,
+          items: grp.items!.map((it) => {
             const effPeople = it.override_people ?? new_people;
             const isPerPerson = it.price_type === "per_person" || it.price_type === "per_person_per_day";
             const isPerDay = it.price_type === "per_person_per_day";
             const unit = it.admin_price_override != null ? Number(it.admin_price_override) : null;
-            const newTotal = unit != null
-              ? unit * (isPerPerson ? effPeople : 1) * (isPerDay ? numberOfDays : 1)
-              : null;
-            const priceLine = unit != null
-              ? `<br><span style="color:#475569;">${formatEur(unit)} ${isPerDay ? "p.p.p.d." : isPerPerson ? "p.p." : "totaal"}, nieuw totaal ${newTotal != null ? formatEur(newTotal) : "-"}</span>`
-              : "";
-            const overrideNote = it.override_people != null
-              ? `<br><span style="color:#b45309;font-size:13px;">Let op: dit onderdeel heeft een eigen aantal (${it.override_people}) en volgt het projectaantal niet automatisch.</span>`
-              : "";
-            return `<li style="margin: 6px 0;"><strong>${sanitizeHtml(it.block_name)}</strong>: ${effPeople} pers.${priceLine}${overrideNote}</li>`;
-          })
-          .join("");
-
-        const subject = `${subjectPrefix}Aantal gasten gewijzigd van ${old_people} naar ${new_people}${ref ? ` (${ref})` : ""}`;
-        const html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-            <h2 style="color: #1a365d; border-bottom: 2px solid #1a365d; padding-bottom: 10px;">
-              Aantal gasten gewijzigd, totaal bijgewerkt
-            </h2>
-            <p>Beste ${sanitizeHtml(partner?.name || firstItem.provider_name || "")},</p>
-            <p>
-              Het aantal gasten voor onderstaand project is aangepast van
-              <strong>${old_people}</strong> naar <strong>${new_people}</strong>.
-              De met u afgesproken <strong>prijs per persoon blijft staan</strong>;
-              alleen het totaal beweegt mee. U hoeft hier verder niets voor te doen;
-              wij informeren u ter kennisgeving.
-            </p>
-            <div style="background: #f0f9ff; padding: 20px; border-left: 4px solid #0284c7; border-radius: 8px; margin: 20px 0;">
-              ${dates ? `<p style="margin: 0 0 8px;"><strong>Datum(s):</strong> ${dates}</p>` : ""}
-              <p style="margin: 0 0 8px;"><strong>Onderde(e)l(en):</strong></p>
-              <ul style="margin: 4px 0 0; padding-left: 20px;">${itemRows}</ul>
-              ${noteHtmlPartner}
-            </div>
-            <p>
-              <a href="${partnerPortalUrl}" style="display: inline-block; background: #1a365d; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600;">
-                Bekijk in het partnerportaal
-              </a>
-            </p>
-            <p style="color: #475569; font-size: 14px;">
-              Klopt er iets niet of moet de prijs anders? U kunt op deze e-mail antwoorden.
-            </p>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-            <p style="color: #666; font-size: 13px;">Referentie: ${ref || "-"}</p>
-          </div>
-        `;
+            return {
+              blockName: it.block_name,
+              people: effPeople,
+              unitPrice: unit,
+              priceType: it.price_type,
+              newTotal: unit != null ? unit * (isPerPerson ? effPeople : 1) * (isPerDay ? numberOfDays : 1) : null,
+              overridePeople: it.override_people,
+            };
+          }),
+          note: trimmedNote || null,
+          portalUrl: partnerPortalUrl,
+          subjectPrefix,
+        });
+        const subject = mail.subject;
+        const html = await wrapEmailHtml(mail.html, supabase);
 
         try {
           const messageId = await send("notify-headcount-change-bulk:partner", {
@@ -382,7 +355,7 @@ export const handler = async (req: Request): Promise<Response> => {
         const pricedFor = (q.priced_for_guests as number | null) ?? old_people;
         const newGuests = ar.number_of_guests ?? new_people;
 
-        const { subject, html } = buildLodgingHeadcountMail({
+        const lodgingMail = buildLodgingHeadcountMail({
           partnerName: partner?.name || "",
           accommodationName: q.accommodation_name || "",
           customerLabel: ar.customer_company || ar.customer_name || program?.customer_company || program?.customer_name || "de klant",
@@ -396,6 +369,8 @@ export const handler = async (req: Request): Promise<Response> => {
           note: trimmedNote || null,
           subjectPrefix,
         });
+        const subject = lodgingMail.subject;
+        const html = await wrapEmailHtml(lodgingMail.html, supabase);
 
         try {
           const messageId = await send("notify-headcount-change-bulk:lodging", {

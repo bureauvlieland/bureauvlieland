@@ -13,6 +13,10 @@ import {
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { isValidBilledTo, normalizeBilledTo } from "../_shared/invoiceBilledTo.ts";
 import { parseVatRate, resolveVatRate } from "../_shared/vatRate.ts";
+// Bedragen in taakteksten in Nederlandse notatie (€ 1.234,50).
+const formatEuroNL = (n: number) =>
+  new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number.isFinite(n) ? n : 0);
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -442,8 +446,8 @@ Deno.serve(async (req) => {
     // Commission todo (once per invoice)
     if (commissionPercentage > 0 && totalCommission > 0) {
       await supabase.from("admin_todos").insert({
-        title: `Commissie factureren: ${partner.name} - €${totalCommission.toFixed(2)}`,
-        description: `Partner ${partner.name} heeft factuur ${invoicedNumber} geregistreerd (${dbItems.length} onderdeel${dbItems.length > 1 ? "en" : ""}) voor project ${project.reference_number || requestId}. Commissie van ${commissionPercentage}% moet worden gefactureerd.`,
+        title: `Commissie factureren: ${partner.name} — ${formatEuroNL(totalCommission)}`,
+        description: `Van ${partner.name} is factuur ${invoicedNumber} ontvangen (${dbItems.length} onderdeel${dbItems.length > 1 ? "en" : ""}) voor project ${project.reference_number || requestId}. Factureer de commissie van ${commissionPercentage}% via de Commissie-werklijst.`,
         priority: "normal",
         status: "todo",
         related_request_id: requestId,
@@ -457,8 +461,8 @@ Deno.serve(async (req) => {
     // gast is geen kostenpost van het bureau: niets door te sturen of te betalen.
     if (invoicingMode === "bureau_central" && !customerPaid) {
       await supabase.from("admin_todos").insert({
-        title: `Inkoopfactuur verwerken: ${partner.name} - ${invoicedNumber}`,
-        description: `Partner ${partner.name} heeft inkoopfactuur ${invoicedNumber} (€${totalExcl}) geregistreerd voor project ${project.reference_number || requestId}. Factuur doorsturen naar Snelstart.`,
+        title: `Inkoopfactuur verwerken: ${partner.name} — ${invoicedNumber}`,
+        description: `Van ${partner.name} is inkoopfactuur ${invoicedNumber} (${formatEuroNL(Number(totalExcl))} ex btw) ontvangen voor project ${project.reference_number || requestId}. Stuur de factuur door naar de boekhouding.`,
         priority: "normal",
         status: "todo",
         related_request_id: requestId,

@@ -84,3 +84,37 @@ Deno.test("taak die al langer bekend is en nooit draaide blijft alarm", () => {
   );
   assertEquals(v?.level, "alarm");
 });
+
+import { buildWatchdogAlertMail, buildWatchdogTodo, jobConsequence } from "./logic.ts";
+import { assertStringIncludes } from "https://deno.land/std@0.224.0/assert/mod.ts";
+
+Deno.test("taaktekst: 'Automatische taak faalt' met gevolg, wat te doen en het technische detail eronder", () => {
+  const todo = buildWatchdogTodo({ jobname: "auto-close-past-execution", level: "alarm", reason: "aanroep mislukt (HTTP 500)" });
+  assertEquals(todo.title, "Automatische taak faalt: auto-close-past-execution");
+  const regels = todo.description.split("\n");
+  assertStringIncludes(regels[0], "Wat betekent dit:");
+  assertStringIncludes(regels[0], "uitgevoerd");
+  assertStringIncludes(regels[1], "Wat te doen: Open Email health");
+  assertStringIncludes(regels[2], "HTTP 500");
+});
+
+Deno.test("verzamelmail: gewone taal bovenaan, techniek onderaan, één onderwerp per aantal", () => {
+  const een = buildWatchdogAlertMail([{ jobname: "check-pending-items", level: "alarm", reason: "geen run in 36 uur (verwacht: 0 7 * * *)" }], "https://bureauvlieland.nl/admin/email-health");
+  assertEquals(een.subject, "[ALERT] Automatische taak faalt: check-pending-items");
+  assertStringIncludes(een.html, "Wat betekent dit:");
+  assertStringIncludes(een.html, "herinneringen");
+  assertStringIncludes(een.html, "Wat te doen:");
+  assertStringIncludes(een.html, "Open Email health");
+  // Het technische detail staat ná de instructie.
+  assertEquals(een.html.indexOf("Wat te doen") < een.html.indexOf("0 7 * * *"), true);
+
+  const twee = buildWatchdogAlertMail([
+    { jobname: "a", level: "alarm", reason: "x" },
+    { jobname: "b", level: "alarm", reason: "y" },
+  ], "https://bureauvlieland.nl/admin/email-health");
+  assertEquals(twee.subject, "[ALERT] 2 automatische taken falen");
+});
+
+Deno.test("onbekende taaknaam krijgt een neutrale gevolg-zin die naar Email health verwijst", () => {
+  assertStringIncludes(jobConsequence("iets-nieuws"), "Email health");
+});

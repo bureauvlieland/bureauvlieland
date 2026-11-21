@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { getRecipientEmail, getSubjectPrefix, formatCurrencyNL } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -131,9 +131,9 @@ Deno.serve(async (req) => {
           <tr><td style="padding: 8px 0; color: #666;">Factuurnummer:</td><td style="padding: 8px 0; font-weight: bold;">${invoice.invoice_number}</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Type:</td><td style="padding: 8px 0;">Commissiefactuur</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Factuurdatum:</td><td style="padding: 8px 0;">${formattedDate}</td></tr>
-          <tr><td style="padding: 8px 0; color: #666;">Bedrag excl. BTW:</td><td style="padding: 8px 0; font-weight: bold;">€${Number(invoice.amount_excl_vat).toFixed(2)}</td></tr>
-          <tr><td style="padding: 8px 0; color: #666;">BTW (${invoice.vat_rate}%):</td><td style="padding: 8px 0;">€${Number(invoice.vat_amount).toFixed(2)}</td></tr>
-          <tr><td style="padding: 8px 0; color: #666;">Totaal incl. BTW:</td><td style="padding: 8px 0; font-weight: bold;">€${Number(invoice.amount_incl_vat).toFixed(2)}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Bedrag excl. BTW:</td><td style="padding: 8px 0; font-weight: bold;">${formatCurrencyNL(Number(invoice.amount_excl_vat))}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">BTW (${invoice.vat_rate}%):</td><td style="padding: 8px 0;">${formatCurrencyNL(Number(invoice.vat_amount))}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Totaal incl. BTW:</td><td style="padding: 8px 0; font-weight: bold;">${formatCurrencyNL(Number(invoice.amount_incl_vat))}</td></tr>
         </table>
 
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />

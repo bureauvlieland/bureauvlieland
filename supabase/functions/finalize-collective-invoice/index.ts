@@ -6,6 +6,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
 import { collectiveInvoiceTotals } from "../_shared/collectiveInvoiceTotals.ts";
+import { getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { logEmail } from "../_shared/email-logger.ts";
+import { buildSummaryHtml, collectiveInvoiceSubject } from "./summary.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -264,12 +267,27 @@ Deno.serve(async (req) => {
           ? (typeof settings.value === "string" ? settings.value.replace(/"/g, "") : String(settings.value))
           : "bureauvlieland@boekhouding.nl";
 
-        const html = buildSummaryHtml(body, invoice);
-        const subject = `Inkoopfactuur ${body.invoice.invoice_number} — Verzamelfactuur (€ ${body.invoice.total_incl_vat.toFixed(2)})`;
+        // Dossiernummers voor de projectkolom ("gekoppeld aan BV-…").
+        const requestIds = Array.from(new Set(body.bookings.map((b) => b.request_id).filter(Boolean))) as string[];
+        const referenceByRequestId: Record<string, string> = {};
+        if (requestIds.length > 0) {
+          const { data: refs } = await adminClient
+            .from("program_requests")
+            .select("id, reference_number")
+            .in("id", requestIds);
+          for (const r of (refs ?? []) as Array<{ id: string; reference_number: string | null }>) {
+            if (r.reference_number) referenceByRequestId[r.id] = r.reference_number;
+          }
+        }
+
+        const html = buildSummaryHtml(body.invoice, body.bookings, Number(invoice.amount_incl_vat), referenceByRequestId);
+        // Testmodus en [TEST]-prefix zoals bij de losse variant (forward-purchase-invoice).
+        const subject = `${getSubjectPrefix(body.origin)}${collectiveInvoiceSubject(body.invoice.invoice_number, body.invoice.total_incl_vat)}`;
+        const recipient = getRecipientEmail(snelstartEmail, body.origin);
 
         const emailMessage: Record<string, unknown> = {
           From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland Admin" },
-          To: [{ Email: snelstartEmail, Name: "Boekhouding" }],
+          To: [{ Email: recipient, Name: "Boekhouding" }],
           Subject: subject,
           HTMLPart: html,
           TrackOpens: "enabled",
@@ -302,6 +320,7 @@ Deno.serve(async (req) => {
         });
         try { mailjetMessageId = extractMessageIds(await mjResp.clone().text())[0] ?? null; } catch { /* body already consumed or non-JSON */ }
 
+        const mjError = mjResp.ok ? undefined : (await mjResp.text()).slice(0, 1000);
         if (mjResp.ok) {
           forwarded = true;
           await adminClient
@@ -312,26 +331,29 @@ Deno.serve(async (req) => {
               forwarded_by: userData.user.id,
             })
             .eq("id", invoice.id);
-
-          // Log email
-          await adminClient.from("email_log").insert({
-            email_type: "purchase_invoice_forward",
-            recipient_email: snelstartEmail,
-            recipient_name: "Boekhouding",
-            subject,
-            status: "sent",
-            sent_by: userData.user.id,
-            related_partner_id: body.partner_id,
-            metadata: {
-              template_name: "collective_invoice_forward",
-              actor: "admin → boekhouding",
-              invoiceId: invoice.id,
-              is_collective: true,
-            },
-          });
         } else {
-          console.error("Mailjet failed:", await mjResp.text());
+          console.error("Mailjet failed:", mjError);
         }
+
+        // Via de centrale logger (ook bij falen), zoals de losse variant.
+        await logEmail({
+          email_type: "purchase_invoice_forward",
+          recipient_email: recipient,
+          recipient_name: "Boekhouding",
+          subject,
+          status: mjResp.ok ? "sent" : "failed",
+          error_message: mjError,
+          mailjet_message_id: mailjetMessageId ?? undefined,
+          sent_by: userData.user.id,
+          related_partner_id: body.partner_id,
+          html_body: html,
+          metadata: {
+            template_name: "collective_invoice_forward",
+            actor: "admin → boekhouding",
+            invoiceId: invoice.id,
+            is_collective: true,
+          },
+        });
       } catch (mailErr) {
         console.error("Forward error:", mailErr);
       }
@@ -343,49 +365,6 @@ Deno.serve(async (req) => {
     return j({ error: err instanceof Error ? err.message : "Unknown error" }, 500);
   }
 });
-
-function buildSummaryHtml(body: FinalizeBody, invoice: any): string {
-  const rows = body.bookings
-    .map((b) => {
-      const proj = b.item_id ? "✓ gekoppeld" : b.match_status === "internal" ? "intern" : "—";
-      return `<tr>
-        <td style="padding:4px 8px;border-bottom:1px solid #eee">${b.resnr}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #eee">${escapeHtml(b.customer_name)}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #eee">${(b.departure_dates || []).join(" / ")}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">€ ${b.amount_incl_vat.toFixed(2)}</td>
-        <td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666">${proj}</td>
-      </tr>`;
-    })
-    .join("");
-
-  return `<div style="font-family:Arial,sans-serif;max-width:720px">
-    <h2>Verzamelfactuur ${body.invoice.invoice_number}</h2>
-    <p><strong>Datum:</strong> ${body.invoice.invoice_date}<br/>
-       <strong>Totaal incl. BTW:</strong> € ${body.invoice.total_incl_vat.toFixed(2)}<br/>
-       ${Number(invoice.amount_incl_vat) > body.invoice.total_incl_vat + 0.005
-         ? `<strong>Toeristenbelasting (0% btw):</strong> € ${(Number(invoice.amount_incl_vat) - body.invoice.total_incl_vat).toFixed(2)}<br/>
-       <strong>Factuurbedrag:</strong> € ${Number(invoice.amount_incl_vat).toFixed(2)}<br/>`
-         : ""}
-       <strong>Commissie BV (verrekend):</strong> € ${body.invoice.total_supplier_commission.toFixed(2)}</p>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
-      <thead><tr style="background:#f7f7f7">
-        <th style="padding:6px 8px;text-align:left">Resnr</th>
-        <th style="padding:6px 8px;text-align:left">Klant</th>
-        <th style="padding:6px 8px;text-align:left">Datum(s)</th>
-        <th style="padding:6px 8px;text-align:right">Bedrag</th>
-        <th style="padding:6px 8px;text-align:left">Project</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <p style="color:#999;font-size:11px;margin-top:16px">Automatisch verstuurd vanuit Bureau Vlieland administratie.</p>
-  </div>`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  }[c]!));
-}
 
 function j(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

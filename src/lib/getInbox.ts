@@ -23,11 +23,19 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { listProjectsForWerkbank } from "./getProject";
-import { assembleInbox, type InboxItem, type OpenConversationSignal, type RawInboxTodo } from "./inboxAssemble";
+import {
+  assembleInbox,
+  collectInboundEvents,
+  type InboundEvent,
+  type InboxItem,
+  type OpenConversationSignal,
+  type RawInboxTodo,
+} from "./inboxAssemble";
 import { fetchOpenConversations } from "./openConversations";
-import type { CooldownLevel, TodoCluster } from "./projectActivity";
+import { INBOUND_AUTO_TYPES, type CooldownLevel, type TodoCluster } from "./projectActivity";
 
 export type {
+  InboundEvent,
   InboxItem,
   InboxItemKind,
   InboxReason,
@@ -35,6 +43,10 @@ export type {
   OpenConversationSignal,
 } from "./inboxAssemble";
 export {
+  collectInboundEvents,
+  formatInboundAge,
+  INBOUND_SECTION_ID,
+  INBOUND_VISIBLE_MAX,
   isLooseRowId,
   isSystemTodo,
   looseRowId,
@@ -121,6 +133,28 @@ export async function loadInbox(opts: { includeSnoozed?: boolean } = {}): Promis
     today,
     openConversations: openSignals,
   });
+}
+
+/**
+ * Binnengekomen gebeurtenissen (cluster inbound), nieuwste eerst, voor de
+ * sectie bovenaan de Werkbank. Zelfde bron en snooze-filter als loadInbox;
+ * de opbouw staat in collectInboundEvents (zuiver, getest).
+ */
+export async function loadInboundEvents(): Promise<InboundEvent[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ data: todos, error }, projects] = await Promise.all([
+    supabase
+      .from("admin_todos")
+      .select("id, title, priority, due_date, auto_type, related_request_id, created_at")
+      .in("status", ["todo", "in_progress"])
+      .in("auto_type", [...INBOUND_AUTO_TYPES])
+      .or(`snoozed_until.is.null,snoozed_until.lte.${today}`)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    listProjectsForWerkbank({ includeSnoozed: true }),
+  ]);
+  if (error) throw error;
+  return collectInboundEvents((todos ?? []) as RawInboxTodo[], projects);
 }
 
 export type { CooldownLevel, TodoCluster };

@@ -34,13 +34,15 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   program_request_partner: { label: "Aanvraag naar partner", category: "Aanvraag" },
   catering_request_bureau: { label: "Cateringaanvraag (melding bureau)", category: "Aanvraag" },
   catering_request_customer: { label: "Cateringaanvraag bevestigd aan klant", category: "Aanvraag" },
-  quote_request_bureau: { label: "Offerteaanvraag (melding bureau)", category: "Aanvraag" },
-  quote_request_customer: { label: "Offerteaanvraag bevestigd aan klant", category: "Aanvraag" },
+  program_draft_link: { label: "Link naar bewaard concept-programma", category: "Aanvraag" },
 
   // Offerte en akkoord
   quote_offer_customer: { label: "Offerte verstuurd", category: "Offerte" },
   quote_accepted_customer: { label: "Akkoord ontvangen", category: "Offerte" },
   customer_terms_request: { label: "Ondertekenverzoek", category: "Offerte" },
+  customer_terms_reminder_t14: { label: "Herinnering ondertekenen, 14 dagen vooraf", category: "Offerte" },
+  customer_terms_reminder_t7: { label: "Herinnering ondertekenen, 7 dagen vooraf", category: "Offerte" },
+  customer_terms_reminder_t3: { label: "Herinnering ondertekenen, 3 dagen vooraf", category: "Offerte" },
   booking_confirmed_customer: { label: "Akkoord vastgelegd aan klant", category: "Offerte" },
   booking_confirmed_partner: { label: "Definitieve boeking aan partner", category: "Offerte" },
   reminder_quote_pending: { label: "Herinnering openstaande offerte", category: "Offerte" },
@@ -58,16 +60,19 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   item_changes_customer: { label: "Programma bijgewerkt (klant)", category: "Programma" },
   item_changes_partner: { label: "Wijziging onderdeel (partner)", category: "Programma" },
   date_change_customer: { label: "Datumwijziging bevestigd (klant)", category: "Programma" },
-  date_change_partner: { label: "Datumwijziging (partner)", category: "Programma" },
-  customer_date_change_bureau: { label: "Datumwijziging klant (melding bureau)", category: "Programma" },
-  partner_briefing_t3: { label: "Briefing partner, 3 dagen vooraf", category: "Programma" },
+  partner_headsup_t3: { label: "Heads-up partner, 3 dagen vooraf", category: "Programma" },
   partner_activity_unconfirmed_t7: { label: "Herinnering onbevestigd onderdeel, 7 dagen", category: "Programma" },
+  reminder_activity_pending: { label: "Herinnering openstaand onderdeel (partner)", category: "Programma" },
+  reminder_headcount_pending: { label: "Herinnering aantalwijziging (partner)", category: "Programma" },
   arrival_reminder: { label: "Aankomstmail", category: "Programma" },
   guest_details_reminder: { label: "Herinnering gastgegevens", category: "Programma" },
   customer_aftersales_review: { label: "Beoordelingsverzoek", category: "Klant" },
+  customer_review_google_reminder: { label: "Herinnering Google-beoordeling", category: "Klant" },
+  customer_link_resend: { label: "Klantlink opnieuw verstuurd", category: "Klant" },
+  ticket_to_customer: { label: "Tickets naar klant", category: "Klant" },
+  reference_case_approval: { label: "Goedkeuring referentie gevraagd", category: "Klant" },
 
   // Logies
-  accommodation_request_bureau: { label: "Logiesaanvraag (melding bureau)", category: "Logies" },
   accommodation_request_customer: { label: "Logiesaanvraag bevestigd aan klant", category: "Logies" },
   accommodation_quote_request_partner: { label: "Logiesaanvraag naar partner", category: "Logies" },
   accommodation_quote_notification: { label: "Logiesofferte binnen (klant)", category: "Logies" },
@@ -75,7 +80,13 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   accommodation_selected_customer: { label: "Logies geboekt (klant)", category: "Logies" },
   accommodation_selected_partner: { label: "Logiesofferte geaccepteerd (partner)", category: "Logies" },
   accommodation_rejected_partner: { label: "Logiesofferte niet gekozen (partner)", category: "Logies" },
-  accommodation_people_change: { label: "Aantal gasten gewijzigd (logies)", category: "Logies" },
+  accommodation_headcount_confirmed_customer: { label: "Nieuw aantal gasten bevestigd (klant)", category: "Logies" },
+  accommodation_headcount_confirmed_partner: { label: "Nieuw aantal gasten bevestigd (partner)", category: "Logies" },
+  accommodation_headcount_rejected_partner: { label: "Nieuw aantal gasten afgewezen (partner)", category: "Logies" },
+  lodging_quote_submitted_bureau: { label: "Logiesofferte ingediend (melding bureau)", category: "Logies" },
+  lodging_quote_revised_bureau: { label: "Logiesofferte herzien (melding bureau)", category: "Logies" },
+  lodging_quote_declined_bureau: { label: "Logiesaanvraag afgewezen door partner (melding bureau)", category: "Logies" },
+  lodging_headcount_confirmed_bureau: { label: "Nieuw aantal gasten bevestigd (melding bureau)", category: "Logies" },
   customer_accommodation_message: { label: "Bericht van klant aan logiespartner", category: "Logies" },
   partner_customer_message: { label: "Bericht van logiespartner aan klant", category: "Logies" },
 
@@ -83,8 +94,7 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   cancellation_customer: { label: "Annulering bevestigd aan klant", category: "Annulering" },
   cancellation_partner: { label: "Annulering naar partner", category: "Annulering" },
   cancellation_accommodation_partner: { label: "Annulering logies naar partner", category: "Annulering" },
-  partner_item_cancellation: { label: "Onderdeel vervallen (partner)", category: "Annulering" },
-  internal_customer_cancellation: { label: "Klant annuleerde (melding bureau)", category: "Annulering" },
+  item_cancelled_partner: { label: "Onderdeel geannuleerd door klant (partner)", category: "Annulering" },
 
   // Facturatie
   bureau_invoice_to_customer: { label: "Factuur naar klant", category: "Facturatie" },
@@ -93,19 +103,25 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   partner_invoice_registered_bureau: { label: "Inkoopfactuur geregistreerd", category: "Facturatie" },
   partner_invoice_reminder_t1: { label: "Verzoek inkoopfactuur", category: "Facturatie" },
   partner_invoice_reminder_t7: { label: "Herinnering inkoopfactuur, 7 dagen", category: "Facturatie" },
+  partner_invoice_reminder_t14: { label: "Herinnering inkoopfactuur, 14 dagen", category: "Facturatie" },
   partner_missing_pdf_reminder: { label: "Herinnering ontbrekende factuur-pdf", category: "Facturatie" },
-  proforma_invoice: { label: "Proformafactuur", category: "Facturatie" },
+  commission_invoice_sent: { label: "Commissiefactuur naar partner", category: "Facturatie" },
+  commission_invoice_forward: { label: "Commissiefactuur naar boekhouding", category: "Facturatie" },
 
   // Partnerbeheer
   partner_invitation: { label: "Uitnodiging partnerportaal", category: "Partner" },
-  partner_intro_portal: { label: "Introductie partnerportaal", category: "Partner" },
   partner_password_reset: { label: "Wachtwoord partnerportaal", category: "Partner" },
+  partner_mailing: { label: "Mailing aan partners", category: "Partner" },
 
   // Chat
   chat_notification: { label: "Chatmelding aan bureau", category: "Chat" },
   chat_reply_notification: { label: "Chatantwoord aan bezoeker", category: "Chat" },
 
   // Handmatig vanuit het dossier
+  bureau_daily_digest: { label: "Dagoverzicht bureau", category: "Bureau" },
+  partner_item_response_bureau: { label: "Partnerreactie op onderdeel (melding bureau)", category: "Bureau" },
+  quote_accepted_bureau: { label: "Klant akkoord op voorstel (melding bureau)", category: "Bureau" },
+  terms_signed_bureau: { label: "Klant heeft getekend (melding bureau)", category: "Bureau" },
   admin_project_email: { label: "E-mail vanuit dossier", category: "Bureau" },
   inbound_reply_to_customer: { label: "Antwoord aan klant", category: "Bureau" },
 
@@ -117,9 +133,25 @@ export const EMAIL_TYPES: Record<string, EmailTypeInfo> = {
   wedding_referral_claim_bureau: { label: "Klant al bekend bij partner (melding bureau)", category: "Doorverwijzing" },
 
   // Systeem
-  cron_watchdog_alert: { label: "Systeemwaarschuwing", category: "Systeem" },
+  cron_watchdog_alert: { label: "Alarm geplande taken", category: "Systeem" },
+  critical_selftest_alert: { label: "Alarm kritieke zelftest", category: "Systeem" },
+  email_webhook_heartbeat_alert: { label: "Alarm e-mailterugkoppeling Mailjet", category: "Systeem" },
+  auto_close_monitor_alert: { label: "Alarm automatisch afsluiten", category: "Systeem" },
+  email_chain_probe: { label: "Testmail e-mailketen", category: "Systeem" },
 
-  // Oudere sleutels die nog in de database kunnen staan
+  // Oudere sleutels die nog in de database kunnen staan (geen code logt ze meer)
+  date_change_partner: { label: "Datumwijziging (partner)", category: "Programma" },
+  customer_date_change_bureau: { label: "Datumwijziging klant (melding bureau)", category: "Programma" },
+  partner_briefing_t3: { label: "Briefing partner, 3 dagen vooraf", category: "Programma" },
+  quote_request_bureau: { label: "Offerteaanvraag (melding bureau)", category: "Aanvraag" },
+  quote_request_customer: { label: "Offerteaanvraag bevestigd aan klant", category: "Aanvraag" },
+  partner_intro_portal: { label: "Introductie partnerportaal", category: "Partner" },
+  partner_item_cancellation: { label: "Onderdeel vervallen (partner)", category: "Annulering" },
+  reminder_item_pending: { label: "Herinnering openstaand onderdeel", category: "Programma" },
+  accommodation_request_bureau: { label: "Logiesaanvraag (melding bureau)", category: "Logies" },
+  accommodation_people_change: { label: "Aantal gasten gewijzigd (logies)", category: "Logies" },
+  internal_customer_cancellation: { label: "Klant annuleerde (melding bureau)", category: "Annulering" },
+  proforma_invoice: { label: "Proformafactuur", category: "Facturatie" },
   partner_quote_request: { label: "Offerteaanvraag partner", category: "Partner" },
   partner_reminder: { label: "Herinnering partner", category: "Partner" },
   partner_notification: { label: "Melding partner", category: "Partner" },

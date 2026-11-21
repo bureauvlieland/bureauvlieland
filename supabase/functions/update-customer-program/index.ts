@@ -15,9 +15,11 @@ import {
   getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { enqueueChangeNotifications, type ChangeLine, type PendingChangeInsert } from "../_shared/changeDigest.ts";
 import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
 import { markReadyForInvoiceAtSigning } from "../_shared/signingCompletion.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { recordBureauEvent, resolveBureauAddress } from "../_shared/bureau-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -524,8 +526,9 @@ Deno.serve(async (req) => {
         const allInvolved = Array.from(providerItems.values()).map((p) => p.name);
         let partnersNotified = false;
         let notifyIssues: string[] = [];
+        // Gekozen logiesoffertes; ook gebruikt voor has_accommodation in de klantmail.
+        let selectedQuoteIds: string[] = [];
         try {
-          let selectedQuoteIds: string[] = [];
           if (program.linked_accommodation_id) {
             const { data: selectedQuotes } = await supabase
               .from("accommodation_quotes")
@@ -581,6 +584,9 @@ Deno.serve(async (req) => {
           customer_name: sanitizeHtml(program.customer_name),
           new_dates: newDates,
           providers_note: "betrokken aanbieder(s)",
+          // Template toont "en logiespartner(s)" alleen als er een gekozen logiesofferte is.
+          has_accommodation: selectedQuoteIds.length > 0 ? "true" : "",
+          reference_number: sanitizeHtml(program.reference_number || ""),
           portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
         });
 
@@ -1117,11 +1123,14 @@ Deno.serve(async (req) => {
       // Bureau notification: klant heeft een tegen-tijd voorgesteld.
       // Geen aparte template — korte interne mail naar het bureau-adres met deeplink.
       try {
+        const bureauAddress = await resolveBureauAddress(supabase);
         const bureauUrl = `https://bureauvlieland.nl/admin/aanvragen/${program.id}`;
-        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
+        const customerLabelPlain = program.customer_company || program.customer_name;
+        const customerLabel = sanitizeHtml(customerLabelPlain);
         const refLabel = program.reference_number ? ` (${sanitizeHtml(program.reference_number)})` : "";
+        // Bureau-melding: geen aanhef, zakelijk, met één regel "Aan zet".
+        const bureauSubject = `${subjectPrefix}Klant stelt andere tijd voor — ${customerLabelPlain} — ${item.block_name}${program.reference_number ? ` (${program.reference_number})` : ""}`;
         const bureauHtml = `
-          <p>Hoi team,</p>
           <p>De klant <strong>${customerLabel}</strong>${refLabel} heeft een ander tijdstip voorgesteld voor:</p>
           <div style="background:#faf5ff;border:1px solid #d6bcfa;border-radius:8px;padding:14px;margin:14px 0;">
             <p style="margin:0;"><strong>${sanitizeHtml(item.block_name)}</strong> &mdash; partner: ${sanitizeHtml(item.provider_name)}</p>
@@ -1129,20 +1138,21 @@ Deno.serve(async (req) => {
             <p style="margin:6px 0 0;color:#7c3aed;font-weight:600;">Klant wil liever: ${sanitizeHtml(counterTime)}</p>
             ${counterNote ? `<p style="margin:6px 0 0;font-style:italic;">"${sanitizeHtml(counterNote)}"</p>` : ""}
           </div>
-          <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open werkbank</a></p>
+          <p><strong>Aan zet:</strong> Bureau Vlieland — beoordeel het voorstel; de partner is tegelijk gevraagd te reageren.</p>
+          <p><a href="${bureauUrl}" style="background:#1a365d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Open het project</a></p>
         `;
         emailMessages.push({
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
-          Subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
+          To: [{ Email: getRecipientEmail(bureauAddress, origin), Name: "Bureau Vlieland" }],
+          Subject: bureauSubject,
           HTMLPart: bureauHtml,
         });
         pendingEmailLogs.push({
           messageIdx: emailMessages.length - 1,
           logPayload: {
             email_type: "customer_counter_proposal_bureau",
-            subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
-            recipient_email: "hallo@bureauvlieland.nl",
+            subject: bureauSubject,
+            recipient_email: bureauAddress,
             recipient_name: "Bureau Vlieland",
             related_request_id: program.id,
             related_item_id: itemId,
@@ -1377,6 +1387,20 @@ Deno.serve(async (req) => {
         console.log(`Created invoicing_ready todo for request ${program.id} (snoozed_until=${snoozeUntil ?? "n/a"})`);
       }
 
+      // Melding aan het bureau: klant heeft getekend (taak "Binnengekomen" + mail).
+      await recordBureauEvent(supabase, {
+        kind: "customer_terms_signed",
+        entityId: program.id,
+        request: {
+          id: program.id,
+          reference_number: program.reference_number,
+          customer_name: program.customer_name,
+          customer_company: program.customer_company ?? null,
+        },
+        reservationNames: signedUnderReservation ? reservationNames : null,
+        origin,
+      });
+
       // Get billing details for partner notification
       const { data: updatedProgram } = await supabase
         .from("program_requests")
@@ -1433,6 +1457,7 @@ Deno.serve(async (req) => {
           items_list: itemsList,
           selected_dates: selectedDates,
           number_of_people: String(program.number_of_people),
+          reference_number: sanitizeHtml(program.reference_number || ""),
           portal_url: "https://bureauvlieland.nl/partner",
         });
 
@@ -1452,9 +1477,7 @@ Deno.serve(async (req) => {
               </div>
 
               <p style="background:#f8f9fa; padding:12px 16px; border-left:3px solid #1e3a5f; border-radius:4px;">
-                <strong>Facturatie:</strong> Bureau Vlieland factureert centraal aan de klant — stuur jouw factuur dus niet rechtstreeks naar de klant.
-                Je factureert ná uitvoering aan Bureau Vlieland: upload de factuur in je partnerportaal of mail de PDF naar
-                <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>. Vermeld het referentienummer voor snelle verwerking.
+                <strong>Facturatie:</strong> Mail na uitvoering de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie ${sanitizeHtml(program.reference_number || "")} erop. Wij factureren centraal aan de klant.
               </p>
 
               <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -1673,8 +1696,11 @@ Deno.serve(async (req) => {
               .join(", ");
             
             const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
-            const timeInfo = change.preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${change.preferredTime}</p>` : "";
-            const notesInfo = change.notes ? `<p><strong>Opmerking:</strong> ${sanitizeHtml(change.notes)}</p>` : "";
+            // Platte waarden: de template zet zelf de labels "Voorkeurstijd:" en "Opmerking:".
+            const preferredTime = change.preferredTime ? sanitizeHtml(change.preferredTime) : "";
+            const itemNotes = change.notes ? sanitizeHtml(change.notes) : "";
+            const timeInfo = preferredTime ? `<p><strong>Voorkeurstijd:</strong> ${preferredTime}</p>` : "";
+            const notesInfo = itemNotes ? `<p><strong>Opmerking:</strong> ${itemNotes}</p>` : "";
 
             const template = await getRenderedTemplate(TemplateIds.ITEM_ADDED_PARTNER, {
               partner_name: sanitizeHtml(block.provider.name),
@@ -1682,8 +1708,9 @@ Deno.serve(async (req) => {
               block_name: sanitizeHtml(block.name),
               selected_dates: selectedDates,
               number_of_people: String(program.number_of_people),
-              preferred_time: timeInfo,
-              notes: notesInfo,
+              preferred_time: preferredTime,
+              notes: itemNotes,
+              reference_number: sanitizeHtml(program.reference_number || ""),
               customer_full_name: sanitizeHtml(program.customer_name),
               customer_company: sanitizeHtml(program.customer_company || "-"),
               customer_email: sanitizeHtml(program.customer_email),
@@ -1693,9 +1720,9 @@ Deno.serve(async (req) => {
             const emailSubject = template?.subject || `Nieuwe activiteit toegevoegd - ${customerLabel}`;
             const emailBody = template?.body || `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                  <h2>Nieuwe activiteit toegevoegd</h2>
-                  <p>Beste ${sanitizeHtml(block.provider.name)},</p>
-                  <p>De klant heeft een nieuwe activiteit aan hun programma toegevoegd:</p>
+                  <h2>Nieuw onderdeel toegevoegd</h2>
+                  <p>Hoi ${sanitizeHtml(block.provider.name)},</p>
+                  <p>De klant <strong>${customerLabel}</strong> heeft via Bureau Vlieland een extra onderdeel aan het programma toegevoegd. We willen je vragen de aanvraag te beoordelen via het partnerportaal en het daar te bevestigen of af te wijzen.</p>
                   
                   <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
                     <h3 style="margin-top: 0;">${sanitizeHtml(block.name)}</h3>
@@ -1705,18 +1732,8 @@ Deno.serve(async (req) => {
                     ${notesInfo}
                   </div>
                   
-                  <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-                  
-                  <h3>Klantgegevens</h3>
-                  <table style="width: 100%;">
-                    <tr><td style="padding: 4px 0;"><strong>Naam:</strong></td><td>${sanitizeHtml(program.customer_name)}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(program.customer_company || "-")}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(program.customer_email)}</td></tr>
-                    <tr><td style="padding: 4px 0;"><strong>Telefoon:</strong></td><td>${sanitizeHtml(program.customer_phone)}</td></tr>
-                  </table>
-                  
                   <p style="margin-top: 24px; color: #666;">
-                    Reageer via de Partner Portal of neem direct contact op met de klant.
+                    Vragen of een alternatief voorstel? Reageer via het partnerportaal of antwoord op deze mail — Bureau Vlieland staat tussen jou en de klant in.
                   </p>
                   
                   <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
@@ -1839,169 +1856,82 @@ Deno.serve(async (req) => {
         return acc;
       }, {} as Record<string, { providerName: string; email: string; changes: PendingChange[] }>);
 
-      // Send emails to affected providers
+      // De "programma bijgewerkt"-mails aan partners en klant gaan niet meer
+      // direct, maar in de dagelijkse bundel (pending_change_notifications →
+      // send-change-digest, 17:00). Zie docs/plan-notificaties.md fase 3.
+      // Nieuwe onderdelen (item_added_partner) en annuleringen hierboven
+      // blijven direct gaan.
       const formatPreviousResponse = (prev: NonNullable<PendingChange["previousResponse"]>): string | null => {
         const parts: string[] = [];
-        if (prev.time) parts.push(sanitizeHtml(String(prev.time).slice(0, 5)));
+        if (prev.time) parts.push(String(prev.time).slice(0, 5));
         if (prev.price != null) parts.push(`€ ${Number(prev.price).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         return parts.length > 0 ? parts.join(", ") : null;
       };
+      const toChangeLine = (change: PendingChange, forPartner: boolean): ChangeLine => {
+        let note: string | null = null;
+        if (forPartner && change.previousResponse) {
+          const prev = formatPreviousResponse(change.previousResponse);
+          note = `${prev ? `Je eerdere voorstel (${prev}) vervalt. ` : "Je eerdere reactie vervalt. "}Graag opnieuw reageren in het partnerportaal.`;
+        }
+        return {
+          item: change.itemName,
+          label: changeTypeLabels[change.type],
+          from: change.oldValue ?? null,
+          to: change.newValue ?? null,
+          note,
+        };
+      };
+      const selectedDatesLabel = (program.selected_dates as string[])
+        .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
+        .join(", ");
+      const customerLabel = program.customer_company || program.customer_name;
+      const providerIdByItem = new Map<string, string | null>(items.map((i) => [i.id, i.provider_id ?? null]));
+      const referenceNumber: string | null = program.reference_number || null;
+      const queueRows: PendingChangeInsert[] = [];
+
       for (const provider of Object.values(changesByProvider)) {
-        const changesHtml = provider.changes
-          .map((change) => {
-            let detail = `<strong>${sanitizeHtml(change.itemName)}</strong>: ${changeTypeLabels[change.type]}`;
-            if (change.oldValue && change.newValue) {
-              detail += ` (${sanitizeHtml(change.oldValue)} → ${sanitizeHtml(change.newValue)})`;
-            }
-            if (change.previousResponse) {
-              const prev = formatPreviousResponse(change.previousResponse);
-              detail += `<br><span style="color: #92400e;">${prev ? `Uw eerdere voorstel (${prev}) vervalt. ` : "Uw eerdere reactie vervalt. "}Graag opnieuw reageren in het partnerportaal.</span>`;
-            }
-            return `<li>${detail}</li>`;
-          })
-          .join("");
-
-        const selectedDates = (program.selected_dates as string[])
-          .map((d: string) => new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }))
-          .join(", ");
-
-        const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
-
-        const template = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
-          partner_name: sanitizeHtml(provider.providerName),
-          customer_name: customerLabel,
-          changes_list: changesHtml,
-          customer_full_name: sanitizeHtml(program.customer_name),
-          customer_company: sanitizeHtml(program.customer_company || "-"),
-          customer_email: sanitizeHtml(program.customer_email),
-          customer_phone: sanitizeHtml(program.customer_phone),
-          selected_dates: selectedDates,
-          number_of_people: String(program.number_of_people),
-        });
-
-        const emailSubject = template?.subject || `Wijziging aanvraag - ${program.customer_company || program.customer_name} - ${selectedDates}`;
-        const emailBody = template?.body || `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Wijziging in programma-aanvraag</h2>
-              <p>Beste ${sanitizeHtml(provider.providerName)},</p>
-              <p>De klant heeft wijzigingen doorgevoerd voor de aanvraag:</p>
-              
-              <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-                <h3 style="margin-top: 0;">Wijzigingen:</h3>
-                <ul>${changesHtml}</ul>
-              </div>
-              
-              <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
-              
-              <h3>Klantgegevens</h3>
-              <table style="width: 100%;">
-                <tr><td style="padding: 4px 0;"><strong>Naam:</strong></td><td>${sanitizeHtml(program.customer_name)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Bedrijf:</strong></td><td>${sanitizeHtml(program.customer_company || "-")}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Email:</strong></td><td>${sanitizeHtml(program.customer_email)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Telefoon:</strong></td><td>${sanitizeHtml(program.customer_phone)}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Datum:</strong></td><td>${selectedDates}</td></tr>
-                <tr><td style="padding: 4px 0;"><strong>Personen:</strong></td><td>${program.number_of_people}</td></tr>
-              </table>
-              
-              <p style="margin-top: 24px; color: #666;">
-                Reageer via de Partner Portal of neem direct contact op met de klant.
-              </p>
-              
-              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-            </div>
-        `;
-
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-          To: [{ Email: getRecipientEmail(provider.email, origin), Name: provider.providerName }],
-          Subject: `${subjectPrefix}${emailSubject}`,
-          HTMLPart: emailBody,
-        });
-        pendingEmailLogs.push({
-          messageIdx: emailMessages.length - 1,
-          logPayload: {
-            email_type: "item_changes_partner",
-            subject: `${subjectPrefix}${emailSubject}`,
-            recipient_email: getRecipientEmail(provider.email, origin),
+        const partnerId =
+          provider.changes.map((c) => providerIdByItem.get(c.itemId)).find((id) => id && id !== "bureau") ?? null;
+        queueRows.push({
+          request_id: program.id,
+          recipient_kind: "partner",
+          recipient_email: getRecipientEmail(provider.email, origin),
+          partner_id: partnerId,
+          payload: {
+            reference_number: referenceNumber,
             recipient_name: provider.providerName,
-            related_request_id: program.id,
-            sent_by: "update-customer-program",
-            metadata: {
-              template_name: TemplateIds.ITEM_CHANGES_PARTNER,
-              actor: "klant → partner (programma-wijzigingen)",
-              change_count: provider.changes.length,
-            },
+            customer_label: customerLabel,
+            changes: provider.changes.map((c) => toChangeLine(c, true)),
+            note: null,
+            portal_url: `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(referenceNumber || "")}`,
+            actor: "klant",
+            subject_prefix: subjectPrefix,
+            dates: selectedDatesLabel,
+            number_of_people: program.number_of_people,
           },
         });
       }
 
-      // Send customer confirmation email for item changes
-      const customerChangesHtml = changes
-        .map((change) => {
-          let detail = `<strong>${sanitizeHtml(change.itemName)}</strong>: ${changeTypeLabels[change.type]}`;
-          if (change.oldValue && change.newValue) {
-            detail += ` (${sanitizeHtml(change.oldValue)} → ${sanitizeHtml(change.newValue)})`;
-          }
-          return `<li>${detail}</li>`;
-        })
-        .join("");
-
-      const itemChangesCustomerTemplate = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_CUSTOMER, {
-        customer_name: sanitizeHtml(program.customer_name),
-        changes_list: customerChangesHtml,
-        changes_summary: `<ul>${customerChangesHtml}</ul>`,
-        reference_number: sanitizeHtml(program.reference_number || ""),
-        portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
-      });
-
-
-      const itemChangesCustomerSubject = itemChangesCustomerTemplate?.subject || "Wijzigingen in je programma bevestigd";
-      const itemChangesCustomerBody = itemChangesCustomerTemplate?.body || `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Wijzigingen bevestigd</h2>
-            <p>Beste ${sanitizeHtml(program.customer_name)},</p>
-            <p>Je wijzigingen zijn doorgevoerd en de betreffende aanbieders zijn op de hoogte gesteld:</p>
-            
-            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-              <ul>${customerChangesHtml}</ul>
-            </div>
-            
-            <p>Je ontvangt een email zodra een aanbieder reageert op de wijziging.</p>
-            
-            <p>
-              <a href="https://bureauvlieland.nl/mijn-programma/${token}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
-                Bekijk je programma
-              </a>
-            </p>
-            
-            <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-          </div>
-      `;
-
-      emailMessages.push({
-        From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-        ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        To: [{ Email: program.customer_email, Name: program.customer_name }],
-        Subject: `${subjectPrefix}${itemChangesCustomerSubject}`,
-        HTMLPart: itemChangesCustomerBody,
-      });
-      pendingEmailLogs.push({
-        messageIdx: emailMessages.length - 1,
-        logPayload: {
-          email_type: "item_changes_customer",
-          subject: `${subjectPrefix}${itemChangesCustomerSubject}`,
-          recipient_email: program.customer_email,
+      // Bevestiging aan de klant: zelfde bundel, met de regel dat de
+      // aanbieders zijn geïnformeerd (actor "klant").
+      queueRows.push({
+        request_id: program.id,
+        recipient_kind: "customer",
+        recipient_email: program.customer_email,
+        partner_id: null,
+        payload: {
+          reference_number: referenceNumber,
           recipient_name: program.customer_name,
-          related_request_id: program.id,
-          sent_by: "update-customer-program",
-          metadata: {
-            template_name: TemplateIds.ITEM_CHANGES_CUSTOMER,
-            actor: "system → klant (wijzigingen bevestigd)",
-            change_count: changes.length,
-          },
+          customer_label: customerLabel,
+          changes: changes.map((c) => toChangeLine(c, false)),
+          note: null,
+          portal_url: `https://bureauvlieland.nl/mijn-programma/${token}`,
+          actor: "klant",
+          subject_prefix: subjectPrefix,
         },
       });
+
+      await enqueueChangeNotifications(supabase, queueRows);
     }
 
     // Send all emails

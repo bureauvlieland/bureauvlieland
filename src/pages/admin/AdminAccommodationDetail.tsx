@@ -540,7 +540,7 @@ export default function AdminAccommodationDetail() {
           const token = sessionData?.session?.access_token;
           if (token) {
             const emailSubject = `Wijziging aantal gasten — ${request?.customer_name || "Klant"}`;
-            const emailBody = `Beste partner,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWij vragen u vriendelijk een aangepaste offerte in te dienen via het partnerportaal.`;
+            const emailBody = `Hoi,\n\nHet aantal gasten voor de aanvraag van **${request?.customer_name || "de klant"}** is gewijzigd van ${request?.number_of_guests} naar ${newGuests} personen.\n\n**Aankomst:** ${request?.arrival_date ? format(new Date(request.arrival_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Vertrek:** ${request?.departure_date ? format(new Date(request.departure_date), "d MMMM yyyy", { locale: nl }) : "—"}\n**Aantal gasten (nieuw):** ${newGuests}\n\nWillen jullie een aangepaste offerte indienen via het partnerportaal?`;
             await supabase.functions.invoke("send-accommodation-quote-request", {
               body: {
                 request_id: id,

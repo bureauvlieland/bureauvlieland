@@ -92,6 +92,8 @@ Deno.serve(async (req) => {
     const template = await getRenderedTemplate(TemplateIds.PARTNER_PASSWORD_RESET, {
       partner_name: partner.name,
       reset_link: actionLink,
+      // Zelf aangevraagde reset: de {{#if admin_initiated}}-variant van de template blijft uit.
+      admin_initiated: "",
     });
 
     const origin = req.headers.get("origin") || undefined;

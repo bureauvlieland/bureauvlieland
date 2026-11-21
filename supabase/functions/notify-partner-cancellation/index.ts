@@ -2,11 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   getRenderedTemplate,
   sanitizeHtml,
-  isTestMode,
+  formatDateNL,
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
   getPortalBaseUrl,
+  wrapEmailHtml,
   SENDER_EMAIL,
   SENDER_NAME,
   TemplateIds,
@@ -14,6 +15,7 @@ import {
 import { logEmail } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
 import { itemWasSentToPartner } from "../_shared/partnerWasApproached.ts";
+import { itemHadPartnerCommitment, type HistoryStatusRow } from "./cancellationRecipients.ts";
 
 
 const corsHeaders = {
@@ -80,18 +82,34 @@ export const handler = async (req: Request): Promise<Response> => {
       : ["pending", "confirmed", "accepted", "counter_proposed"];
     const { data: openItems } = await supabase
       .from("program_request_items")
-      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status, skip_partner_notification, quoted_at, partner_price_change_acknowledged_at")
+      .select("id, provider_id, provider_name, provider_email, block_name, block_type, block_category, status, skip_partner_notification, quoted_at, partner_price_change_acknowledged_at, customer_accepted_at, executed_at")
       .eq("request_id", request_id)
       .in("status", itemStatuses);
 
-    // Alleen partners die daadwerkelijk benaderd zijn mogen een annuleringsmail
-    // krijgen. Dit geldt ook als hun partner_id expliciet is meegegeven — een
-    // partner die nooit een aanvraag zag, hoort niets over een annulering.
+    // Status van vóór de annulering, voor onderdelen die de aanroeper al op
+    // 'cancelled' zette (cancel-program-request): uit de historie.
+    let statusHistory: HistoryStatusRow[] = [];
+    const cancelledIds = (openItems || []).filter((i: any) => i.status === "cancelled").map((i: any) => i.id);
+    if (cancelledIds.length > 0) {
+      const { data: historyRows } = await supabase
+        .from("program_request_history")
+        .select("item_id, old_value, new_value")
+        .eq("request_id", request_id)
+        .in("item_id", cancelledIds);
+      statusHistory = (historyRows || []) as HistoryStatusRow[];
+    }
+
+    // Alleen partners die daadwerkelijk benaderd zijn én het onderdeel hadden
+    // bevestigd (of de klant had het geaccepteerd) krijgen een annuleringsmail.
+    // Dit geldt ook als hun partner_id expliciet is meegegeven: een partner die
+    // alleen een aanvraag kreeg, hoort niets over een annulering
+    // (cancellationRecipients.ts).
     const notifiableItems = (openItems || []).filter(
       (i: any) =>
         i.block_type !== "self_arranged" &&
         !isBureauItem(i) &&
         itemWasSentToPartner(i) &&
+        itemHadPartnerCommitment(i, statusHistory) &&
         (!partnerFilter || (i.provider_id && partnerFilter.has(i.provider_id)))
     );
 
@@ -175,30 +193,32 @@ export const handler = async (req: Request): Promise<Response> => {
     for (const [partnerId, group] of partnerGroups) {
       const itemsList = group.items.map((n) => `• ${sanitizeHtml(n)}`).join("<br>");
 
-      // Unified annuleringstemplate (zelfde als customer-cancel-flow)
-      const templateResult = await getRenderedTemplate("cancellation_partner", {
+      // Eén template (zelfde als de klant-annuleerflow); de portaalknop zit
+      // sinds migratie 20261121160000 in de template als {{portal_url}}.
+      const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
+      const templateResult = await getRenderedTemplate(TemplateIds.CANCELLATION_PARTNER, {
         partner_name: sanitizeHtml(group.name),
         customer_name: "",
         reference_number: sanitizeHtml(refNumber),
         cancelled_items: itemsList,
         cancellation_reason: cancellationReasonHtml,
+        portal_url: portalUrl,
       });
 
       const subject = `${getSubjectPrefix(origin)}Aanvraag ${refNumber} is geannuleerd`;
       const reasonBlock = cancellationReasonHtml
         ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
         : "";
-      const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(refNumber)}`;
-      const portalLinkBlock = `<p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p><p style="font-size:12px;color:#64748b">Of zoek in je portal op referentie <strong>${sanitizeHtml(refNumber)}</strong> (incl. geannuleerde aanvragen).</p>`;
-      const baseBody = templateResult?.body || `
-        <p>Beste ${sanitizeHtml(group.name)},</p>
+      const body = templateResult?.body ?? await wrapEmailHtml(`
+        <h2 style="color:#0F4C5C;margin:0 0 16px;font-size:20px;">Aanvraag geannuleerd</h2>
+        <p>Hoi ${sanitizeHtml(group.name)},</p>
         <p>Hierbij laten we je weten dat aanvraag <strong>${sanitizeHtml(refNumber)}</strong> is geannuleerd.</p>
         <p>De volgende onderdelen komen daarmee te vervallen:</p>
         <p>${itemsList}</p>
         ${reasonBlock}
-        <p>Heb je vragen, mail of bel ons gerust.</p>
-      `;
-      const body = `${baseBody}${portalLinkBlock}`;
+        <p>Je hoeft verder niets te doen. Heb je vragen, mail of bel ons gerust.</p>
+        <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0F4C5C;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportaal</a></p>
+      `, supabase);
 
       const recipientEmail = getRecipientEmail(group.email, origin);
 
@@ -297,9 +317,11 @@ export const handler = async (req: Request): Promise<Response> => {
         "onbekende klant";
       const arrival = accommodationReq?.arrival_date || null;
       const departure = accommodationReq?.departure_date || null;
-      const periodLine = arrival && departure
-        ? `<p>Periode: <strong>${sanitizeHtml(arrival)}</strong> t/m <strong>${sanitizeHtml(departure)}</strong>.</p>`
-        : "";
+      const datesLabel = arrival && departure
+        ? `${formatDateNL(arrival)} t/m ${formatDateNL(departure)}`
+        : arrival
+          ? formatDateNL(arrival)
+          : "";
 
       if (filteredQuotes.length > 0) {
         // Enrich partner emails
@@ -319,27 +341,43 @@ export const handler = async (req: Request): Promise<Response> => {
 
           if (partnerEmail) {
             const wasSelected = quote.status === "selected" || quote.status === "accepted" || quote.status === "cancelled";
-            const statusLine = wasSelected
-              ? `Uw offerte was reeds geselecteerd voor deze aanvraag. Met deze annulering komt de boeking te vervallen.`
-              : `Uw offerte was nog in behandeling bij de klant. Met deze annulering komt de offerteaanvraag te vervallen — een reactie is niet meer nodig.`;
+            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(accommodationRef)}`;
 
-            const subject = `${getSubjectPrefix(origin)}Logies-aanvraag ${accommodationRef} – ${customerLabel} is geannuleerd`;
+            // DB-template (migratie 20261121160000); de code had hier eigen HTML.
+            const rendered = await getRenderedTemplate(TemplateIds.CANCELLATION_ACCOMMODATION_PARTNER, {
+              partner_name: sanitizeHtml(partnerName),
+              customer_name: sanitizeHtml(customerLabel),
+              customer_company: sanitizeHtml(accommodationReq?.customer_company || ""),
+              reference_number: sanitizeHtml(accommodationRef),
+              program_reference: accommodationRef !== refNumber ? sanitizeHtml(refNumber) : "",
+              accommodation_name: sanitizeHtml(quote.accommodation_name || ""),
+              dates: sanitizeHtml(datesLabel),
+              was_selected: wasSelected ? "1" : "",
+              cancellation_reason: cancellationReasonHtml,
+              portal_url: portalUrl,
+            }, {
+              reference_number: accommodationRef,
+              customer_name: customerLabel,
+            });
+
+            const subject = rendered
+              ? `${getSubjectPrefix(origin)}${rendered.subject}`
+              : `${getSubjectPrefix(origin)}Logiesaanvraag ${accommodationRef} is geannuleerd (${customerLabel})`;
+            const statusLine = wasSelected
+              ? "Je offerte was al gekozen voor deze aanvraag; met deze annulering vervalt de boeking."
+              : "Je offerte was nog in behandeling; met deze annulering vervalt de offerteaanvraag en is een reactie niet meer nodig.";
             const reasonBlock = cancellationReasonHtml
               ? `<p><strong>Reden van annulering:</strong> ${cancellationReasonHtml}</p>`
               : "";
-            const portalUrl = `${getPortalBaseUrl(origin)}/partner/dashboard?tab=projecten&q=${encodeURIComponent(accommodationRef)}`;
-            const body = `
-              <p>Beste ${sanitizeHtml(partnerName)},</p>
-              <p>Hierbij laten we je weten dat de logies-aanvraag met referentie <strong>${sanitizeHtml(accommodationRef)}</strong> voor <strong>${sanitizeHtml(customerLabel)}</strong> is geannuleerd.</p>
-              ${periodLine}
-              <p style="font-size:12px;color:#64748b">Onderdeel van programma ${sanitizeHtml(refNumber)}.</p>
+            const body = rendered?.body ?? await wrapEmailHtml(`
+              <h2 style="color:#0F4C5C;margin:0 0 16px;font-size:20px;">Logiesaanvraag geannuleerd</h2>
+              <p>Hoi ${sanitizeHtml(partnerName)},</p>
+              <p>De logiesaanvraag <strong>${sanitizeHtml(accommodationRef)}</strong> van ${sanitizeHtml(customerLabel)}${datesLabel ? ` voor <strong>${sanitizeHtml(datesLabel)}</strong>` : ""} is geannuleerd.</p>
               <p>${statusLine}</p>
               ${reasonBlock}
-              <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0f172a;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportal</a></p>
-              <p style="font-size:12px;color:#64748b">Geannuleerde aanvragen blijven in je portal vindbaar via zoeken op referentie <strong>${sanitizeHtml(accommodationRef)}</strong> (incl. archief).</p>
-              <p>Excuses voor het ongemak — heb je vragen, neem dan gerust contact met ons op.</p>
-              <p>Met vriendelijke groet,<br>Bureau Vlieland</p>
-            `;
+              <p>Je hoeft verder niets te doen. Excuses voor het ongemak; heb je vragen, reageer dan gerust op deze mail.</p>
+              <p style="margin-top:16px"><a href="${portalUrl}" style="display:inline-block;padding:10px 16px;background:#0F4C5C;color:#fff;border-radius:6px;text-decoration:none">Bekijk in je partnerportaal</a></p>
+            `, supabase);
 
             const recipientEmail = getRecipientEmail(partnerEmail, origin);
 
@@ -356,7 +394,7 @@ export const handler = async (req: Request): Promise<Response> => {
                   To: [{ Email: recipientEmail, Name: partnerName }],
                   Subject: subject,
                   HTMLPart: body,
-                  ...(buildReplyTo(refNumber) ? { ReplyTo: buildReplyTo(refNumber) } : {}),
+                  ...(buildReplyTo(accommodationRef) ? { ReplyTo: buildReplyTo(accommodationRef) } : {}),
                 }],
               }),
             });

@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
         description:
           `Admin heeft het project handmatig op "klaar voor facturatie" gezet${
             reason ? ` — reden: ${reason}` : ""
-          }.${snoozeUntil ? ` Taak verschijnt automatisch de dag na afloop van het event (${snoozeUntil}).` : ""}`,
+          }.${snoozeUntil ? ` Taak verschijnt automatisch de dag na afloop van het programma (${snoozeUntil}).` : ""}`,
         priority: "normal",
         status: "todo",
         related_request_id: program_id,

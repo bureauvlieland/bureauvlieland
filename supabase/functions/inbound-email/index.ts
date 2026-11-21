@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, buildReplyTo, SENDER_EMAIL, SENDER_NAME } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
+import { isCommissionInvoiceReference, routeCommissionInvoiceReply } from "./commissionReply.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -703,6 +704,32 @@ Deno.serve(async (req) => {
     const rawContent = textContent || stripHtml(htmlContent) || "(geen inhoud)";
     const content = trimQuotedReply(rawContent) || rawContent;
     const truncatedContent = content.length > 10000 ? content.substring(0, 10000) + "\n\n[Bericht ingekort]" : content;
+
+    // Antwoord op een commissiefactuur (Reply-To reply+BVC-JJMM-NNNN@…): geen
+    // project, dus geen dossierregel maar een Werkbank-taak voor de partner.
+    if (isCommissionInvoiceReference(referenceNumber)) {
+      const attachments = await extractAndStoreAttachments(rawPayload, supabase, referenceNumber);
+      const routed = await routeCommissionInvoiceReply(supabase, {
+        invoiceNumber: referenceNumber,
+        senderName: contactName || null,
+        senderEmail: contactEmail || null,
+        subject: subject || null,
+        content: truncatedContent,
+        attachmentNames: attachments.map((a) => a.name),
+      });
+      if (routed) {
+        console.log(`Inbound reply on commission invoice ${referenceNumber} — from ${contactEmail}`);
+        return new Response(
+          JSON.stringify({ status: "ok", routed_to: "commission_invoice_reply", reference: referenceNumber, invoice_id: routed.invoiceId }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      console.warn(`No commission invoice found for reference: ${referenceNumber}`);
+      return new Response(JSON.stringify({ status: "ignored", reason: "commission_invoice_not_found" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Look up the project by reference number
     let requestId: string | null = null;

@@ -326,14 +326,14 @@ export const handler = async (req: Request): Promise<Response> => {
       if (partnerEmail) {
         const subject = `${subjectPrefix}Nieuw aantal verwerkt: ${customerLabel}${refSuffix}`;
         const inner = `
-          <h2 style="color: #0F4C5C; margin-bottom: 8px;">Uw bevestiging is verwerkt</h2>
-          <p>Beste ${sanitizeHtml(partner.name)},</p>
+          <h2 style="color: #0F4C5C; margin-bottom: 8px;">Je bevestiging is verwerkt</h2>
+          <p>Hoi ${sanitizeHtml(partner.name)},</p>
           <p>
-            Bureau Vlieland heeft uw bevestiging van <strong>${proposal.guests} gasten</strong> voor ${sanitizeHtml(customerLabel)}
-            ${arrival && departure ? `(${arrival} tot ${departure}) ` : ""}verwerkt. Het totaal van uw offerte staat nu op
+            Bureau Vlieland heeft je bevestiging van <strong>${proposal.guests} gasten</strong> voor ${sanitizeHtml(customerLabel)}
+            ${arrival && departure ? `(${arrival} tot ${departure}) ` : ""}verwerkt. Het totaal van je offerte staat nu op
             <strong>${formatCurrencyNL(proposal.price_total)}</strong>. De klant is geïnformeerd.
           </p>
-          <p>Na het verblijf factureert u dit bedrag zoals gebruikelijk.</p>
+          <p>Na het verblijf factureer je dit bedrag zoals gebruikelijk.</p>
           ${button(`${baseUrl}/partner/logies/${request.id}`, "Open de logiesaanvraag")}
           <p style="color: #666; font-size: 13px;">Referentie: ${sanitizeHtml(logiesRef || "-")}</p>
         `;
@@ -404,20 +404,20 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
     if (partnerEmail) {
-      const subject = `${subjectPrefix}Uw aanpassing voor ${customerLabel} is niet overgenomen${refSuffix}`;
+      const subject = `${subjectPrefix}Je aanpassing voor ${customerLabel} is niet overgenomen${refSuffix}`;
       const inner = `
-        <h2 style="color: #0F4C5C; margin-bottom: 8px;">Uw aanpassing is niet overgenomen</h2>
-        <p>Beste ${sanitizeHtml(partner.name)},</p>
+        <h2 style="color: #0F4C5C; margin-bottom: 8px;">Je aanpassing is niet overgenomen</h2>
+        <p>Hoi ${sanitizeHtml(partner.name)},</p>
         <p>
-          Bureau Vlieland heeft uw voorstel van <strong>${formatCurrencyNL(proposal.price_total)}</strong> voor
+          Bureau Vlieland heeft je voorstel van <strong>${formatCurrencyNL(proposal.price_total)}</strong> voor
           <strong>${proposal.guests} gasten</strong> (${sanitizeHtml(customerLabel)}${arrival && departure ? `, ${arrival} tot ${departure}` : ""}) niet overgenomen.
         </p>
         <div style="background: #fef2f2; padding: 16px; border-left: 4px solid #dc2626; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 0;"><strong>Reden:</strong> ${sanitizeHtml(reason)}</p>
         </div>
-        <p>Uw offerte blijft staan op ${formatCurrencyNL(proposal.previous_price_total)}. Wilt u het nieuwe aantal opnieuw bevestigen in het partnerportaal, of neemt u contact met ons op als u wilt overleggen?</p>
+        <p>Je offerte blijft staan op ${formatCurrencyNL(proposal.previous_price_total)}. Wil je het nieuwe aantal opnieuw bevestigen in het partnerportaal, of neem je contact met ons op als je wilt overleggen?</p>
         ${button(partnerPortalUrl, "Nieuw aantal bevestigen")}
-        <p style="color: #475569; font-size: 14px;">U kunt ook op deze e-mail antwoorden.</p>
+        <p style="color: #475569; font-size: 14px;">Je kunt ook op deze mail antwoorden.</p>
         <p style="color: #666; font-size: 13px;">Referentie: ${sanitizeHtml(logiesRef || "-")}</p>
       `;
       const html = await wrapEmailHtml(inner, supabase);

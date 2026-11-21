@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
       const ids = cancelledIds.map((r: any) => r.id);
       const { data } = await supabase
         .from("admin_todos")
-        .update({ status: "done", completed_at: now })
+        .update({ status: "done", completed_at: now, completion_reason: "cleanup_cancelled_projects" })
         .in("related_request_id", ids)
         .neq("status", "done")
         .select("id");
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       const ids = completedIds.map((r: any) => r.id);
       const { data } = await supabase
         .from("admin_todos")
-        .update({ status: "done", completed_at: now })
+        .update({ status: "done", completed_at: now, completion_reason: "cleanup_completed_projects" })
         .in("related_request_id", ids)
         .neq("status", "done")
         .select("id");
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_quote_pending_partner" })
           .in("id", staleIds);
         results.quote_pending_partner = staleIds.length;
       }
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_quote_review" })
           .in("id", staleIds);
         results.quote_review = staleIds.length;
       }
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_forward_accommodation_quote" })
           .in("id", staleIds);
         results.forward_accommodation_quote = staleIds.length;
       }
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_quote_ready_to_send" })
           .in("id", staleIds);
         results.quote_ready_to_send = staleIds.length;
       }
@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_send_items_to_partners" })
           .in("id", staleIds);
         results.send_items_to_partners = staleIds.length;
       }
@@ -309,18 +309,26 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_accommodation_selected" })
           .in("id", staleIds);
         results.accommodation_selected = staleIds.length;
       }
     }
 
-    // 9. customer_status_email_due — quote no longer 'offerte_verstuurd', any item approved, or quote_sent_at cleared
-    const { data: customerStatusDueTodos } = await supabase
+    // 9. "Nog geen akkoord"-taken: de oude sleutel customer_status_email_due en
+    // sinds fase 3 de variant van customer_status_update_due met "nog geen
+    // akkoord" in de titel. Klaar zodra de offerte niet meer op akkoord wacht,
+    // een onderdeel is goedgekeurd of het project is afgerond.
+    const { data: customerStatusDueRows } = await supabase
       .from("admin_todos")
-      .select("id, related_request_id")
-      .eq("auto_type", "customer_status_email_due")
+      .select("id, related_request_id, auto_type, title")
+      .in("auto_type", ["customer_status_email_due", "customer_status_update_due"])
       .neq("status", "done");
+    const customerStatusDueTodos = (customerStatusDueRows || []).filter(
+      (t: any) =>
+        t.auto_type === "customer_status_email_due" ||
+        String(t.title || "").includes("nog geen akkoord"),
+    );
 
     if (customerStatusDueTodos?.length) {
       const reqIds = customerStatusDueTodos
@@ -357,7 +365,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_customer_status_due" })
           .in("id", staleIds);
         results.customer_status_email_due = staleIds.length;
       }
@@ -400,7 +408,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_customer_status_update_due" })
           .in("id", staleIds);
         results.customer_status_update_due = staleIds.length;
       }
@@ -467,7 +475,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_customer_inputs_missing" })
           .in("id", staleIds);
         results.customer_inputs_missing = staleIds.length;
       }
@@ -504,7 +512,7 @@ Deno.serve(async (req) => {
       if (staleIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: `cleanup_${autoType}_after_email` })
           .in("id", staleIds);
         results[`${autoType}_after_email`] = staleIds.length;
       }
@@ -563,7 +571,7 @@ Deno.serve(async (req) => {
       if (dupIds.length) {
         await supabase
           .from("admin_todos")
-          .update({ status: "done", completed_at: now })
+          .update({ status: "done", completed_at: now, completion_reason: "cleanup_duplicate_todos" })
           .in("id", dupIds);
         results.duplicate_todos = dupIds.length;
       }

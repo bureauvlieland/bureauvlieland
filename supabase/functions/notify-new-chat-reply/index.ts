@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { getRenderedTemplate, TemplateIds, getSubjectPrefix, getRecipientEmail, getPortalBaseUrl } from "../_shared/email-templates.ts";
+import { buildReplyFallbackSubject } from "./subject.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -113,29 +114,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build portal link and subject
+    // Portaallink en dossiernummer (LOG-/BV-). Het onderwerp komt uit de
+    // template (met {{reference_number}}); de code bouwt alleen de terugval.
     const baseUrl = getPortalBaseUrl(req.headers.get("origin") || undefined);
     let portalLink = `${baseUrl}/?chat=open`;
-    let emailSubject = "Nieuw bericht van Bureau Vlieland";
-
+    let referenceNumber = "";
 
     if (isAccommodationChat) {
-      // Get accommodation reference number
-      let refNumber = "";
       if (conv.accommodation_id) {
         const { data: accReq } = await supabase
           .from("accommodation_requests")
           .select("reference_number")
           .eq("id", conv.accommodation_id)
-          .single();
-        refNumber = accReq?.reference_number || "";
+          .maybeSingle();
+        referenceNumber = accReq?.reference_number || "";
       }
       portalLink = `${baseUrl}/partner/logies`;
-      emailSubject = refNumber
-        ? `Nieuw bericht inzake logiesaanvraag ${refNumber}`
-        : "Nieuw bericht over een logiesaanvraag";
     } else if (conv.source === "customer_portal" && conv.source_token) {
       portalLink = `${baseUrl}/mijn-programma/${conv.source_token}?chat=open`;
+      const { data: pr } = await supabase
+        .from("program_requests")
+        .select("reference_number")
+        .eq("customer_token", conv.source_token)
+        .maybeSingle();
+      referenceNumber = pr?.reference_number || "";
     } else if (conv.source === "partner_portal") {
       portalLink = `${baseUrl}/partner/dashboard`;
     } else if (conv.request_id) {
@@ -148,22 +150,13 @@ Deno.serve(async (req) => {
       if (pr?.customer_token) {
         portalLink = `${baseUrl}/mijn-programma/${pr.customer_token}?chat=open`;
       }
-      if (pr?.reference_number) {
-        emailSubject = `Nieuw bericht over uw aanvraag ${pr.reference_number}`;
-      }
-    } else if (conv.accommodation_id) {
-      const { data: ar } = await supabase
-        .from("accommodation_requests")
-        .select("customer_token, reference_number")
-        .eq("id", conv.accommodation_id)
-        .maybeSingle();
-      if (ar?.customer_token) {
-        portalLink = `${baseUrl}/mijn-logies/${ar.customer_token}?chat=open`;
-      }
-      if (ar?.reference_number) {
-        emailSubject = `Nieuw bericht over uw logiesaanvraag ${ar.reference_number}`;
-      }
+      referenceNumber = pr?.reference_number || "";
     }
+
+    const emailSubject = buildReplyFallbackSubject(
+      isAccommodationChat ? "accommodation_partner" : "customer",
+      referenceNumber,
+    );
 
     // Try DB template — the template uses {{message_preview}} and {{chat_url}}
     const template = await getRenderedTemplate(TemplateIds.CHAT_REPLY_VISITOR, {
@@ -171,6 +164,7 @@ Deno.serve(async (req) => {
       portal_link: portalLink,
       chat_url: portalLink,
       message_preview: messagePreview,
+      reference_number: referenceNumber,
     });
 
     const finalSubject = template?.subject || emailSubject;
@@ -187,8 +181,8 @@ Deno.serve(async (req) => {
           <tr><td align="center" style="padding:40px 20px;">
             <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;">
               <tr><td style="font-size:16px;line-height:24px;color:#333333;">
-                <p style="margin:0 0 16px 0;">Hallo ${recipientName},</p>
-                <p style="margin:0 0 16px 0;">Je hebt een nieuw bericht ontvangen van Bureau Vlieland:</p>
+                <p style="margin:0 0 16px 0;">Beste ${recipientName},</p>
+                <p style="margin:0 0 16px 0;">U heeft een nieuw bericht ontvangen van Bureau Vlieland:</p>
               </td></tr>
               ${previewBlock}
               <tr><td style="font-size:16px;line-height:24px;color:#333333;padding-bottom:8px;">
@@ -265,6 +259,7 @@ Deno.serve(async (req) => {
         template_name: "chat_reply_notification",
         actor: "system → ontvanger (chat reply)",
         conversation_id,
+        reference_number: referenceNumber || null,
       },
     });
 

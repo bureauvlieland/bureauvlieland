@@ -1,6 +1,7 @@
 /**
  * Acties op losse taken in de Werkbank-inbox: afronden, niet relevant,
- * snoozen en verwijderen — los of in bulk.
+ * snoozen en verwijderen — los of in bulk. "Gezien" sluit een binnengekomen
+ * gebeurtenis (cluster Binnengekomen) met completion_reason "seen".
  *
  * De lijst reageert optimistisch (de rij verdwijnt meteen) en de toast biedt
  * "Ongedaan maken" voor alles wat omkeerbaar is. Verwijderen is definitief
@@ -10,9 +11,9 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { InboxItem } from "@/lib/getInbox";
+import type { InboundEvent, InboxItem } from "@/lib/getInbox";
 
-export type InboxTodoAction = "done" | "dismissed" | "snooze" | "delete";
+export type InboxTodoAction = "done" | "dismissed" | "snooze" | "delete" | "seen";
 
 export const SNOOZE_DAYS = 7;
 
@@ -36,12 +37,17 @@ export function useInboxTodoActions(opts: { onResolved?: (ids: string[]) => void
     queryClient.invalidateQueries({ queryKey: ["werkbank-finance-todos"] });
     queryClient.invalidateQueries({ queryKey: ["admin-todos"] });
     queryClient.invalidateQueries({ queryKey: ["admin-todo-count"] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-inbound-count"] });
+    queryClient.invalidateQueries({ queryKey: ["werkbank-inbound-events"] });
   }, [queryClient]);
 
   /** Haal de taken direct uit de gecachte inbox, nog vóór de server antwoordt. */
   const removeOptimistic = useCallback(
     (ids: string[]) => {
       const gone = new Set(ids);
+      queryClient.setQueriesData<InboundEvent[]>({ queryKey: ["werkbank-inbound-events"] }, (old) =>
+        old ? old.filter((e) => !gone.has(e.id)) : old,
+      );
       queryClient.setQueriesData<InboxItem[]>({ queryKey: ["werkbank-inbox"] }, (old) => {
         if (!old) return old;
         return old
@@ -75,6 +81,18 @@ export function useInboxTodoActions(opts: { onResolved?: (ids: string[]) => void
         title = `${ids.length} ${plural(ids.length, "taak", "taken")} gesnoozed tot ${new Date(until).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}`;
         undo = async () => {
           await supabase.from("admin_todos").update({ snoozed_until: null }).in("id", ids);
+        };
+      } else if (action === "seen") {
+        ({ error } = await supabase
+          .from("admin_todos")
+          .update({ status: "done", completed_at: new Date().toISOString(), completion_reason: "seen" } as never)
+          .in("id", ids));
+        title = ids.length === 1 ? "Gebeurtenis gezien" : `${ids.length} gebeurtenissen gezien`;
+        undo = async () => {
+          await supabase
+            .from("admin_todos")
+            .update({ status: "todo", completed_at: null, completion_reason: null } as never)
+            .in("id", ids);
         };
       } else {
         const patch: Record<string, unknown> = { status: action };

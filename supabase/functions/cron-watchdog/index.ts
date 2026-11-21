@@ -20,6 +20,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +30,7 @@ const corsHeaders = {
 const DEDUPE_HOURS = 12;
 const HEALTH_URL = "https://bureauvlieland.nl/admin/email-health";
 
-import { type JobHealth, judge, type Verdict } from "./logic.ts";
+import { buildWatchdogAlertMail, buildWatchdogTodo, type JobHealth, judge, type Verdict } from "./logic.ts";
 
 async function getAdminEmail(supabase: ReturnType<typeof createClient>): Promise<string> {
   try {
@@ -42,7 +43,8 @@ async function getAdminEmail(supabase: ReturnType<typeof createClient>): Promise
     const email = typeof raw === "string" ? raw : raw ? String(raw) : "";
     if (email) return email;
   } catch { /* ignore */ }
-  return Deno.env.get("ADMIN_ALERT_EMAIL") ?? "hallo@bureauvlieland.nl";
+  // Eén terugvaladres voor alle systeemalarmen.
+  return Deno.env.get("ADMIN_ALERT_EMAIL") ?? GENERAL_CONTACT_EMAIL;
 }
 
 Deno.serve(async (req) => {
@@ -98,13 +100,16 @@ Deno.serve(async (req) => {
         .limit(1);
       if (existing && existing.length > 0) continue;
 
+      const todoText = buildWatchdogTodo(alarm);
       await supabase.from("admin_todos").insert({
         auto_type: "system_cron_failure",
         auto_entity_id: alarm.jobname,
-        title: `Automatische taak faalt: ${alarm.jobname}`,
-        description: alarm.reason,
+        title: todoText.title,
+        description: todoText.description,
         priority: "high",
-        status: "open",
+        // "open" bestond niet in admin_todos_status_check; de taak werd nooit
+        // aangemaakt (plan-notificaties fase 0).
+        status: "todo",
       });
     }
 
@@ -121,13 +126,7 @@ Deno.serve(async (req) => {
 
       if (!recent || recent.length === 0) {
         const to = await getAdminEmail(supabase);
-        const rows = alarms
-          .map((a) => `<li><strong>${a.jobname}</strong> — ${a.reason}</li>`)
-          .join("");
-        const subject = `[ALERT] ${alarms.length} automatische taak/taken falen`;
-        const html =
-          `<p>De volgende geplande taken draaien niet of eindigen met een fout:</p><ul>${rows}</ul>` +
-          `<p>Bekijk de status op <a href="${HEALTH_URL}">${HEALTH_URL}</a>.</p>`;
+        const { subject, html } = buildWatchdogAlertMail(alarms, HEALTH_URL);
 
         const send = await sendMailjet({
           source: "cron-watchdog",

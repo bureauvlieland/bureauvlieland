@@ -22,12 +22,15 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 import {
   SELFTEST_TODO_ENTITY,
   SELFTEST_TODO_TYPE,
   buildSelftestTodo,
   decideSelftestTodoAction,
 } from "../_shared/selftestTodo.ts";
+import { GENERAL_CONTACT_EMAIL } from "../_shared/bureau-contact.ts";
+import { buildSelftestAlertHtml, buildSelftestAlertSubject } from "./consequences.ts";
 import { loadReconciliationInputs } from "../_shared/commissionReconciliationData.ts";
 import { getCommissionRate } from "../_shared/commissionRates.ts";
 import {
@@ -608,27 +611,12 @@ Deno.serve(async (req) => {
           .maybeSingle();
         const rawTo = setting?.value;
         const to = (typeof rawTo === "string" ? rawTo : rawTo ? String(rawTo) : "") ||
-          Deno.env.get("ADMIN_ALERT_EMAIL") || "administratie@bureauvlieland.nl";
+          Deno.env.get("ADMIN_ALERT_EMAIL") || GENERAL_CONTACT_EMAIL;
 
-        const rows = checks
-          .map((c) => {
-            const icon = c.ok ? (c.fixedByAutofix ? "🛠️" : "✅") : c.severity === "critical" ? "🛑" : "⚠️";
-            return `<tr>
-              <td style="padding:6px 8px;border-bottom:1px solid #eee;">${icon}</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #eee;"><strong>${c.label}</strong><br><span style="color:#666;font-size:12px;">${c.detail}</span>${
-              c.ok ? "" : `<br><span style="color:#b45309;font-size:12px;">Fix: ${c.fixHint ?? "—"}</span>`
-            }</td>
-              <td style="padding:6px 8px;border-bottom:1px solid #eee;color:#666;font-size:12px;">${c.durationMs} ms</td>
-            </tr>`;
-          })
-          .join("");
-
-        const fixedCount = checks.filter((c) => c.fixedByAutofix).length;
-        const html = `<p>De dagelijkse kritieke-pad-test vond <strong>${failed.length} probleem(en)</strong>.</p>
-          ${fixedCount > 0 ? `<p>${fixedCount} probleem is automatisch hersteld (ontbrekende rechten).</p>` : ""}
-          <table style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px;">${rows}</table>
-          <p style="margin-top:16px;">Details: <a href="https://bureauvlieland.nl/admin/email-health">Systeemgezondheid in de admin</a></p>`;
-
+        // Eerst wat het betekent en wat te doen (consequences.ts), daaronder de
+        // technische tabel met fix-hints.
+        const html = buildSelftestAlertHtml(checks);
+        const subject = buildSelftestAlertSubject(failed);
         const send = await sendMailjet({
           source: "critical-selftest",
           checkSuppression: false,
@@ -638,15 +626,31 @@ Deno.serve(async (req) => {
               Name: "Bureau Vlieland Monitor",
             },
             To: [{ Email: to }],
-            Subject: `[ALERT] Kritieke zelftest: ${failed.length} probleem(en) — ${
-              failed.map((f) => f.label).slice(0, 2).join(", ")
-            }`,
+            Subject: subject,
             HTMLPart: html,
             TextPart: html.replace(/<[^>]+>/g, " "),
           }],
         });
         if (send.ok) alertSent = true;
         else alertSkipped = `mail faalde: ${send.error}`;
+
+        // Alarmmail in email_log, zodat het Berichtencentrum hem ook ziet.
+        await logEmail({
+          email_type: "critical_selftest_alert",
+          subject,
+          recipient_email: to,
+          status: send.ok ? "sent" : "failed",
+          error_message: send.ok ? undefined : send.error,
+          mailjet_message_id: send.ok ? send.messageId ?? undefined : undefined,
+          sent_by: "critical-selftest",
+          html_body: html,
+          metadata: {
+            template_name: "critical_selftest_alert",
+            actor: "system → bureau (zelftest)",
+            run_id: runId,
+            failed_checks: failed.map((f) => f.key),
+          },
+        });
       }
     }
 

@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
         if (!existingBureau) {
           await supabase.from("admin_todos").insert({
             title: `Prijs invullen: "${bi.block_name}" voor ${custName}`,
-            description: `Bureau-item "${bi.block_name}" in project ${refNum} heeft nog geen prijs. Vul een admin prijs in.`,
+            description: `Het onderdeel "${bi.block_name}" van het bureau zelf (${refNum}) heeft nog geen prijs. Vul de verkoopprijs in op het programmaonderdeel.`,
             priority: "normal",
             status: "todo",
             related_request_id: req.id,
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
 
       await supabase.from("admin_todos").insert({
         title: `Alle partners hebben gereageerd op ${refNum} (${custName})`,
-        description: `Alle verstuurde programmaonderdelen zijn beantwoord${bureauItems.length > 0 ? ' en alle bureau-items hebben een prijs' : ''}. Beoordeel de reacties en stuur een status update naar de klant.`,
+        description: `Alle verstuurde programmaonderdelen zijn beantwoord${bureauItems.length > 0 ? ' en alle onderdelen van het bureau zelf hebben een prijs' : ''}. Beoordeel de reacties en stuur een status update naar de klant.`,
         priority: "high",
         status: "todo",
         related_request_id: req.id,

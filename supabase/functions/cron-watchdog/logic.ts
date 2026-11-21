@@ -87,3 +87,78 @@ export function judge(job: JobHealth, now: number): Verdict | null {
   return null;
 }
 
+
+// ---------------------------------------------------------------------------
+// Teksten voor Erwin (geen cron-uitdrukkingen of HTTP-codes bovenaan; die
+// staan als technisch detail eronder). Getest in cronWatchdog.test.ts.
+
+/** Wat er voor het bureau gebeurt als deze taak niet draait, per bekende taaknaam. */
+const JOB_CONSEQUENCES: Array<[RegExp, string]> = [
+  [/auto-close|past-execution/i, "projecten worden niet automatisch op 'uitgevoerd' gezet en de nazorg- en factuurtaken komen niet"],
+  [/check-pending|reminder|herinnering/i, "partners en klanten krijgen geen herinneringen (open onderdelen, facturen, gastgegevens)"],
+  [/reconcile/i, "de Werkbank ruimt afgehandelde taken niet op en vult nieuwe niet aan"],
+  [/selftest/i, "een storing in het aanvraagformulier of de mail wordt niet meer gemeld"],
+  [/heartbeat|webhook/i, "een stilgevallen mailterugkoppeling van Mailjet wordt niet meer gemeld"],
+  [/arrival|aankomst/i, "klanten krijgen geen aankomstmail met programma"],
+  [/guest-details|gast/i, "klanten krijgen geen verzoek om gastenlijst en wensen"],
+  [/review|aftersales|nazorg/i, "klanten krijgen geen bedank- en beoordelingsmail na afloop"],
+  [/invoice|factuur|commission|commissie/i, "facturen en commissies worden niet automatisch verwerkt of gemeld"],
+  [/watchdog/i, "falende automatische taken worden niet meer gemeld"],
+];
+
+/** Eén zin in gewone taal: wat het bureau merkt als deze taak stilstaat. */
+export function jobConsequence(jobname: string): string {
+  const hit = JOB_CONSEQUENCES.find(([re]) => re.test(jobname));
+  return hit
+    ? `Zolang dit duurt ${hit[1]}.`
+    : "Zolang dit duurt doet het systeem dit werk niet; wat precies, staat in Email health bij deze taak.";
+}
+
+/** Vaste instructie bij elke falende taak. */
+export const WATCHDOG_WHAT_TO_DO =
+  "Open Email health en klik bij de taak op 'Nu uitvoeren'. Blijft de taak rood, meld het dan bij de ontwikkelaar.";
+
+export interface WatchdogTodoText {
+  title: string;
+  description: string;
+}
+
+/** Werkbank-taak: titel "Automatische taak faalt: …" met gevolg, wat te doen en het technische detail. */
+export function buildWatchdogTodo(alarm: Verdict): WatchdogTodoText {
+  return {
+    title: `Automatische taak faalt: ${alarm.jobname}`,
+    description: [
+      `Wat betekent dit: ${jobConsequence(alarm.jobname)}`,
+      `Wat te doen: ${WATCHDOG_WHAT_TO_DO}`,
+      `Technisch: ${alarm.reason}.`,
+    ].join("\n"),
+  };
+}
+
+export interface WatchdogMailText {
+  subject: string;
+  html: string;
+}
+
+/** Verzamelmail: eerst wat het betekent en wat te doen, daaronder de technische details. */
+export function buildWatchdogAlertMail(alarms: Verdict[], healthUrl: string): WatchdogMailText {
+  const n = alarms.length;
+  const subject = n === 1
+    ? `[ALERT] Automatische taak faalt: ${alarms[0].jobname}`
+    : `[ALERT] ${n} automatische taken falen`;
+  const gevolgen = alarms
+    .map((a) => `<li><strong>${a.jobname}</strong>: ${jobConsequence(a.jobname)}</li>`)
+    .join("");
+  const techniek = alarms
+    .map((a) => `<li><strong>${a.jobname}</strong> — ${a.reason}</li>`)
+    .join("");
+  const html =
+    `<p><strong>Wat betekent dit:</strong> ${n === 1 ? "een automatische taak" : `${n} automatische taken`} van het systeem ${n === 1 ? "draait" : "draaien"} niet of ${n === 1 ? "eindigt" : "eindigen"} met een fout.</p>` +
+    `<ul>${gevolgen}</ul>` +
+    `<p><strong>Wat te doen:</strong> ${WATCHDOG_WHAT_TO_DO}</p>` +
+    `<p><a href="${healthUrl}">Open Email health</a></p>` +
+    `<hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">` +
+    `<p style="color:#666;font-size:13px;"><strong>Technische details</strong></p>` +
+    `<ul style="color:#666;font-size:13px;">${techniek}</ul>`;
+  return { subject, html };
+}

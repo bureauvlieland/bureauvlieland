@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         : new Date().toISOString();
 
       // Find ALL matching log rows. mailjet_message_id is niet uniek:
-      // group-mails (send-items-to-partners, notify-partners-informational,
+      // group-mails (send-items-to-partners,
       // accept-quote-proposal) schrijven per item een aparte email_log-rij
       // met dezelfde mailjet_message_id, zodat de item-popover per rij een
       // related_item_id kan tonen. Elk Mailjet-event moet ALLE rijen

@@ -3,9 +3,12 @@ import {
   SENDER_EMAIL,
   SENDER_NAME,
   buildReplyTo,
+  formatCurrencyNL,
+  formatDateNL,
   getRecipientEmail,
   getSubjectPrefix,
   isTestMode,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -34,8 +37,7 @@ interface RequestBody {
   customMessage?: string;
 }
 
-const formatCurrency = (amount: number) =>
-  `€ ${Number(amount).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (amount: number) => formatCurrencyNL(Number(amount));
 
 const escapeHtml = (str: string) =>
   str
@@ -184,37 +186,31 @@ export async function handler(req: Request): Promise<Response> {
       ? `${subjectPrefix}${body.customSubject.trim()}`
       : `${subjectPrefix}Commissiefactuur ${invoice.invoice_number} – Bureau Vlieland`;
 
-    const greeting = `Beste ${escapeHtml(recipientName)},`;
+    const greeting = `Hoi ${escapeHtml(recipientName)},`;
     const messageBody = body.customMessage?.trim()
       ? escapeHtml(body.customMessage).replace(/\n/g, "<br/>")
-      : `In de bijlage vindt u commissiefactuur <strong>${escapeHtml(invoice.invoice_number)}</strong> van Bureau Vlieland.<br/><br/>` +
-        `Wij verzoeken u vriendelijk het bedrag van <strong>${formatCurrency(Number(invoice.amount_incl_vat))}</strong> ` +
-        `binnen de op de factuur vermelde betaaltermijn over te maken onder vermelding van het factuurnummer.`;
+      : `In de bijlage vind je commissiefactuur <strong>${escapeHtml(invoice.invoice_number)}</strong> van Bureau Vlieland.<br/><br/>` +
+        `Wil je het bedrag van <strong>${formatCurrency(Number(invoice.amount_incl_vat))}</strong> ` +
+        `binnen de op de factuur vermelde betaaltermijn overmaken, onder vermelding van het factuurnummer?`;
 
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1a1a1a;">
-        <h2 style="color: #1e3a5f; margin-bottom: 16px;">Commissiefactuur ${escapeHtml(invoice.invoice_number)}</h2>
-        <p>${greeting}</p>
-        <p>${messageBody}</p>
+    // Huisstijl (logo, voettekst met KvK en IBAN) via wrapEmailHtml; geen eigen voettekst.
+    const html = await wrapEmailHtml(`
+      <h2 style="color:#0F4C5C;margin:0 0 16px;">Commissiefactuur ${escapeHtml(invoice.invoice_number)}</h2>
+      <p>${greeting}</p>
+      <p>${messageBody}</p>
 
-        <table style="width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px;">
-          <tr><td style="padding: 6px 0; color: #666; width: 180px;">Factuurnummer:</td><td style="padding: 6px 0; font-weight: bold;">${escapeHtml(invoice.invoice_number)}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666;">Factuurdatum:</td><td style="padding: 6px 0;">${new Date(invoice.invoice_date).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666;">Bedrag excl. BTW:</td><td style="padding: 6px 0;">${formatCurrency(Number(invoice.amount_excl_vat))}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666;">BTW (${invoice.vat_rate}%):</td><td style="padding: 6px 0;">${formatCurrency(Number(invoice.vat_amount))}</td></tr>
-          <tr><td style="padding: 6px 0; color: #666;">Totaal incl. BTW:</td><td style="padding: 6px 0; font-weight: bold;">${formatCurrency(Number(invoice.amount_incl_vat))}</td></tr>
-        </table>
+      <table style="width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;">
+        <tr><td style="padding:6px 0;color:#666;width:180px;">Factuurnummer:</td><td style="padding:6px 0;font-weight:bold;">${escapeHtml(invoice.invoice_number)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">Factuurdatum:</td><td style="padding:6px 0;">${formatDateNL(invoice.invoice_date)}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">Bedrag excl. btw:</td><td style="padding:6px 0;">${formatCurrency(Number(invoice.amount_excl_vat))}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">Btw (${invoice.vat_rate}%):</td><td style="padding:6px 0;">${formatCurrency(Number(invoice.vat_amount))}</td></tr>
+        <tr><td style="padding:6px 0;color:#666;">Totaal incl. btw:</td><td style="padding:6px 0;font-weight:bold;">${formatCurrency(Number(invoice.amount_incl_vat))}</td></tr>
+      </table>
 
-        <p>Heeft u vragen over deze factuur? Neem gerust contact met ons op via een reply op deze e-mail.</p>
-        <p style="margin-top: 24px;">Met vriendelijke groet,<br/><strong>Bureau Vlieland</strong></p>
-
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-        <p style="color: #999; font-size: 11px;">
-          Bureau Vlieland · hallo@bureauvlieland.nl · 0562 700 208
-          ${isTestMode(origin) ? "<br/><strong>[TEST MODE]</strong> origineel adres: " + escapeHtml(fallbackRecipient || "") : ""}
-        </p>
-      </div>
-    `;
+      <p>Vragen over deze factuur? Reageer gerust op deze mail.</p>
+      <p style="margin-top:24px;">Met vriendelijke groet,<br/><strong>Bureau Vlieland</strong></p>
+      ${isTestMode(origin) ? `<p style="color:#999;font-size:11px;"><strong>[TEST MODE]</strong> origineel adres: ${escapeHtml(fallbackRecipient || "")}</p>` : ""}
+    `, supabase);
 
     if (!MAILJET_API_KEY || !MAILJET_SECRET_KEY) {
       return new Response(JSON.stringify({ error: "Email service not configured" }), {

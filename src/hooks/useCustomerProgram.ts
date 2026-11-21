@@ -102,7 +102,12 @@ interface UseCustomerProgramReturn {
   acceptItem: (itemId: string) => Promise<boolean>;
   cancelItem: (itemId: string) => Promise<boolean>;
   submitCounterProposal: (itemId: string, counterTime: string, counterNote: string) => Promise<boolean>;
-  acceptQuoteProposal: () => Promise<boolean>;
+  /**
+   * Akkoord op het voorstel. `signedInSameStep`: de klant heeft in dezelfde klik
+   * net getekend (acceptTerms geslaagd) en kreeg daarvan al een mail; de
+   * server slaat dan de tweede klantmail (quote_accepted_customer) over.
+   */
+  acceptQuoteProposal: (options?: { signedInSameStep?: boolean }) => Promise<boolean>;
   approveQuoteItem: (itemId: string) => Promise<boolean>;
   bulkApproveQuoteItems: () => Promise<{ approved: number; failed: number; autoSentToPartner: number }>;
   statusSummary: ReturnType<typeof calculateStatusSummary>;
@@ -939,7 +944,7 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
   };
 
   // Accept quote proposal (for maatwerk quotes)
-  const acceptQuoteProposal = useCallback(async (): Promise<boolean> => {
+  const acceptQuoteProposal = useCallback(async (options?: { signedInSameStep?: boolean }): Promise<boolean> => {
     if (!program) return false;
 
     try {
@@ -949,6 +954,9 @@ export const useCustomerProgram = (token: string, options: UseCustomerProgramOpt
           token: token,
           origin: window.location.origin,
           ...(adminOverride ? { admin_override: true } : {}),
+          // Net getekend in dezelfde stap → booking_confirmed_customer is al
+          // onderweg; geen tweede klantmail (quote_accepted_customer).
+          ...(options?.signedInSameStep ? { skipCustomerEmail: true } : {}),
         },
       });
 

@@ -3,7 +3,7 @@ import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 Deno.env.set("SUPABASE_URL", "http://test-supabase.local");
 Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "srv");
 
-const { handler } = await import("./index.ts");
+const { handler, pickCustomerStatusMail } = await import("./index.ts");
 const url = "http://test-supabase.local/functions/v1/update-partner-item-status";
 
 const baseBody = {
@@ -129,4 +129,51 @@ Deno.test({ name: "acknowledge_price_change zonder prijs → 400", sanitizeOps: 
 Deno.test({ name: "acknowledge_price_change met geldige prijs → tokencheck", sanitizeOps: false, sanitizeResources: false }, async () => {
   const res = await post({ status: "acknowledge_price_change", quotedPrice: 199 });
   assertEquals(res.status, 403);
+});
+
+// ============================================================
+// Eén klantmail per partnerreactie (audit fase 1: óf counter_proposal_response,
+// óf status_*; nooit beide)
+// ============================================================
+
+Deno.test("tegenvoorstel: partnerreactie geeft alleen counter_proposal_response, geen status_*-mail", () => {
+  for (const status of ["confirmed", "alternative", "unavailable"]) {
+    assertEquals(
+      pickCustomerStatusMail({ status, oldStatus: "counter_proposed", confirmOnly: false }),
+      "counter_proposal_response",
+      status,
+    );
+    // Ook bij een bevestiging-onderdeel wint de tegenvoorstel-reactie.
+    assertEquals(
+      pickCustomerStatusMail({ status, oldStatus: "counter_proposed", confirmOnly: true }),
+      "counter_proposal_response",
+      `${status} (confirmOnly)`,
+    );
+  }
+});
+
+Deno.test("geen tegenvoorstel: gewone statusmail", () => {
+  for (const oldStatus of ["pending", "sent", null, undefined]) {
+    for (const status of ["confirmed", "alternative", "unavailable"]) {
+      assertEquals(pickCustomerStatusMail({ status, oldStatus, confirmOnly: false }), "status", `${oldStatus}/${status}`);
+    }
+  }
+});
+
+Deno.test("bevestiging-onderdeel zonder offerte: geen klantmail bij confirmed, wél bij unavailable", () => {
+  assertEquals(pickCustomerStatusMail({ status: "confirmed", oldStatus: "pending", confirmOnly: true }), null);
+  assertEquals(pickCustomerStatusMail({ status: "unavailable", oldStatus: "pending", confirmOnly: true }), "status");
+});
+
+Deno.test("andere statussen (pending, counter_proposed) sturen geen klantmail", () => {
+  assertEquals(pickCustomerStatusMail({ status: "pending", oldStatus: "sent", confirmOnly: false }), null);
+  assertEquals(pickCustomerStatusMail({ status: "counter_proposed", oldStatus: "sent", confirmOnly: false }), null);
+});
+
+Deno.test("broncontract: de statusmail-tak hangt aan dezelfde keuze als de tegenvoorstel-tak (geen tweede mail)", async () => {
+  const src = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  assertEquals(src.includes('if (customerMail === "counter_proposal_response")'), true);
+  assertEquals(src.includes('if (customerMail === "status")'), true);
+  // De oude losse voorwaarde die beide mails tegelijk liet gaan mag niet terugkomen.
+  assertEquals(src.includes('if (oldStatus === "counter_proposed" && (status === "confirmed"'), false);
 });

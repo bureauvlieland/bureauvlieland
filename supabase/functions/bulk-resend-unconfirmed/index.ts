@@ -17,8 +17,6 @@ const ACTION_TYPES = [
   "program_request_bureau",
   "program_request_customer",
   "program_request_partner",
-  "quote_request_bureau",
-  "quote_request_customer",
   "quote_offer_customer",
   "accommodation_quote_request_partner",
   "accommodation_quote_notification",

@@ -2,16 +2,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "npm:zod@3.22.4";
 import {
   sanitizeHtml,
-  formatDateNL,
   getPortalBaseUrl,
   isTestMode,
   getSubjectPrefix,
   getRecipientEmail,
   buildReplyTo,
-  renderEffectiveTimeLine,
+  wrapEmailHtml,
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { recordBureauEvent } from "../_shared/bureau-event.ts";
+import { buildPartnerRequestMail } from "../_shared/partnerRequestMail.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -27,6 +28,10 @@ const AcceptQuoteSchema = z.object({
   request_id: z.string().optional(),
   admin_override: z.boolean().optional(),
   origin: z.string().optional(),
+  // Akkoord en ondertekenen in één klik: update-customer-program stuurt dan
+  // al booking_confirmed_customer; de klantmail quote_accepted_customer blijft
+  // dan achterwege. Partnermails en taken gaan gewoon door.
+  skipCustomerEmail: z.boolean().optional(),
 }).refine(d => d.token || d.request_id, {
   message: "token of request_id is verplicht",
 });
@@ -43,6 +48,9 @@ interface ProgramItem {
   confirmed_time: string | null;
   day_index: number;
   skip_partner_notification: boolean;
+  /** zie _shared/itemHandling */
+  partner_handling?: string | null;
+  billing_route?: string | null;
 }
 
 interface PartnerGroup {
@@ -117,69 +125,6 @@ async function groupItemsByProvider(items: ProgramItem[], supabase: any): Promis
   }
 
   return groups;
-}
-
-function generatePartnerNotificationEmail(
-  group: PartnerGroup,
-  program: any,
-  portalUrl: string
-): string {
-  const formattedDates = (program.selected_dates as string[])
-    .map((d) => formatDateNL(d))
-    .join(", ");
-
-  const itemsHtml = group.items
-    .map((item) => {
-      return `<li style="margin-bottom: 12px;">
-        <strong>${sanitizeHtml(item.block_name)}</strong>
-        ${renderEffectiveTimeLine(item, "Tijd")}
-      </li>`;
-    })
-    .join("");
-
-  const customerLabel = sanitizeHtml(program.customer_company || program.customer_name || "");
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-      <h2 style="color: #0F4C5C; border-bottom: 2px solid #0F4C5C; padding-bottom: 10px;">
-        Aanvraag bevestigd door klant
-      </h2>
-
-      <p>Hoi ${sanitizeHtml(group.partnerName)},</p>
-
-      <p>Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben onderstaande onderdelen definitief in het programma opgenomen en willen je vragen ze te bevestigen via het partnerportaal.</p>
-
-      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #2d3748; font-size:15px;">Aanvraag</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 5px 0; color: #666;">Referentie:</td><td style="padding: 5px 0;"><strong>${program.reference_number || "-"}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Klant:</td><td style="padding: 5px 0;"><strong>${customerLabel || "-"}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Datum(s):</td><td style="padding: 5px 0;"><strong>${formattedDates}</strong></td></tr>
-          <tr><td style="padding: 5px 0; color: #666;">Aantal personen:</td><td style="padding: 5px 0;"><strong>${program.number_of_people}</strong></td></tr>
-        </table>
-      </div>
-
-      <div style="background: #edf7ed; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #48bb78;">
-        <h3 style="margin-top: 0; color: #276749;">Onderdelen voor jou</h3>
-        <ul style="padding-left: 20px; margin-bottom: 0;">
-          ${itemsHtml}
-        </ul>
-      </div>
-
-      <div style="text-align:center; margin: 24px 0;">
-        <a href="${portalUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600;">
-          Bevestig in partnerportaal →
-        </a>
-      </div>
-
-      <p style="background:#f0f4ff;padding:12px 16px;border-left:3px solid #0F4C5C;border-radius:4px;color:#374151;font-size:14px;margin:16px 0;">
-        <strong>Facturatie:</strong> Bureau Vlieland regelt de communicatie en facturatie richting de klant. Stuur jouw factuur na uitvoering naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a> (of upload in het partnerportaal). Vragen? Reageer op deze mail — wij staan tussen jou en de klant in.
-      </p>
-
-      <p style="margin-top: 24px; color:#666; font-size:13px;">
-        Met vriendelijke groet,<br><strong>Bureau Vlieland</strong>
-      </p>
-    </div>
-  `;
 }
 
 function generateCustomerConfirmationEmail(
@@ -260,7 +205,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { token, request_id, admin_override, origin } = validationResult.data;
+    const { token, request_id, admin_override, origin, skipCustomerEmail } = validationResult.data;
     const testMode = isTestMode(origin);
     const subjectPrefix = getSubjectPrefix(origin);
     const isAdmin = !!admin_override;
@@ -415,72 +360,79 @@ Deno.serve(async (req: Request): Promise<Response> => {
         notes: `Klant heeft het voorstel geaccordeerd. ${approvedItems?.length || 0} onderdeel(en) wachten op verwerking door Bureau Vlieland.`,
       });
 
-      const custBaseUrl = getPortalBaseUrl(origin);
-      const custPortalUrl = `${custBaseUrl}/mijn-programma/${program.customer_token}`;
-      const customerEmailHtml = generateCustomerConfirmationEmail(
-        program,
-        custPortalUrl
-      );
-      const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
+      // Klantmail "Uw akkoord is ontvangen". Bij akkoord-en-ondertekenen in één
+      // klik heeft update-customer-program net booking_confirmed_customer gestuurd;
+      // dan slaan we deze over (skipCustomerEmail) zodat de klant één mail krijgt.
+      if (skipCustomerEmail) {
+        console.log(`Klantmail quote_accepted_customer overgeslagen (skipCustomerEmail) voor ${program.reference_number}`);
+      } else {
+        const custBaseUrl = getPortalBaseUrl(origin);
+        const custPortalUrl = `${custBaseUrl}/mijn-programma/${program.customer_token}`;
+        const customerEmailHtml = generateCustomerConfirmationEmail(
+          program,
+          custPortalUrl
+        );
+        const customerRecipientEmail = getRecipientEmail(program.customer_email, origin);
 
-      try {
-        const customerMailjetResponse = await sendEmailViaMailjet([
-          {
-            From: {
-              Email: "hallo@bureauvlieland.nl",
-              Name: "Bureau Vlieland",
-            },
-            To: [
-              {
-                Email: customerRecipientEmail,
-                Name: program.customer_name,
+        try {
+          const customerMailjetResponse = await sendEmailViaMailjet([
+            {
+              From: {
+                Email: "hallo@bureauvlieland.nl",
+                Name: "Bureau Vlieland",
               },
-            ],
-            ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-            Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-            HTMLPart: customerEmailHtml,
-          },
-        ]);
+              To: [
+                {
+                  Email: customerRecipientEmail,
+                  Name: program.customer_name,
+                },
+              ],
+              ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
+              Subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+              HTMLPart: customerEmailHtml,
+            },
+          ]);
 
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "sent",
-          mailjet_message_id:
-            customerMailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
-          sent_by: "system",
-          metadata: {
-            template_name: "quote_accepted_customer",
-            actor: "klant → bureau (akkoord bevestiging)",
-            approved_item_count: approvedItems?.length || 0,
-            test_mode: testMode,
-          },
-        });
+          await logEmail({
+            email_type: "quote_accepted_customer",
+            subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            recipient_email: customerRecipientEmail,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            status: "sent",
+            mailjet_message_id:
+              customerMailjetResponse?.Messages?.[0]?.To?.[0]?.MessageID?.toString() || null,
+            sent_by: "system",
+            metadata: {
+              template_name: "quote_accepted_customer",
+              actor: "klant → bureau (akkoord bevestiging)",
+              approved_item_count: approvedItems?.length || 0,
+              test_mode: testMode,
+            },
+          });
 
-        console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
-      } catch (customerEmailError) {
-        console.error("Error sending customer confirmation:", customerEmailError);
-        await logEmail({
-          email_type: "quote_accepted_customer",
-          subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
-          recipient_email: customerRecipientEmail,
-          recipient_name: program.customer_name,
-          related_request_id: program.id,
-          status: "failed",
-          error_message:
-            customerEmailError instanceof Error
-              ? customerEmailError.message
-              : "Unknown error",
-          sent_by: "system",
-          metadata: {
-            template_name: "quote_accepted_customer",
-            actor: "klant → bureau (akkoord bevestiging)",
-            failure: true,
-          },
-        });
+          console.log(`Sent confirmation email to customer ${customerRecipientEmail}`);
+        } catch (customerEmailError) {
+          console.error("Error sending customer confirmation:", customerEmailError);
+          await logEmail({
+            email_type: "quote_accepted_customer",
+            subject: `${subjectPrefix}Uw akkoord is ontvangen - Bureau Vlieland`,
+            recipient_email: customerRecipientEmail,
+            recipient_name: program.customer_name,
+            related_request_id: program.id,
+            status: "failed",
+            error_message:
+              customerEmailError instanceof Error
+                ? customerEmailError.message
+                : "Unknown error",
+            sent_by: "system",
+            metadata: {
+              template_name: "quote_accepted_customer",
+              actor: "klant → bureau (akkoord bevestiging)",
+              failure: true,
+            },
+          });
+        }
       }
 
       console.log(`Customer quote acceptance completed for ${program.reference_number}`);
@@ -507,6 +459,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
         });
         console.log(`Created send_items_to_partners todo for ${program.id}`);
       }
+
+      // Melding aan het bureau: klant gaf akkoord (taak "Binnengekomen" + mail).
+      await recordBureauEvent(supabase, {
+        kind: "customer_quote_accepted",
+        entityId: program.id,
+        request: {
+          id: program.id,
+          reference_number: program.reference_number,
+          customer_name: program.customer_name,
+          customer_company: program.customer_company ?? null,
+        },
+        origin,
+      });
 
       return new Response(
         JSON.stringify({
@@ -556,7 +521,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.log(`Found ${items?.length || 0} items to notify partners about`);
 
     // 6. Group items by provider
-    const partnerGroups = await groupItemsByProvider(items || [], supabase);
+    const partnerGroups = await groupItemsByProvider((items || []) as ProgramItem[], supabase);
     console.log(`Grouped into ${partnerGroups.size} partner groups`);
 
     // 7. Build portal URLs
@@ -586,8 +551,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       const partnerPortalUrl = `${baseUrl}/partner/login`;
 
-      // Generate email
-      const emailHtml = generatePartnerNotificationEmail(group, program, partnerPortalUrl);
+      // Eén tekst voor dit moment, gedeeld met send-items-to-partners
+      // (_shared/partnerRequestMail.ts), in de huisstijl.
+      const mail = buildPartnerRequestMail({
+        partnerName: group.partnerName,
+        referenceNumber: program.reference_number,
+        customerLabel: program.customer_company || program.customer_name,
+        dates: Array.isArray(program.selected_dates) ? (program.selected_dates as string[]) : [],
+        numberOfPeople: program.number_of_people,
+        items: group.items,
+        portalUrl: partnerPortalUrl,
+        customerSigned: !!program.terms_accepted_at,
+        subjectPrefix,
+      });
+      const emailHtml = await wrapEmailHtml(mail.html, supabase);
+      const partnerSubject = mail.subject;
       const recipientEmail = getRecipientEmail(group.partnerEmail, origin);
 
       const messageIdx = emailMessages.length;
@@ -603,14 +581,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
           },
         ],
         ...(buildReplyTo(program.reference_number) ? { ReplyTo: buildReplyTo(program.reference_number) } : {}),
-        Subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+        Subject: partnerSubject,
         HTMLPart: emailHtml,
       });
 
       for (const it of group.items) {
         emailLogs.push({
           email_type: EmailTypes.PROGRAM_REQUEST_PARTNER,
-          subject: `${subjectPrefix}Nieuwe aanvraag via Bureau Vlieland — ${program.reference_number || ""}`,
+          subject: partnerSubject,
           recipient_email: recipientEmail,
           recipient_name: group.partnerName,
           related_request_id: program.id,

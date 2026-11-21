@@ -123,12 +123,7 @@ Deno.serve(async (req) => {
       return out;
     };
     let substitutedSubject = applySubstitutions(subject || "");
-    let substitutedBody = applySubstitutions(body || "");
-
-    // Verwijder dubbele afsluiting (de wrapper voegt al "Met vriendelijke groet, Bureau Vlieland" toe)
-    substitutedBody = substitutedBody
-      .replace(/\s*Met vriendelijke groet,?\s*\n+\s*Bureau Vlieland\.?\s*$/i, "")
-      .trimEnd();
+    const substitutedBody = applySubstitutions(body || "").trimEnd();
 
     if (!recipientEmail || !subject || !body) {
       return new Response(

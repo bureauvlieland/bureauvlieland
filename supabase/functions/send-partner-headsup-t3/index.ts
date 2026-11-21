@@ -1,42 +1,33 @@
-// Sends a "heads-up T-3" email to partners exactly 3 days before an
-// accepted activity, with the latest state of affairs (date, time, people,
-// location, guest list, dietary notes, admin instructions).
+// Heads-up T-3 aan partners: drie dagen vóór een definitief onderdeel de
+// laatste stand van zaken (datum, tijd, aantal, locatie, gastenlijst,
+// dieetwensen, instructie van het bureau). Tekst: DB-template
+// `partner_headsup_t3` (migratie 20261121160000), noodrem in headsup-mail.ts.
 //
-// Trigger: daily cron (pg_cron) at 08:00 NL. Idempotent via email_log dedup
-// on (email_type='partner_headsup_t3', related_item_id).
+// Trigger: dagelijkse cron (pg_cron) om 08:00 NL. Idempotent via email_log
+// op (email_type='partner_headsup_t3', related_item_id).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   getPortalBaseUrl,
   getSubjectPrefix,
   getRecipientEmail,
-  formatDateNL,
   getEffectiveItemTime,
+  getRenderedTemplate,
+  wrapEmailHtml,
   buildReplyTo,
   SENDER_EMAIL,
   SENDER_NAME,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { HEADSUP_TEMPLATE_ID, buildHeadsupMail, isHeadsupCandidate } from "./headsup-mail.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Letterlijk, zodat emailTypeLabelsContract.test.ts de sleutel ziet; gelijk aan HEADSUP_TEMPLATE_ID.
 const EMAIL_TYPE = "partner_headsup_t3";
-
-function escapeHtml(s: string | null | undefined): string {
-  if (s == null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function nlToBr(s: string | null | undefined): string {
-  return escapeHtml(s).replace(/\n/g, "<br>");
-}
+if (EMAIL_TYPE !== HEADSUP_TEMPLATE_ID) throw new Error("EMAIL_TYPE en HEADSUP_TEMPLATE_ID lopen uit elkaar");
 
 // Build target date string (YYYY-MM-DD) in Europe/Amsterdam, today + offsetDays.
 function targetDateNL(offsetDays: number): string {
@@ -66,11 +57,14 @@ interface ItemRow {
   day_index: number | null;
   override_people: number | null;
   partner_instructions: string | null;
-  admin_price_notes: string | null;
   location_address: string | null;
   duration: number | null;
   status: string | null;
   skip_partner_notification: boolean | null;
+  customer_approved_at: string | null;
+  customer_accepted_at: string | null;
+  partner_handling: string | null;
+  billing_route: string | null;
 }
 
 interface RequestRow {
@@ -110,13 +104,16 @@ Deno.serve(async (req) => {
     const subjectPrefix = getSubjectPrefix(origin);
     const target = targetDateNL(offsetDays);
 
-    // 1) Candidate items: accepted, not skipped, real partner provider, not bureau/self_arranged.
+    // 1) Kandidaten: definitief (accepted, of confirmed met klantakkoord; zie
+    //    isHeadsupCandidate), naar de partner verstuurd, echte partner, geen
+    //    bureau- of self_arranged-onderdeel. admin_price_notes is intern en
+    //    wordt bewust niet opgehaald.
     const { data: items, error: itemsErr } = await supabase
       .from("program_request_items")
       .select(
-        "id, request_id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, override_people, partner_instructions, admin_price_notes, location_address, duration, status, skip_partner_notification",
+        "id, request_id, block_name, block_category, block_type, provider_id, provider_name, provider_email, preferred_time, proposed_time, confirmed_time, day_index, override_people, partner_instructions, location_address, duration, status, skip_partner_notification, customer_approved_at, customer_accepted_at, partner_handling, billing_route",
       )
-      .eq("status", "accepted")
+      .in("status", ["accepted", "confirmed"])
       .eq("skip_partner_notification", false)
       .not("provider_id", "is", null)
       .neq("provider_id", "bureau")
@@ -145,6 +142,7 @@ Deno.serve(async (req) => {
     type Eligible = { item: ItemRow; request: RequestRow; activityDate: string };
     const eligible: Eligible[] = [];
     for (const it of items as ItemRow[]) {
+      if (!isHeadsupCandidate(it)) continue;
       const r = reqMap.get(it.request_id);
       if (!r) continue;
       if (r.cancelled_at) continue;
@@ -221,9 +219,6 @@ Deno.serve(async (req) => {
       const people = item.override_people ?? request.number_of_people ?? null;
       const customerLabel = request.customer_company || request.customer_name || "klant";
       const showCatering = (item.block_category || "").toLowerCase() === "catering";
-      const guestsUpdated = request.guest_details_updated_at
-        ? formatDateNL(request.guest_details_updated_at)
-        : null;
 
       matched.push({
         item_id: item.id,
@@ -238,69 +233,33 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const subject = `${subjectPrefix}Over 3 dagen: ${item.block_name} — ${formatDateNL(activityDate)}${request.reference_number ? ` (${request.reference_number})` : ""}`;
-
-      const portalLink = `${baseUrl}/partner/login`;
-
-      const html = `
-<div style="font-family: Arial, sans-serif; color:#1f2937; max-width:640px; margin:0 auto;">
-  <h2 style="color:#0F4C5C; margin-bottom:4px;">Heads-up: over 3 dagen op het programma</h2>
-  <p style="margin-top:0; color:#6b7280;">Een korte update zodat je goed voorbereid bent op de uitvoering.</p>
-
-  <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:16px; margin:16px 0;">
-    <h3 style="margin:0 0 8px; color:#0F4C5C;">${escapeHtml(item.block_name)}</h3>
-    <table style="width:100%; border-collapse:collapse; font-size:14px;">
-      <tr><td style="padding:4px 0; color:#6b7280; width:160px;">Datum</td><td><strong>${escapeHtml(formatDateNL(activityDate))}</strong></td></tr>
-      ${effectiveTime ? `<tr><td style="padding:4px 0; color:#6b7280;">Tijd</td><td><strong>${escapeHtml(effectiveTime)}</strong></td></tr>` : ""}
-      ${item.duration ? `<tr><td style="padding:4px 0; color:#6b7280;">Duur</td><td>${escapeHtml(String(item.duration))} min</td></tr>` : ""}
-      ${people != null ? `<tr><td style="padding:4px 0; color:#6b7280;">Aantal personen</td><td><strong>${escapeHtml(String(people))}</strong></td></tr>` : ""}
-      ${item.location_address ? `<tr><td style="padding:4px 0; color:#6b7280;">Locatie</td><td>${escapeHtml(item.location_address)}</td></tr>` : ""}
-      ${request.reference_number ? `<tr><td style="padding:4px 0; color:#6b7280;">Project</td><td>${escapeHtml(request.reference_number)} — ${escapeHtml(customerLabel)}</td></tr>` : ""}
-    </table>
-  </div>
-
-  ${
-    item.partner_instructions
-      ? `<div style="background:#fff7ed; border-left:4px solid #E36414; padding:12px 14px; border-radius:6px; margin:12px 0;">
-          <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#92400e; margin-bottom:4px;">Instructie van Bureau Vlieland</div>
-          <div style="font-size:14px;">${nlToBr(item.partner_instructions)}</div>
-        </div>`
-      : ""
-  }
-  ${
-    item.admin_price_notes
-      ? `<div style="background:#f0f9ff; border-left:4px solid #0284c7; padding:12px 14px; border-radius:6px; margin:12px 0;">
-          <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#075985; margin-bottom:4px;">Toelichting</div>
-          <div style="font-size:14px;">${nlToBr(item.admin_price_notes)}</div>
-        </div>`
-      : ""
-  }
-
-  ${
-    request.guest_names || (showCatering && request.dietary_notes)
-      ? `<div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; margin:12px 0;">
-          <div style="font-weight:600; color:#0F4C5C; margin-bottom:6px;">Gastgegevens${guestsUpdated ? ` <span style="font-weight:400; color:#6b7280; font-size:12px;">— laatst bijgewerkt op ${escapeHtml(guestsUpdated)}</span>` : ""}</div>
-          ${request.guest_names ? `<div style="font-size:13px; margin-bottom:8px;"><div style="color:#6b7280; margin-bottom:2px;">Gastenlijst</div>${nlToBr(request.guest_names)}</div>` : ""}
-          ${showCatering && request.dietary_notes ? `<div style="font-size:13px;"><div style="color:#6b7280; margin-bottom:2px;">Dieetwensen</div>${nlToBr(request.dietary_notes)}</div>` : ""}
-        </div>`
-      : ""
-  }
-
-  ${
-    request.invoicing_mode === "bureau_central"
-      ? `<p style="font-size:13px; color:#475569; background:#f1f5f9; padding:10px 12px; border-radius:6px;">
-          <strong>Facturatie via Bureau Vlieland.</strong> Je factureert Bureau Vlieland (niet de klant) en uploadt je factuur via de knop "Factuur registreren" in het partnerportaal.
-        </p>`
-      : ""
-  }
-
-  <p style="margin:20px 0;">
-    <a href="${portalLink}" style="background:#0F4C5C; color:#fff; padding:10px 18px; border-radius:6px; text-decoration:none; display:inline-block;">Bekijk in partnerportaal</a>
-  </p>
-
-  <p style="font-size:13px; color:#6b7280;">Heb je nog vragen of wijzigingen? Reply gerust op deze e-mail — die komt direct in het projectdossier terecht.</p>
-  <p style="font-size:13px; color:#6b7280;">Met vriendelijke groet,<br>Bureau Vlieland</p>
-</div>`;
+      const mail = buildHeadsupMail({
+        partnerName,
+        blockName: item.block_name,
+        activityDate,
+        effectiveTime,
+        durationMinutes: item.duration,
+        people,
+        location: item.location_address,
+        referenceNumber: request.reference_number,
+        customerLabel,
+        partnerInstructions: item.partner_instructions,
+        guestNames: request.guest_names,
+        dietaryNotes: showCatering ? request.dietary_notes : null,
+        guestsUpdatedAt: request.guest_details_updated_at,
+        invoicingMode: request.invoicing_mode,
+        item,
+        portalUrl: `${baseUrl}/partner/login`,
+        subjectPrefix,
+      });
+      const rendered = await getRenderedTemplate(HEADSUP_TEMPLATE_ID, mail.variables, {
+        ...mail.variables,
+        block_name: item.block_name,
+        customer_name: customerLabel,
+        reference_number: request.reference_number || "",
+      });
+      const subject = rendered ? `${subjectPrefix}${rendered.subject}` : mail.subject;
+      const html = rendered?.body ?? await wrapEmailHtml(mail.fallbackHtml, supabase);
 
       const recipientEmail = getRecipientEmail(partnerEmail, origin);
       const replyTo = buildReplyTo(request.reference_number);

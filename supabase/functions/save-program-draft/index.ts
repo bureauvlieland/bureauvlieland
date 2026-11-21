@@ -1,7 +1,7 @@
 // Save a program draft and email the visitor a cross-device recovery link.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3.22.4";
-import { SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import { SENDER_EMAIL, SENDER_NAME, getRecipientEmail, getSubjectPrefix, getPortalBaseUrl, wrapEmailHtml } from "../_shared/email-templates.ts";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -40,42 +40,17 @@ const generateToken = () => {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 };
 
-const getOrigin = (req: Request): string => {
-  const origin = req.headers.get("origin");
-  if (origin && /^https?:\/\//.test(origin)) return origin;
-  return "https://bureauvlieland.nl";
-};
-
+// Binnenkant van de mail; de huisstijlwrapper (wrapEmailHtml) levert logo en
+// voettekst met adres, KvK en IBAN, dus geen eigen kop of voet meer.
 const buildEmailHtml = (recoveryUrl: string, itemCount: number) => `
-<!doctype html>
-<html lang="nl">
-<body style="margin:0;padding:0;background:#f8f7f3;font-family:Georgia,serif;color:#1a1a1a;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f7f3;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="padding:32px 32px 8px;">
-          <div style="font-size:13px;letter-spacing:0.12em;text-transform:uppercase;color:#7a6a4f;">Bureau Vlieland</div>
-          <h1 style="font-size:24px;margin:12px 0 8px;color:#1a1a1a;">Uw programma staat klaar</h1>
-          <p style="font-size:15px;line-height:1.6;color:#3a3a3a;margin:0 0 16px;">
-            Wij hebben uw concept-programma met ${itemCount} ${itemCount === 1 ? "onderdeel" : "onderdelen"} voor u bewaard. U kunt het op elk apparaat verder afmaken via onderstaande link.
-          </p>
-          <p style="margin:24px 0;">
-            <a href="${recoveryUrl}" style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:4px;font-size:15px;font-family:Helvetica,Arial,sans-serif;">
-              Programma openen
-            </a>
-          </p>
-          <p style="font-size:13px;color:#7a6a4f;line-height:1.6;margin:24px 0 0;">
-            De link blijft 30 dagen geldig. Heeft u dit niet aangevraagd? Dan kunt u deze e-mail negeren.
-          </p>
-        </td></tr>
-        <tr><td style="padding:24px 32px;background:#f4f1ea;font-size:12px;color:#7a6a4f;line-height:1.5;">
-          Bureau Vlieland · Vlieland · info@bureauvlieland.nl
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+  <h2 style="color:#0F4C5C;margin:0 0 12px;">Uw concept staat klaar</h2>
+  <p>Wij hebben uw concept-programma met ${itemCount} ${itemCount === 1 ? "onderdeel" : "onderdelen"} voor u bewaard. U kunt het op elk apparaat verder afmaken via onderstaande knop.</p>
+  <p style="margin:24px 0;">
+    <a href="${recoveryUrl}" style="display:inline-block;background:#0F4C5C;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600;">Programma openen</a>
+  </p>
+  <p style="font-size:13px;color:#666;">De link blijft 30 dagen geldig. Heeft u dit niet aangevraagd? Dan kunt u deze e-mail negeren.</p>
+  <p>Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
+`;
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -153,11 +128,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (shouldSendEmail) {
-      const origin = getOrigin(req);
-      const recoveryUrl = `${origin}/concept/${token}`;
+      // Zoals overal: de link wijst naar het productiedomein (lokaal: de origin zelf).
+      const origin = req.headers.get("origin") || undefined;
+      const recoveryUrl = `${getPortalBaseUrl(origin)}/concept/${token}`;
       const itemCount = Array.isArray(payload.cartItems) ? payload.cartItems.length : 0;
-      const subject = `${getSubjectPrefix(origin)}Uw programma staat klaar — Bureau Vlieland`;
-      const html = buildEmailHtml(recoveryUrl, itemCount);
+      const subject = `${getSubjectPrefix(origin)}Uw concept-programma staat klaar — Bureau Vlieland`;
+      const html = await wrapEmailHtml(buildEmailHtml(recoveryUrl, itemCount), supabase);
       // Via de gedeelde verzender (blokkadelijst, exacte MessageID) en gelogd
       // volgens het e-mail-logging-contract; zonder logregel kon de
       // terugkoppeling van Mailjet op deze mail nergens op matchen.

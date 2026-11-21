@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getRecipientEmail, getSubjectPrefix, buildReplyTo } from "../_shared/email-templates.ts";
+import { getRecipientEmail, getSubjectPrefix, buildReplyTo, formatCurrencyNL } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -479,7 +479,7 @@ Deno.serve(async (req) => {
     // Minimal HTML body — keeps Snelstart from saving the message itself as a separate "e-mail.pdf".
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; font-size: 13px; color: #333;">
-        <p>Verkoopfactuur <strong>${invoice.invoice_number}</strong> — ${customerLabel} — €${amountIncl.toFixed(2)} incl. BTW.</p>
+        <p>Verkoopfactuur <strong>${invoice.invoice_number}</strong> — ${customerLabel} — ${formatCurrencyNL(amountIncl)} incl. btw.</p>
         <p>Zie bijlagen: PDF (visueel) en UBL/XML (boekhoudkundige verwerking).</p>
       </div>
     `;

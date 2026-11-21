@@ -4,10 +4,12 @@ import {
   SENDER_NAME,
   buildReplyTo,
   getRenderedTemplate,
+  sanitizeHtml,
   TemplateIds,
   getPortalBaseUrl,
 } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
+import { enqueueChangeNotifications, type ChangeLine, type PendingChangeInsert } from "../_shared/changeDigest.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,6 +93,14 @@ function renderChangesListHtml(rows: ChangeRow[]): string {
   return `<ul style="margin:8px 0 16px; padding-left:20px;">${renderChangeItems(rows)}</ul>`;
 }
 
+// Wijzigingsregel voor de wachtrij van de dagelijkse bundel (platte tekst;
+// _shared/changeDigest.ts ontsmet bij het opbouwen van de mail).
+function toChangeLine(r: ChangeRow): ChangeLine {
+  if (r.field === "added") return { item: r.blockName, label: "Toegevoegd", from: null, to: r.blockName };
+  if (r.field === "removed") return { item: r.blockName, label: "Geannuleerd", from: null, to: r.blockName };
+  return { item: r.blockName, label: fieldLabel[r.field], from: r.oldValue, to: r.newValue };
+}
+
 async function sendMailjet(messages: any[]) {
   const apiKey = Deno.env.get("MAILJET_API_KEY");
   const secretKey = Deno.env.get("MAILJET_SECRET_KEY");
@@ -124,6 +134,10 @@ Deno.serve(async (req) => {
       dryRun = false,
       approvalScope,
       newItemApproval = "require",
+      // Standaard gaan de "programma bijgewerkt"-mails in de dagelijkse bundel
+      // (pending_change_notifications → send-change-digest, 17:00). Met
+      // sendNow gaan ze direct, zoals vroeger.
+      sendNow = false,
     } = body as {
       requestId: string;
       notifyCustomer?: boolean;
@@ -133,6 +147,7 @@ Deno.serve(async (req) => {
       dryRun?: boolean;
       approvalScope?: { customer?: "reset" | "keep"; partner?: "reset" | "keep" };
       newItemApproval?: "require" | "skip";
+      sendNow?: boolean;
     };
     // Klantgoedkeuring gaat over de activiteit zelf. Is een onderdeel eenmaal
     // goedgekeurd, dan blijft dat akkoord staan bij wijzigingen (tijd, prijs,
@@ -585,6 +600,8 @@ Deno.serve(async (req) => {
           changes: changeRows,
           would_publish: items.length,
           would_email: previewRecipients,
+          // false: de mails gaan in de dagelijkse bundel van 17:00.
+          send_now: !!sendNow,
           test_mode: isTestMode(origin),
           portal_url_customer: `${portalBase}/mijn-programma/${program.customer_token}`,
         }),
@@ -791,6 +808,9 @@ Deno.serve(async (req) => {
     const notifiedEmails: string[] = [];
     const emailMessages: any[] = [];
     const pendingLogs: Array<{ idx: number; payload: any }> = [];
+    // Wachtrij voor de dagelijkse bundel (alleen de "programma bijgewerkt"-mails).
+    const queueRows: PendingChangeInsert[] = [];
+    const queuedEmails: string[] = [];
 
     const portalBase = getPortalBaseUrl(origin);
     const customerPortalUrl = `${portalBase}/mijn-programma/${program.customer_token}`;
@@ -802,55 +822,77 @@ Deno.serve(async (req) => {
 
     // Klant-mail — template gebruikt {{changes_summary}} (volledig HTML-blok mét <ul>)
     if (notifyCustomer && program.customer_email && changeRows.length > 0) {
-      const html = renderChangesListHtml(changeRows);
-      const noteBlock = adminNote
-        ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
-        : "";
       // Nieuwe onderdelen waarvoor de klant nog akkoord moet geven → aparte
-      // template met een expliciete goedkeuringsvraag. Anders de reguliere
-      // "programma bijgewerkt"-bevestiging.
+      // template met een expliciete goedkeuringsvraag, altijd direct. Anders de
+      // reguliere "programma bijgewerkt"-bevestiging, die in de dagelijkse
+      // bundel gaat tenzij sendNow.
       const customerTemplateId =
         addedItemsNeedingApproval.length > 0
           ? TemplateIds.ITEM_ADDED_CUSTOMER_APPROVAL
           : TemplateIds.ITEM_CHANGES_CUSTOMER;
-      const rendered = await getRenderedTemplate(customerTemplateId, {
-        customer_name: program.customer_name,
-        changes_summary: html + noteBlock,
-        portal_url: customerPortalUrl,
-        reference_number: program.reference_number || "",
-        new_item_count: String(addedItemsNeedingApproval.length),
-        new_item_names: addedItemsNeedingApproval
-          .map((i: any) => i.pending_block_name ?? i.block_name)
-          .join(", "),
-      });
-      if (rendered) {
+      if (customerTemplateId === TemplateIds.ITEM_CHANGES_CUSTOMER && !sendNow) {
         const to = recipientFor(program.customer_email, origin);
-        notifiedEmails.push(to);
-        const idx = emailMessages.length;
-        emailMessages.push({
-          From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: to, Name: program.customer_name }],
-          ReplyTo: buildReplyTo(program.reference_number),
-          Subject: subjectPrefix(origin) + rendered.subject,
-          HTMLPart: rendered.body,
-        });
-        pendingLogs.push({
-          idx,
+        queuedEmails.push(to);
+        queueRows.push({
+          request_id: requestId,
+          recipient_kind: "customer",
+          recipient_email: to,
+          partner_id: null,
           payload: {
-            email_type: customerTemplateId,
-            subject: rendered.subject,
-            recipient_email: to,
+            reference_number: program.reference_number || null,
             recipient_name: program.customer_name,
-            related_request_id: requestId,
-            sent_by: "publish-program-changes",
-            metadata: {
-              template_name: customerTemplateId,
-              actor: "admin → klant (gebundelde publicatie)",
-              change_count: changeRows.length,
-              new_items_awaiting_approval: addedItemsNeedingApproval.length,
-            },
+            customer_label: program.customer_company || program.customer_name,
+            changes: changeRows.map(toChangeLine),
+            note: adminNote || null,
+            portal_url: customerPortalUrl,
+            actor: "bureau",
+            subject_prefix: subjectPrefix(origin),
           },
         });
+      } else {
+        const html = renderChangesListHtml(changeRows);
+        const noteBlock = adminNote
+          ? `<p style="margin:16px 0;padding:12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;">${adminNote.replace(/\n/g, "<br>")}</p>`
+          : "";
+        const rendered = await getRenderedTemplate(customerTemplateId, {
+          customer_name: program.customer_name,
+          changes_summary: html + noteBlock,
+          portal_url: customerPortalUrl,
+          reference_number: program.reference_number || "",
+          new_item_count: String(addedItemsNeedingApproval.length),
+          new_item_names: addedItemsNeedingApproval
+            .map((i: any) => i.pending_block_name ?? i.block_name)
+            .join(", "),
+        });
+        if (rendered) {
+          const to = recipientFor(program.customer_email, origin);
+          notifiedEmails.push(to);
+          const idx = emailMessages.length;
+          emailMessages.push({
+            From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
+            To: [{ Email: to, Name: program.customer_name }],
+            ReplyTo: buildReplyTo(program.reference_number),
+            Subject: subjectPrefix(origin) + rendered.subject,
+            HTMLPart: rendered.body,
+          });
+          pendingLogs.push({
+            idx,
+            payload: {
+              email_type: customerTemplateId,
+              subject: rendered.subject,
+              recipient_email: to,
+              recipient_name: program.customer_name,
+              related_request_id: requestId,
+              sent_by: "publish-program-changes",
+              metadata: {
+                template_name: customerTemplateId,
+                actor: "admin → klant (gebundelde publicatie)",
+                change_count: changeRows.length,
+                new_items_awaiting_approval: addedItemsNeedingApproval.length,
+              },
+            },
+          });
+        }
       }
     }
 
@@ -885,22 +927,53 @@ Deno.serve(async (req) => {
       if (skippedItemIds.length > 0) skippedNotApprovedByPartner[pid] = skippedItemIds;
       if (rows.length === 0) continue;
 
+      if (!sendNow) {
+        const to = recipientFor(partnerEmail, origin);
+        queuedEmails.push(to);
+        queueRows.push({
+          request_id: requestId,
+          recipient_kind: "partner",
+          recipient_email: to,
+          partner_id: pid,
+          payload: {
+            reference_number: program.reference_number || null,
+            recipient_name: partner.name,
+            customer_label: program.customer_company || program.customer_name,
+            changes: rows.map(toChangeLine),
+            note: adminNote || null,
+            portal_url: `${portalBase}/partner/dashboard?tab=projecten&q=${encodeURIComponent(program.reference_number || "")}`,
+            actor: "bureau",
+            subject_prefix: subjectPrefix(origin),
+            dates,
+            number_of_people: program.number_of_people,
+          },
+        });
+        continue;
+      }
+
       // Template wrapt {{changes_list}} al in <ul>...</ul> → enkel <li>-items leveren.
       const itemsHtml = renderChangeItems(rows);
       const noteLi = adminNote
         ? `<li style="margin-top:8px;list-style:none;padding:8px 12px;background:#f8fafc;border-left:3px solid #0F4C5C;border-radius:4px;"><strong>Toelichting:</strong> ${adminNote.replace(/\n/g, "<br>")}</li>`
         : "";
-      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, {
-        partner_name: partner.name,
-        customer_name: program.customer_name,
-        customer_company: program.customer_company || "",
+      // Namen uit de database gaan HTML-ontsmet de template in; het onderwerp
+      // is platte tekst en krijgt de onbewerkte waarden.
+      const partnerTemplateVars = {
+        partner_name: sanitizeHtml(partner.name),
+        customer_name: sanitizeHtml(program.customer_name),
+        customer_company: sanitizeHtml(program.customer_company || ""),
         customer_email: "", // privacy: PII niet delen
         customer_phone: "",
         dates,
         selected_dates: dates,
         number_of_people: program.number_of_people,
         changes_list: itemsHtml + noteLi,
-
+      };
+      const rendered = await getRenderedTemplate(TemplateIds.ITEM_CHANGES_PARTNER, partnerTemplateVars, {
+        ...partnerTemplateVars,
+        partner_name: partner.name,
+        customer_name: program.customer_name,
+        customer_company: program.customer_company || "",
       });
       if (!rendered) continue;
       const to = recipientFor(partnerEmail, origin);
@@ -949,13 +1022,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Persist change log
+    // In de wachtrij voor de bundel van 17:00.
+    const emailsQueued = await enqueueChangeNotifications(supabase, queueRows);
+
+    // Persist change log (notified_emails: direct gemaild én in de bundel gezet)
     if (logRows.length > 0) {
       const rowsWithMeta = logRows.map((r) => ({
         ...r,
         changed_by: actorUserId,
         published_at: nowIso,
-        notified_emails: notifiedEmails,
+        notified_emails: [...notifiedEmails, ...queuedEmails],
         admin_note: adminNote || null,
       }));
       await supabase.from("program_change_log").insert(rowsWithMeta);
@@ -966,7 +1042,9 @@ Deno.serve(async (req) => {
         ok: true,
         published: items.length,
         emails_sent: emailMessages.length,
+        emails_queued: emailsQueued,
         notified: notifiedEmails,
+        queued: queuedEmails,
         skipped_not_approved: skippedNotApprovedByPartner,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },

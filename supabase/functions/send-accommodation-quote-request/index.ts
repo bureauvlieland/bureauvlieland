@@ -2,7 +2,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { logEmail } from "../_shared/email-logger.ts";
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
-import { getPortalBaseUrl, getRecipientEmail, getSubjectPrefix } from "../_shared/email-templates.ts";
+import {
+  getPortalBaseUrl,
+  getRecipientEmail,
+  getSubjectPrefix,
+  buildReplyTo,
+  formatDateNL,
+  sanitizeHtml,
+  wrapEmailHtml,
+} from "../_shared/email-templates.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -41,55 +49,73 @@ const sendEmailViaMailjet = async (messages: any[]) => {
   return await response.json();
 };
 
-// Convert markdown-style formatting to HTML
-function markdownToHtml(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+/**
+ * De admin schrijft de tekst in de dialoog met lichte markdown: **vet**,
+ * regels die met "- " beginnen als opsomming, verder gewone regels.
+ * HTML uit de tekst wordt ontsmet; alleen deze opmaak komt erdoor.
+ */
+export function markdownToHtml(text: string): string {
+  const lines = sanitizeHtml(text).replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let list: string[] = [];
+  const flushList = () => {
+    if (list.length > 0) {
+      out.push(`<ul style="margin:4px 0 8px;padding-left:20px;">${list.map((l) => `<li style="margin:2px 0;">${l}</li>`).join("")}</ul>`);
+      list = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    const bullet = /^\s*-\s+(.*)$/.exec(line);
+    if (bullet) {
+      list.push(bullet[1]);
+      continue;
+    }
+    flushList();
+    out.push(line);
+  }
+  flushList();
+  // Gewone regels krijgen een <br>; een lijst staat op zichzelf.
+  return out
+    .map((part, i) => (part.startsWith("<ul") || i === out.length - 1 ? part : `${part}<br>`))
+    .join("");
 }
 
-// Wrap plain text in a styled HTML email template
-function wrapInEmailTemplate(body: string, partnerName: string, portalBaseUrl: string): string {
-  const htmlBody = markdownToHtml(body);
-  
+export interface QuoteRequestMailInput {
+  body: string;
+  portalBaseUrl: string;
+  /** LOG-nummer van de logiesaanvraag. */
+  referenceNumber: string | null;
+  /** Al opgemaakt: tot wanneer de in te dienen offerte geldig blijft. */
+  validUntilLabel: string | null;
+}
+
+/** Binnenkant van de offerteaanvraag-mail; de aanroeper wikkelt dit in wrapEmailHtml. */
+export function buildQuoteRequestInner(input: QuoteRequestMailInput): string {
   return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #0f766e 0%, #134e4a 100%); padding: 24px; border-radius: 12px 12px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">Bureau Vlieland</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0;">Offerteaanvraag Logies</p>
-  </div>
-  
-  <div style="background: #fff; padding: 24px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-    ${htmlBody}
-    
-    <div style="margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-      <p style="margin: 0 0 12px; font-weight: 600; color: #334155;">Offerte indienen?</p>
-      <p style="margin: 0; font-size: 14px; color: #64748b;">
-        Log in op het partnerportaal om je offerte in te dienen. Je vindt de aanvraag onder "Logies aanvragen".
-      </p>
-      <a href="${portalBaseUrl}/partner" 
-         style="display: inline-block; margin-top: 12px; background-color: #0f766e; color: white; 
-                padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500;">
-        Ga naar partnerportaal →
-      </a>
-    </div>
-  </div>
-  
-  <div style="text-align: center; padding: 20px; color: #64748b; font-size: 12px;">
-    <p style="margin: 0;">Bureau Vlieland - Je partner voor Vlieland evenementen</p>
-    <p style="margin: 4px 0 0;">
-      <a href="mailto:hallo@bureauvlieland.nl" style="color: #0f766e;">hallo@bureauvlieland.nl</a> | 
-      0562 700 208
-    </p>
-  </div>
-</body>
-</html>`;
+<div style="font-size:15px;line-height:1.6;color:#333;">
+  ${markdownToHtml(input.body)}
+</div>
+
+<div style="margin-top:24px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+  <p style="margin:0 0 12px;font-weight:600;color:#334155;">Offerte indienen?</p>
+  <p style="margin:0;font-size:14px;color:#64748b;">
+    Log in op het partnerportaal om je offerte in te dienen. Je vindt de aanvraag onder "Logiesaanvragen"${input.referenceNumber ? ` (referentie ${sanitizeHtml(input.referenceNumber)})` : ""}.${input.validUntilLabel ? ` De offerte die je indient blijft geldig tot ${sanitizeHtml(input.validUntilLabel)}; daarna kun je de geldigheid in het portaal verlengen.` : ""}
+  </p>
+  <a href="${input.portalBaseUrl}/partner/login"
+     style="display:inline-block;margin-top:12px;background-color:#0F4C5C;color:#ffffff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;">
+    Ga naar partnerportaal
+  </a>
+</div>
+
+<p style="margin:20px 0 0;font-size:14px;color:#64748b;">Vragen? Reageer gerust op deze mail; die komt direct in het dossier terecht.</p>`;
+}
+
+/** Onderwerp met het LOG-nummer erachter, als de admin dat nog niet zelf noemde. */
+export function quoteRequestSubject(subject: string, referenceNumber: string | null, prefix = ""): string {
+  const trimmed = subject.trim();
+  if (referenceNumber && !trimmed.includes(referenceNumber)) return `${prefix}${trimmed} (${referenceNumber})`;
+  return `${prefix}${trimmed}`;
 }
 
 export const handler = async (req: Request): Promise<Response> => {
@@ -181,6 +207,9 @@ export const handler = async (req: Request): Promise<Response> => {
       existingQuoteMap[q.partner_id] = { id: q.id, status: q.status };
     });
 
+    // Geldigheid van de in te dienen offerte: 14 dagen (ook in de mail genoemd).
+    const validUntilIso = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
     // Process each partner: insert, update, or skip (reminder only)
     for (const partnerId of partner_ids) {
       const existing = existingQuoteMap[partnerId];
@@ -195,7 +224,7 @@ export const handler = async (req: Request): Promise<Response> => {
             partner_id: partnerId,
             accommodation_name: "",
             price_total: 0,
-            valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+            valid_until: validUntilIso,
             status: "pending",
             commission_percentage: partner?.accommodation_commission_percentage ?? 10,
           });
@@ -223,7 +252,7 @@ export const handler = async (req: Request): Promise<Response> => {
             quote_attachment_path: null,
             quote_attachment_filename: null,
             quote_external_url: null,
-            valid_until: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+            valid_until: validUntilIso,
           })
           .eq("id", existing.id);
 
@@ -234,13 +263,28 @@ export const handler = async (req: Request): Promise<Response> => {
       // For status "pending": do nothing to the record, just send the email (reminder)
     }
 
-    // Send emails to each partner (prefer contact_email for notifications)
+    // Send emails to each partner (prefer contact_email for notifications).
+    // Huisstijl via wrapEmailHtml, Reply-To op de LOG-referentie zodat een
+    // antwoord in het dossier landt, LOG-nummer in het onderwerp.
     const subjectPrefix = getSubjectPrefix(origin);
+    const referenceNumber: string | null = request.reference_number || null;
+    const finalSubject = quoteRequestSubject(email_subject, referenceNumber, subjectPrefix);
+    const htmlPart = await wrapEmailHtml(
+      buildQuoteRequestInner({
+        body: email_body,
+        portalBaseUrl,
+        referenceNumber,
+        validUntilLabel: formatDateNL(validUntilIso),
+      }),
+      supabase,
+    );
+    const replyTo = buildReplyTo(referenceNumber);
     const emailMessages = partners.map((partner: any) => ({
       From: { Email: "hallo@bureauvlieland.nl", Name: "Bureau Vlieland" },
       To: [{ Email: getRecipientEmail(partner.contact_email || partner.email, origin), Name: partner.name }],
-      Subject: `${subjectPrefix}${email_subject}`,
-      HTMLPart: wrapInEmailTemplate(email_body, partner.name, portalBaseUrl),
+      ...(replyTo ? { ReplyTo: replyTo } : {}),
+      Subject: finalSubject,
+      HTMLPart: htmlPart,
     }));
 
     const mailjetResult = await sendEmailViaMailjet(emailMessages);
@@ -255,7 +299,7 @@ export const handler = async (req: Request): Promise<Response> => {
       const partner = partners[idx] as any;
       await logEmail({
         email_type: "accommodation_quote_request_partner",
-        subject: email_subject,
+        subject: finalSubject,
         recipient_email: partner.contact_email || partner.email,
         recipient_name: partner.name,
         related_accommodation_id: request_id,
