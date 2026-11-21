@@ -319,17 +319,22 @@ Deno.serve(async (req) => {
       .neq("status", "done");
     console.log(`Resolved quote_pending_partner todo for quote ${quoteId}`);
 
-    // Create admin_todo: new accommodation quote received from partner
-    await supabase.from("admin_todos").insert({
-      title: `Nieuwe logiesofferte: ${partner.name} voor ${request.customer_name}`,
-      description: `${partner.name} heeft een offerte ingediend voor ${quote.accommodation_name} (${formatCurrencyNL(grandTotal)}). Beoordeel en stuur eventueel door naar de klant.`,
-      priority: "high",
-      auto_type: "forward_accommodation_quote",
-      auto_entity_id: quoteId,
-      related_request_id: request.linked_program_id || null,
-      related_partner_id: partner.id,
-    });
-    console.log(`Created forward_accommodation_quote todo for quote ${quoteId}`);
+    // Deze functie ís het doorsturen naar de klant; een taak "stuur de offerte
+    // door" (forward_accommodation_quote) hoort hier dus niet meer te ontstaan.
+    // Nog openstaande exemplaren voor deze offerte of aanvraag sluiten we af.
+    const nowIso = new Date().toISOString();
+    const entityIds = [quoteId, request.id].filter(Boolean);
+    const { error: forwardTodoError } = await supabase
+      .from("admin_todos")
+      .update({ status: "done", completed_at: nowIso, completion_reason: "quote_forwarded" })
+      .eq("auto_type", "forward_accommodation_quote")
+      .in("auto_entity_id", entityIds)
+      .neq("status", "done");
+    if (forwardTodoError) {
+      console.warn("Kon open forward_accommodation_quote-taken niet sluiten:", forwardTodoError.message);
+    } else {
+      console.log(`Open forward_accommodation_quote-taken gesloten voor offerte ${quoteId}`);
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

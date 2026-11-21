@@ -153,7 +153,7 @@ Volumes over 180 dagen, met het gemiddelde aantal uren tot afsluiten.
 
 | `auto_type` | Wanneer | 180 d | Open nu | Uren tot dicht | Oordeel |
 |---|---|---|---|---|---|
-| `new_program_request` / `new_request_received` | aanvraag binnen | 129 | 40 | 96 | 40 open: wordt niet als taak gebruikt maar als lijst. Ofwel automatisch sluiten bij offerte verstuurd, ofwel weg |
+| `new_program_request` / `new_request_received` | aanvraag binnen | 129 | 0 (40 weggeklikt) | 96 | 40 van de 101 zijn met "verwijderen" weggeklikt in plaats van afgevinkt: wordt niet als taak gebruikt. Automatisch sluiten bij offerte verstuurd |
 | `new_accommodation_request` | logiesaanvraag | 10 | 1 | 71 | Houden |
 | `partner_status_update` | partner reageert | 78 | 0 | 30 (mediaan 17) | **Sluit zichzelf voor je hem ziet** (zie 0) |
 | `all_partners_responded` | alle partners hebben gereageerd | 10 | 1 | 120 | Houden: dit is het eigenlijke actiemoment |
@@ -255,9 +255,11 @@ hier het enige actieve kanaal.
    `commission_missing_invoice`, `customer_status_update_due` naast
    `customer_status_email_due`, `new_program_request` naast
    `new_request_received` en naast de intake-mail.
-7. **40 open `new_program_request`-taken.** Dat is geen werkvoorraad meer, dat
-   is behang. Elke open taak die je nooit afvinkt maakt de teller boven de
-   Werkbank betekenisloos.
+7. **40 weggeklikte `new_program_request`-taken.** Van de 101 taken "nieuwe
+   aanvraag" zijn er 40 niet afgevinkt maar met "verwijderen" weggeklikt
+   (status `dismissed`). Een taak die je structureel wegklikt is geen taak.
+   (Correctie 21 november: de eerste versie van dit rapport noemde ze
+   "open"; de Werkbank telt `dismissed` niet mee.)
 
 ### 3.3 Wat kapot is
 
@@ -533,9 +535,8 @@ controleert op dode routes, oude adressen (`inkoop@`, `info@`,
   onderwerp of tekst, telt als "factuur binnen". Dezelfde bron die
   `get-partner-dashboard` al gebruikt voor "Ontvangen op …, wordt verwerkt",
   zodat portaal en herinnering hetzelfde zeggen.
-- Eenmalige migratie: de 40 open `new_program_request`-taken sluiten waar de
-  aanvraag al een offerte of archiefstatus heeft; het laatste
-  `inbound_email`-exemplaar sluiten.
+- Geen opruimmigratie nodig: de 40 "nieuwe aanvraag"-taken en het laatste
+  `inbound_email`-exemplaar bleken al weggeklikt (`dismissed`), niet open.
 - Labelkaart `emailTypeLabels.ts` bijwerken met de 21 ontbrekende sleutels,
   de 7 dode labels verwijderen, en een test die controleert dat elke sleutel
   die in `supabase/functions` gelogd wordt een label heeft (zoals
@@ -622,6 +623,91 @@ controleert op dode routes, oude adressen (`inkoop@`, `info@`,
 Totaal 9 bouwdagen (fase 0 is gedaan). Fase 1 kan direct en lost de vraag
 uit BV-2611-0001, de factuurherinneringen en de veertien fouten uit de audit
 op.
+
+## Gebouwd
+
+### Fase 1 (21 november 2026)
+
+Reconciler en herinneringen:
+
+- `partner_status_update` sluit niet meer op `confirmed`. De regel staat in
+  `_shared/partnerStatusUpdateTodo.ts` (getest): dicht als het onderdeel
+  verdween of geannuleerd werd, of na zeven dagen; anders blijft de melding
+  staan tot Erwin hem afvinkt.
+- `reconcile-admin-todos` roept `check-pending-items` niet meer aan. De
+  herinneringschecks draaien alleen nog via de eigen dagcron.
+- Herinneringsbeleid in `_shared/reminderPolicy.ts` (getest): een vaste reeks
+  (factuur T+3, T+7, nieuw T+14) gaat per type, adres en onderdeel precies
+  één keer; herhalende herinneringen (activiteit open, logiesofferte open,
+  aantal niet bevestigd) elke zeven dagen, maximaal drie keer. De
+  dedupe-query leest de nieuwste rijen met `limit` in plaats van
+  `maybeSingle`, die bij twee rijen faalde en daardoor juist doorstuurde.
+  Vanaf T+21 zonder factuur krijgt de bestaande taak
+  `commission_missing_invoice` prioriteit hoog; verdere mail blijft uit.
+- Bureau-onderdelen via `isBureauItem()` (ook `provider_id = 'bureau'` met
+  `block_type = 'activity'`), zodat het bureau zichzelf geen
+  factuurherinneringen meer stuurt.
+- `_shared/partner-invoice-presence.ts` kent nu ook facturen op projectniveau
+  en onverwerkte mails in `purchase_invoice_inbox` (op afzendadres van de
+  partner of BV-nummer in onderwerp, tekst of scan), dezelfde bron als het
+  partnerportaal. Zeven tests.
+- `quote_expired_partner` gaat weer weg: de schaduwvariabele `req` heet nu
+  `quoteRequest`; de taak krijgt het gekoppelde programma als dossier.
+- `cron-watchdog` maakt de taak `system_cron_failure` met status `todo`
+  (was `open`, dat de tabel weigert).
+- Migratie `20261121120000`: template `partner_invoice_reminder_t14` en
+  "Gisteren" uit de T+3-template.
+
+Dubbele en onware mails:
+
+- Eén klantmail per partnerreactie: `pickCustomerStatusMail` in
+  `update-partner-item-status` kiest `counter_proposal_response` óf een
+  `status_*`-mail.
+- Eén klantmail bij akkoord en ondertekenen in één klik:
+  `accept-quote-proposal` kent de vlag `skipCustomerEmail`, die het
+  klantportaal meegeeft als de ondertekening net is gelukt.
+- De spooktaak `forward_accommodation_quote` wordt niet meer aangemaakt door
+  de functie die de offerte net doorstuurde; open exemplaren sluiten met reden
+  `quote_forwarded`.
+- Logies gekozen: dubbel euroteken weg; klant- en partnermail zeggen beide
+  dat Bureau Vlieland het aanspreekpunt is; het voorwaardenblok staat binnen
+  de huisstijlkaart (migratie `20261121130000`).
+- `cancellation_customer` en `date_change_customer` zeggen "Wij informeren de
+  betrokken aanbieders" in plaats van een belofte die soms onwaar was;
+  `has_accommodation` wordt nu gevuld. `item_added_partner` zonder dubbel
+  label, `item_changes_partner` actor-neutraal en gesanitized (migratie
+  `20261121140000`).
+- `send-project-email` knipt de afsluiting niet meer weg; `save-program-draft`
+  gebruikt het algemene bureauadres; catering belooft 5 werkdagen zoals de
+  site.
+
+Factuurinstructie aan partners, overal dezelfde zin ("Mail na uitvoering de
+pdf van je factuur naar invoices@reply.bureauvlieland.nl, met onze referentie
+erop. Wij factureren centraal aan de klant."): templates
+`program_request_partner`, `booking_confirmed_partner`, `partner_invitation`,
+`accommodation_selected_partner`, en in code `send-items-to-partners`,
+`accept-quote-proposal`, `send-partner-headsup-t3`, de fallback in
+`update-customer-program` en `partnerBillingNote`. Waar de code geen
+referentie meegeeft staat "(het BV-nummer)"; dat wordt in fase 3 een
+variabele.
+
+Overig:
+
+- Antwoorden op commissiefacturen (`reply+BVC-…`) landen als Werkbank-taak
+  `commission_invoice_reply` bij de partner (`inbound-email/commissionReply.ts`).
+- `partner_missing_pdf_reminder` linkt naar `/partner/facturatie` en vraagt om
+  de pdf te mailen; met Reply-To als alle facturen bij één project horen.
+- De drie alarmmails (zelftest, heartbeat, auto-close-monitor) staan in
+  `email_log`.
+- Labelkaart `emailTypeLabels.ts` compleet; `emailTypeLabelsContract.test.ts`
+  bewaakt dat elke gelogde sleutel een label heeft.
+- Correctie op het rapport: de 40 "nieuwe aanvraag"-taken waren weggeklikt
+  (`dismissed`), niet open; geen opruimmigratie nodig.
+
+Niet in fase 1 (naar fase 3): referentienummer als variabele in de vier
+templates en in de onderwerpregels, knoppen in `item_added_partner` en
+`item_changes_partner`, huisstijlwrapper om de inline mails, de drie
+onderdeelsoorten in de partnertemplates.
 
 ## Beslissingen voor Erwin
 

@@ -22,6 +22,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 import {
   SELFTEST_TODO_ENTITY,
   SELFTEST_TODO_TYPE,
@@ -629,6 +630,9 @@ Deno.serve(async (req) => {
           <table style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px;">${rows}</table>
           <p style="margin-top:16px;">Details: <a href="https://bureauvlieland.nl/admin/email-health">Systeemgezondheid in de admin</a></p>`;
 
+        const subject = `[ALERT] Kritieke zelftest: ${failed.length} probleem(en) — ${
+          failed.map((f) => f.label).slice(0, 2).join(", ")
+        }`;
         const send = await sendMailjet({
           source: "critical-selftest",
           checkSuppression: false,
@@ -638,15 +642,31 @@ Deno.serve(async (req) => {
               Name: "Bureau Vlieland Monitor",
             },
             To: [{ Email: to }],
-            Subject: `[ALERT] Kritieke zelftest: ${failed.length} probleem(en) — ${
-              failed.map((f) => f.label).slice(0, 2).join(", ")
-            }`,
+            Subject: subject,
             HTMLPart: html,
             TextPart: html.replace(/<[^>]+>/g, " "),
           }],
         });
         if (send.ok) alertSent = true;
         else alertSkipped = `mail faalde: ${send.error}`;
+
+        // Alarmmail in email_log, zodat het Berichtencentrum hem ook ziet.
+        await logEmail({
+          email_type: "critical_selftest_alert",
+          subject,
+          recipient_email: to,
+          status: send.ok ? "sent" : "failed",
+          error_message: send.ok ? undefined : send.error,
+          mailjet_message_id: send.ok ? send.messageId ?? undefined : undefined,
+          sent_by: "critical-selftest",
+          html_body: html,
+          metadata: {
+            template_name: "critical_selftest_alert",
+            actor: "system → bureau (zelftest)",
+            run_id: runId,
+            failed_checks: failed.map((f) => f.key),
+          },
+        });
       }
     }
 

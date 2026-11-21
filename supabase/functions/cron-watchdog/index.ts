@@ -104,7 +104,9 @@ Deno.serve(async (req) => {
         title: `Automatische taak faalt: ${alarm.jobname}`,
         description: alarm.reason,
         priority: "high",
-        status: "open",
+        // "open" bestond niet in admin_todos_status_check; de taak werd nooit
+        // aangemaakt (plan-notificaties fase 0).
+        status: "todo",
       });
     }
 

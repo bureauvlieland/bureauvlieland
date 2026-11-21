@@ -1,5 +1,6 @@
-// Reconcile open admin_todos: close ones whose anchor is resolved, then
-// invoke check-pending-items to (re)create new ones.
+// Reconcile open admin_todos: close ones whose anchor is resolved. Het
+// aanmaken van nieuwe taken gebeurt in check-pending-items (eigen dagcron);
+// die wordt hier bewust niet meer aangeroepen.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   fetchLastContactByProject,
@@ -7,6 +8,7 @@ import {
   REFERRAL_PAUSED_AUTO_TYPES,
   REMINDER_TYPES_GUARDED_BY_COOLDOWN,
 } from "../_shared/project-activity.ts";
+import { shouldClosePartnerStatusUpdate } from "../_shared/partnerStatusUpdateTodo.ts";
 import {
   REQUEST_BOUND_AUTO_TYPES,
   isUuid,
@@ -490,8 +492,7 @@ Deno.serve(async (req) => {
           if (!stillPending) markClosed(t.id, type);
           break;
         }
-        case "partner_reminder":
-        case "partner_status_update": {
+        case "partner_reminder": {
           const item = eid ? itemMap.get(eid) : null;
           if (
             item &&
@@ -501,6 +502,16 @@ Deno.serve(async (req) => {
           ) {
             markClosed(t.id, type);
           }
+          break;
+        }
+        case "partner_status_update": {
+          // Een partnerreactie is een gebeurtenis die Erwin moet zien; de
+          // status "confirmed" is juist de reden dat de taak bestaat. Sluit
+          // alleen als het onderdeel verdween of geannuleerd werd, of na
+          // zeven dagen (zoals all_partners_responded). Zie
+          // docs/plan-notificaties.md, "Het korte antwoord".
+          const item = eid ? itemMap.get(eid) : null;
+          if (shouldClosePartnerStatusUpdate(t, item)) markClosed(t.id, type);
           break;
         }
         case "all_partners_responded": {
@@ -613,27 +624,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Trigger check-pending-items to (re)create new todos
-    let created = 0;
-    try {
-      const res = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/check-pending-items`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-        },
-      );
-      if (res.ok) {
-        const body = await res.json().catch(() => ({}));
-        created =
-          (body?.created ?? body?.todos_created ?? body?.total ?? 0) as number;
-      }
-    } catch (e) {
-      console.warn("check-pending-items invoke failed", e);
-    }
+    // check-pending-items wordt hier bewust NIET meer aangeroepen. De Werkbank
+    // draait reconcile elke vijf minuten; daardoor liepen de herinnerings-
+    // checks (en hun mails aan partners) de hele dag door in plaats van één
+    // keer per dag via de eigen cron (docs/plan-notificaties.md, 3.3).
+    const created = 0;
 
     console.log("reconcile-admin-todos done", { closed, created, reasons });
 

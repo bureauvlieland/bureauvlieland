@@ -24,6 +24,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Welke klantmail hoort bij een partnerreactie? Precies één:
+ * - stond het onderdeel in `counter_proposed`, dan is de reactie een antwoord
+ *   op het tegenvoorstel van de klant → `counter_proposal_response`;
+ * - anders de gewone statusmail (`status_confirmed` / `_alternative` /
+ *   `_unavailable`), behalve bij een bevestiging-onderdeel dat zonder offerte
+ *   wordt bevestigd (daar is niets voor de klant te doen → geen mail).
+ * Vroeger gingen bij een tegenvoorstel beide mails tegelijk (audit, fase 1).
+ */
+export type CustomerStatusMail = "counter_proposal_response" | "status" | null;
+export function pickCustomerStatusMail(args: {
+  status: string;
+  oldStatus: string | null | undefined;
+  confirmOnly: boolean;
+}): CustomerStatusMail {
+  const { status, oldStatus, confirmOnly } = args;
+  if (status !== "confirmed" && status !== "alternative" && status !== "unavailable") return null;
+  if (oldStatus === "counter_proposed") return "counter_proposal_response";
+  if (confirmOnly && status === "confirmed") return null;
+  return "status";
+}
+
 interface MailSendResult {
   ok: boolean;
   messageId: string | null;
@@ -481,8 +503,12 @@ export const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Check if this is a response to a counter-proposal and send customer notification
-    if (oldStatus === "counter_proposed" && (status === "confirmed" || status === "alternative" || status === "unavailable")) {
+    // Eén klantmail per partnerreactie: óf de reactie op het tegenvoorstel,
+    // óf de gewone statusmail (zie pickCustomerStatusMail).
+    const customerMail = pickCustomerStatusMail({ status, oldStatus, confirmOnly });
+
+    // Reactie op een tegenvoorstel van de klant → counter_proposal_response
+    if (customerMail === "counter_proposal_response") {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       
@@ -723,11 +749,10 @@ export const handler = async (req: Request): Promise<Response> => {
     }
 
 
-    const validEmailStatuses = ["confirmed", "unavailable", "alternative"];
-    // Een bevestiging zonder offerte vraagt geen akkoord van de klant; die
-    // krijgt er dus ook geen statusmail over. "Niet beschikbaar" wel.
-    const skipCustomerEmail = confirmOnly && status === "confirmed";
-    if (validEmailStatuses.includes(status) && !skipCustomerEmail) {
+    // Gewone statusmail. Een bevestiging zonder offerte vraagt geen akkoord
+    // van de klant; die krijgt er dus ook geen statusmail over ("Niet
+    // beschikbaar" wel). Na een counter_proposal_response gaat deze niet meer.
+    if (customerMail === "status") {
       const programRequest = item.program_requests as { customer_name: string; customer_email: string; customer_token: string; reference_number: string | null };
       const portalUrl = `https://bureauvlieland.nl/mijn-programma/${programRequest.customer_token}`;
       

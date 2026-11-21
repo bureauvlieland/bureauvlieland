@@ -98,9 +98,9 @@ export const BILLING_ROUTE_LABELS: Record<BillingRoute, { admin: string; partner
 export function partnerBillingNote(item: HandlingItemLike | null | undefined): string | null {
   switch (billingRouteOf(item)) {
     case "partner_stay_invoice":
-      return "Facturatie: op uw eigen verblijfsnota aan de klant. U hoeft hiervoor niets bij Bureau Vlieland in te dienen.";
+      return "Facturatie: op jouw eigen verblijfsnota aan de klant. Je hoeft hiervoor niets bij Bureau Vlieland in te dienen.";
     case "customer_direct":
-      return "Facturatie: de klant rekent dit rechtstreeks met u af. U hoeft hiervoor niets bij Bureau Vlieland in te dienen.";
+      return "Facturatie: de klant rekent dit rechtstreeks met jou af. Je hoeft hiervoor niets bij Bureau Vlieland in te dienen.";
     default:
       return null;
   }

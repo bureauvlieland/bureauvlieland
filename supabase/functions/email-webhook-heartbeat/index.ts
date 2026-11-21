@@ -10,6 +10,7 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendMailjet } from "../_shared/mailjet-send.ts";
+import { logEmail } from "../_shared/email-logger.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -152,6 +153,7 @@ Deno.serve(async (req) => {
         <p>Zonder deze events weten we niet of mail wordt afgeleverd en worden onbereikbare adressen niet geblokkeerd.</p>
         <p>Herstellen: open <a href="https://bureauvlieland.nl/admin/email-health">Email health</a>, kopieer de webhook-URL en zet die in Mailjet bij alle event-types (sent, open, click, bounce, blocked, spam, unsub).</p>`;
 
+      const subject = "[ALERT] Geen e-mail-terugkoppeling van Mailjet";
       const send = await sendMailjet({
         source: "email-webhook-heartbeat",
         checkSuppression: false,
@@ -161,12 +163,31 @@ Deno.serve(async (req) => {
             Name: "Bureau Vlieland Monitor",
           },
           To: [{ Email: to }],
-          Subject: "[ALERT] Geen e-mail-terugkoppeling van Mailjet",
+          Subject: subject,
           HTMLPart: html,
           TextPart: html.replace(/<[^>]+>/g, " "),
         }],
       });
       alerted = send.ok;
+
+      // Alarmmail in email_log, zodat het Berichtencentrum hem ook ziet.
+      await logEmail({
+        email_type: "email_webhook_heartbeat_alert",
+        subject,
+        recipient_email: to,
+        status: send.ok ? "sent" : "failed",
+        error_message: send.ok ? undefined : send.error,
+        mailjet_message_id: send.ok ? send.messageId ?? undefined : undefined,
+        sent_by: "email-webhook-heartbeat",
+        html_body: html,
+        metadata: {
+          template_name: "email_webhook_heartbeat_alert",
+          actor: "system → bureau (webhook-heartbeat)",
+          verdict,
+          sent_count: sentCount ?? 0,
+          rejected_attempts: rejectedAttempts ?? 0,
+        },
+      });
     }
 
     return json({
