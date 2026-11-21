@@ -181,6 +181,11 @@ verify_jwt = false
 # functie leest alleen de rol (zie _shared/jwt-role.ts).
 verify_jwt = true
 
+[functions.send-change-digest]
+# Dagelijkse bundel van wijzigingsmails; zelfde toegang als map-sync-blocks:
+# cron met anon key als Bearer-token, of een admin.
+verify_jwt = true
+
 [functions.customer-review]
 verify_jwt = false
 

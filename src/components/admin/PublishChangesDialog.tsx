@@ -169,6 +169,9 @@ export function PublishChangesDialog({
   // Nieuw toegevoegde onderdelen in een project dat de klant al heeft
   // goedgekeurd: moet de klant hier nog akkoord op geven?
   const [newItemApproval, setNewItemApproval] = useState<"require" | "skip">("require");
+  // Wijzigingsmails gaan standaard om 17:00 in één bundel per ontvanger
+  // (send-change-digest). "Nu versturen" stuurt ze direct, zoals vroeger.
+  const [sendNow, setSendNow] = useState(false);
 
   const addedItems = useMemo(
     () => pendingItems.filter((it) => it.pending_added),
@@ -268,6 +271,7 @@ export function PublishChangesDialog({
     setApprovalCustomer("reset");
     setApprovalPartner("reset");
     setNewItemApproval("require");
+    setSendNow(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [involvedPartners.length, open]);
 
@@ -289,6 +293,7 @@ export function PublishChangesDialog({
             partner: approvalPartner,
           },
           newItemApproval,
+          sendNow,
         },
       });
       if (error) {
@@ -306,14 +311,18 @@ export function PublishChangesDialog({
         throw new Error(serverMsg ?? error.message ?? "Onbekende fout");
       }
       const sent = (data as any)?.emails_sent ?? 0;
+      const queued = (data as { emails_queued?: number } | null)?.emails_queued ?? 0;
       const skippedMap = ((data as any)?.skipped_not_approved ?? {}) as Record<string, string[]>;
       const skippedTotal = Object.values(skippedMap).reduce(
         (n, arr) => n + (Array.isArray(arr) ? arr.length : 0),
         0,
       );
+      const mailParts: string[] = [];
+      if (sent > 0) mailParts.push(`${sent} mail(s) verstuurd`);
+      if (queued > 0) mailParts.push(`${queued} mail(s) in de bundel van 17:00`);
       const base =
-        sent > 0
-          ? `${pendingItems.length} wijziging(en) gepubliceerd · ${sent} mail(s) verstuurd`
+        mailParts.length > 0
+          ? `${pendingItems.length} wijziging(en) gepubliceerd · ${mailParts.join(" · ")}`
           : `${pendingItems.length} wijziging(en) gepubliceerd (zonder mail)`;
       if (skippedTotal > 0) {
         toast.success(base, {
@@ -348,6 +357,7 @@ export function PublishChangesDialog({
           adminNote: adminNote.trim(),
           origin: window.location.origin,
           newItemApproval,
+          sendNow,
           dryRun: true,
         },
       });
@@ -640,6 +650,21 @@ export function PublishChangesDialog({
                   goedkeuring.
                 </p>
               )}
+              <div className="mt-2 flex items-start gap-2 border-t pt-2">
+                <Checkbox
+                  id="send-now"
+                  checked={sendNow}
+                  onCheckedChange={(v) => setSendNow(!!v)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="send-now" className="cursor-pointer text-sm leading-snug">
+                  Nu versturen (niet wachten tot de dagelijkse bundel)
+                  <div className="text-xs font-normal text-muted-foreground">
+                    Anders gaan de wijzigingen om 17:00 in één mail per ontvanger,
+                    samen met alles wat vandaag nog verandert.
+                  </div>
+                </Label>
+              </div>
             </div>
           </div>
 
@@ -674,6 +699,11 @@ export function PublishChangesDialog({
                   <span className="font-medium">{dryRunResult.would_publish}</span> item(s) worden
                   geüpdatet.
                 </div>
+                {dryRunResult.would_email.length > 0 && !sendNow && (
+                  <div className="text-xs text-muted-foreground">
+                    Deze mails gaan om 17:00 in de dagelijkse bundel (één mail per ontvanger).
+                  </div>
+                )}
                 {dryRunResult.would_email.length === 0 ? (
                   <div className="text-xs text-muted-foreground">Geen mails zouden uitgaan.</div>
                 ) : (
@@ -699,7 +729,7 @@ export function PublishChangesDialog({
         <DialogFooter className="gap-2 sm:gap-2">
           <Badge variant="outline" className="mr-auto">
             {totalRecipients > 0
-              ? `${totalRecipients} mail${totalRecipients !== 1 ? "s" : ""}`
+              ? `${totalRecipients} mail${totalRecipients !== 1 ? "s" : ""}${sendNow ? "" : " · bundel 17:00"}`
               : "Geen mail"}
           </Badge>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={publishing || dryRunLoading}>

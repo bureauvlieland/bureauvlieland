@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { COMMUNICATION_STATE_META } from "@/lib/projectCommunication";
 import { CLUSTER_META, type TodoCluster } from "@/lib/projectActivity";
+import { todoPriorityLabel } from "@/lib/autoTodoCreator";
 import {
   AlertTriangle,
   Check,
@@ -538,7 +539,7 @@ function LooseRow({
       />
       <button onClick={onClick} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5">
-          <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[head.priority] ?? PRIORITY_DOT.normal)} title={`Prioriteit: ${head.priority}`} />
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIORITY_DOT[head.priority] ?? PRIORITY_DOT.normal)} title={`Prioriteit: ${todoPriorityLabel(head.priority)}`} />
           <span className="truncate text-sm font-medium">{head.title}</span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
