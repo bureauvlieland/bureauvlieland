@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { AttributionWidget } from "@/components/admin/AttributionWidget";
 import { DraftsWidget } from "@/components/admin/DraftsWidget";
 import { InboxList } from "@/components/admin/werkbank/InboxList";
-import { isLooseRowId, todoIdFromLooseRowId } from "@/lib/getInbox";
+import { INBOUND_SECTION_ID, isLooseRowId, todoIdFromLooseRowId } from "@/lib/getInbox";
 import { ProjectDetailPanel } from "@/components/admin/werkbank/ProjectDetailPanel";
 import { OrphanTodoPanel } from "@/components/admin/werkbank/OrphanTodoPanel";
 import { FinanceTodoList } from "@/components/admin/werkbank/FinanceTodoList";
@@ -132,8 +132,12 @@ function ProjectListRow({
 
 export default function AdminWerkbank() {
   const [params, setParams] = useSearchParams();
+  // ?sectie=binnengekomen (zijbalk) opent de inbox-tab en scrolt naar die sectie.
+  const sectie = params.get("sectie");
   const [tab, setTab] = useState<"inbox" | "projecten" | "financieel">(
-    (params.get("tab") as "inbox" | "projecten" | "financieel") || "inbox",
+    sectie === INBOUND_SECTION_ID
+      ? "inbox"
+      : (params.get("tab") as "inbox" | "projecten" | "financieel") || "inbox",
   );
   const [view, setView] = useState<QuickView>("alles");
   const [search, setSearch] = useState("");
@@ -160,6 +164,25 @@ export default function AdminWerkbank() {
     const idParam = params.get("id");
     setSelectedId(idParam);
   }, [params]);
+
+  // Naar de sectie "Binnengekomen" scrollen zodra die gerenderd is. De lijst
+  // laadt asynchroon, dus we proberen het kort een paar keer.
+  useEffect(() => {
+    if (sectie !== INBOUND_SECTION_ID) return;
+    setTab("inbox");
+    let tries = 0;
+    const id = window.setInterval(() => {
+      const el = document.getElementById(INBOUND_SECTION_ID);
+      tries += 1;
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.clearInterval(id);
+      } else if (tries > 20) {
+        window.clearInterval(id);
+      }
+    }, 150);
+    return () => window.clearInterval(id);
+  }, [sectie]);
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["werkbank-projects", archive ? "archief" : "actief"],

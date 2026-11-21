@@ -103,7 +103,22 @@ const CLUSTER_MAP: Record<string, TodoCluster> = {
   partner_status_update: "inbound",
   accommodation_selected: "inbound",
   all_partners_responded: "inbound",
+  commission_invoice_reply: "inbound",
+  // gebeurtenissen van buiten (plan-notificaties fase 2): partner markeert
+  // uitgevoerd, klant geeft akkoord, klant tekent
+  partner_item_executed: "inbound",
+  customer_quote_accepted: "inbound",
+  customer_terms_signed: "inbound",
 };
+
+/**
+ * Alle auto_types in cluster "Binnengekomen": gebeurtenissen van buiten die
+ * het bureau wegklikt met "gezien". Afgeleid uit CLUSTER_MAP, zodat de teller
+ * in de zijbalk (useInboundEventCount) en de Werkbank dezelfde set gebruiken.
+ */
+export const INBOUND_AUTO_TYPES: readonly string[] = Object.keys(CLUSTER_MAP)
+  .filter((k) => CLUSTER_MAP[k] === "inbound")
+  .sort();
 
 export function clusterForAutoType(autoType: string | null | undefined): TodoCluster {
   if (!autoType) return "other";
@@ -142,7 +157,7 @@ export const CLUSTER_META: Record<
   next_action_bureau: { label: "Aan zet",          tone: "text-blue-700",    order: 1 },
   awaiting_partner:   { label: "Wacht op partner", tone: "text-sky-700",     order: 3 },
   awaiting_customer:  { label: "Wacht op klant",   tone: "text-orange-700",  order: 4 },
-  inbound:            { label: "Inbound",          tone: "text-emerald-700", order: 2 },
+  inbound:            { label: "Binnengekomen",    tone: "text-emerald-700", order: 2 },
   post_execution:     { label: "Na uitvoering",    tone: "text-violet-700",  order: 5 },
   other:              { label: "Overig",           tone: "text-muted-foreground", order: 6 },
 };
@@ -160,14 +175,14 @@ export function shouldShowDuringCooldown(
   const prio = todo.priority ?? "normal";
   if (prio === "urgent") return true;
 
+  // Binnengekomen gebeurtenissen nooit dempen: het recente contact ís de
+  // gebeurtenis die hier gemeld wordt.
+  if (clusterForAutoType(todo.auto_type) === "inbound") return true;
+
   // harde deadline-typen blijven altijd door
   const hardTypes = new Set([
     "quote_expired_partner",
     "customer_cancellation",
-    "purchase_invoice_inbox",
-    "purchase_invoice_pending",
-    "sales_inbox",
-    "inbound_email",
   ]);
   if (todo.auto_type && hardTypes.has(todo.auto_type)) return true;
 

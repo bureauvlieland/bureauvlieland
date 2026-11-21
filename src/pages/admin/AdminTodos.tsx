@@ -283,6 +283,23 @@ const autoTypeActionConfig: Record<string, {
     getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}?action=status-email` : "/admin/projecten",
     linkLabel: "Stuur herinnering",
   },
+  // cluster Binnengekomen (plan-notificaties fase 2)
+  partner_item_executed: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk project",
+  },
+  customer_quote_accepted: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk project",
+  },
+  customer_terms_signed: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/projecten",
+    linkLabel: "Bekijk project",
+  },
+  commission_invoice_reply: {
+    getLink: (t) => t.related_request_id ? `/admin/aanvragen/${t.related_request_id}` : "/admin/commissies",
+    linkLabel: "Bekijk project",
+  },
 };
 
 // ─── Email Log Config ─────────────────────────────────────────

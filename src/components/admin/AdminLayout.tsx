@@ -47,13 +47,14 @@ import {
   Inbox,
   MapPin,
   Ticket,
-  Landmark, Star, BookMarked, Heart, ScrollText } from "lucide-react";
+  Landmark, Star, BookMarked, Heart, ScrollText, BellRing } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { usePurchaseInvoiceInboxCount } from "@/hooks/usePurchaseInvoiceInbox";
 import { useSalesInboxCount } from "@/hooks/useSalesInbox";
 import { useInvoicingReadyCount } from "@/hooks/useInvoicingReadyCount";
 import { useBankPendingCount } from "@/hooks/useBankStatements";
 import { useWerkbankInboxCount } from "@/hooks/useWerkbankInboxCount";
+import { useInboundEventCount } from "@/hooks/useInboundEventCount";
 import { InboxBell } from "@/components/admin/InboxBell";
 import { useOpenConversations } from "@/hooks/useOpenConversations";
 
@@ -137,6 +138,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
   const isCollapsed = state === "collapsed";
   const { data: todoCount = 0 } = useOpenTodoCount();
   const { data: werkbankCount = 0 } = useWerkbankInboxCount();
+  const { data: inboundEventCount = 0 } = useInboundEventCount();
   const { data: inboxCount = 0 } = usePurchaseInvoiceInboxCount();
   const { data: salesInboxCount = 0 } = useSalesInboxCount();
   const { data: invoicingCount = 0 } = useInvoicingReadyCount();
@@ -151,6 +153,7 @@ const AdminSidebar = ({ admin, onLogout }: { admin: AdminInfo; onLogout: () => v
       label: "Operationeel",
       items: [
         { title: "Werkbank", url: "/admin/werkbank", icon: Inbox, badge: werkbankCount },
+        { title: "Binnengekomen", url: "/admin/werkbank?sectie=binnengekomen", icon: BellRing, badge: inboundEventCount },
         { title: "Projecten", url: "/admin/projecten", icon: CalendarDays },
         { title: "Sales Inbox", url: "/admin/sales-inbox", icon: Mail, badge: salesInboxCount },
         { title: "Tickets", url: "/admin/tickets", icon: Ticket, badge: openTicketsCount },
