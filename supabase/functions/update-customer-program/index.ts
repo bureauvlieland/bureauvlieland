@@ -18,6 +18,7 @@ import { logEmail } from "../_shared/email-logger.ts";
 import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
 import { markReadyForInvoiceAtSigning } from "../_shared/signingCompletion.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { recordBureauEvent, resolveBureauAddress } from "../_shared/bureau-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1121,6 +1122,7 @@ Deno.serve(async (req) => {
       // Bureau notification: klant heeft een tegen-tijd voorgesteld.
       // Geen aparte template — korte interne mail naar het bureau-adres met deeplink.
       try {
+        const bureauAddress = await resolveBureauAddress(supabase);
         const bureauUrl = `https://bureauvlieland.nl/admin/aanvragen/${program.id}`;
         const customerLabel = sanitizeHtml(program.customer_company || program.customer_name);
         const refLabel = program.reference_number ? ` (${sanitizeHtml(program.reference_number)})` : "";
@@ -1137,7 +1139,7 @@ Deno.serve(async (req) => {
         `;
         emailMessages.push({
           From: { Email: SENDER_EMAIL, Name: SENDER_NAME },
-          To: [{ Email: getRecipientEmail("hallo@bureauvlieland.nl", origin), Name: "Bureau Vlieland" }],
+          To: [{ Email: getRecipientEmail(bureauAddress, origin), Name: "Bureau Vlieland" }],
           Subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
           HTMLPart: bureauHtml,
         });
@@ -1146,7 +1148,7 @@ Deno.serve(async (req) => {
           logPayload: {
             email_type: "customer_counter_proposal_bureau",
             subject: `${subjectPrefix}Klant stelt andere tijd voor — ${item.block_name}`,
-            recipient_email: "hallo@bureauvlieland.nl",
+            recipient_email: bureauAddress,
             recipient_name: "Bureau Vlieland",
             related_request_id: program.id,
             related_item_id: itemId,
@@ -1380,6 +1382,20 @@ Deno.serve(async (req) => {
         });
         console.log(`Created invoicing_ready todo for request ${program.id} (snoozed_until=${snoozeUntil ?? "n/a"})`);
       }
+
+      // Melding aan het bureau: klant heeft getekend (taak "Binnengekomen" + mail).
+      await recordBureauEvent(supabase, {
+        kind: "customer_terms_signed",
+        entityId: program.id,
+        request: {
+          id: program.id,
+          reference_number: program.reference_number,
+          customer_name: program.customer_name,
+          customer_company: program.customer_company ?? null,
+        },
+        reservationNames: signedUnderReservation ? reservationNames : null,
+        origin,
+      });
 
       // Get billing details for partner notification
       const { data: updatedProgram } = await supabase

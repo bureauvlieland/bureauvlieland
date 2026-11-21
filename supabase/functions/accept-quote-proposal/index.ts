@@ -12,6 +12,7 @@ import {
 } from "../_shared/email-templates.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 import { isBureauItem } from "../_shared/bureau-item.ts";
+import { recordBureauEvent } from "../_shared/bureau-event.ts";
 
 const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
 const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
@@ -519,6 +520,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
         });
         console.log(`Created send_items_to_partners todo for ${program.id}`);
       }
+
+      // Melding aan het bureau: klant gaf akkoord (taak "Binnengekomen" + mail).
+      await recordBureauEvent(supabase, {
+        kind: "customer_quote_accepted",
+        entityId: program.id,
+        request: {
+          id: program.id,
+          reference_number: program.reference_number,
+          customer_name: program.customer_name,
+          customer_company: program.customer_company ?? null,
+        },
+        origin,
+      });
 
       return new Response(
         JSON.stringify({

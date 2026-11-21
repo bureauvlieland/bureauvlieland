@@ -9,6 +9,7 @@ import {
   REMINDER_TYPES_GUARDED_BY_COOLDOWN,
 } from "../_shared/project-activity.ts";
 import { shouldClosePartnerStatusUpdate } from "../_shared/partnerStatusUpdateTodo.ts";
+import { BUREAU_EVENT_TTL_DAYS } from "../_shared/bureau-event.ts";
 import {
   REQUEST_BOUND_AUTO_TYPES,
   isUuid,
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
         ? supabase
             .from("program_requests")
             .select(
-              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates",
+              "id, status, quote_status, quote_valid_until, completion_status, terms_accepted_at, billing_company_name, linked_accommodation_id, expires_at, cancelled_at, number_of_people, selected_dates, archived_at",
             )
             .in("id", [...requestIds])
         : Promise.resolve({ data: [], error: null }),
@@ -426,11 +427,15 @@ Deno.serve(async (req) => {
         }
         case "new_request_received":
         case "new_program_request": {
+          // Dicht zodra de aanvraag niet meer nieuw is: offerte verstuurd
+          // (quote_status), gearchiveerd, of niet meer actief.
           if (
             req &&
             req.status &&
             !["new", "submitted", "active"].includes(req.status)
           ) {
+            markClosed(t.id, type);
+          } else if (req && req.archived_at) {
             markClosed(t.id, type);
           } else if (req && req.quote_status && req.quote_status !== "concept") {
             markClosed(t.id, type);
@@ -502,6 +507,15 @@ Deno.serve(async (req) => {
           ) {
             markClosed(t.id, type);
           }
+          break;
+        }
+        case "partner_item_executed":
+        case "customer_quote_accepted":
+        case "customer_terms_signed": {
+          // Gebeurtenissen van buiten (_shared/bureau-event.ts): blijven staan
+          // tot Erwin ze als gezien afvinkt, vervallen na de bewaartermijn.
+          const age = Date.now() - new Date(t.created_at).getTime();
+          if (age > BUREAU_EVENT_TTL_DAYS * 86400_000) markClosed(t.id, type);
           break;
         }
         case "partner_status_update": {

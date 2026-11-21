@@ -18,6 +18,7 @@ import {
   getPortalBaseUrl,
 } from "./email-templates.ts";
 import { GENERAL_CONTACT_EMAIL } from "./bureau-contact.ts";
+import { resolveBureauAddress } from "./bureau-event.ts";
 
 export type LodgingAlertKind = "submitted" | "revised" | "declined" | "headcount_confirmed";
 
@@ -167,7 +168,8 @@ export async function sendLodgingBureauAlert(
     const emailType = LodgingAlertEmailTypes[input.kind];
     const hasAltDates = !!(input.proposedArrival && input.proposedDeparture);
     const customerLabel = input.request.customer_company || input.request.customer_name;
-    const recipient = getRecipientEmail(GENERAL_CONTACT_EMAIL, input.origin);
+    // Eén adresbron voor alle bureau-meldingen (instelling bureau_admin_email).
+    const recipient = getRecipientEmail(await resolveBureauAddress(supabase), input.origin);
     const idempotencyKey = `lodging-alert-${emailType}-${input.quoteId}-${input.versionKey ?? "v1"}`;
 
     // Dedupe: zelfde gebeurtenis + zelfde versie ⇒ niet nogmaals mailen.

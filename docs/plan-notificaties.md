@@ -709,6 +709,31 @@ templates en in de onderwerpregels, knoppen in `item_added_partner` en
 `item_changes_partner`, huisstijlwrapper om de inline mails, de drie
 onderdeelsoorten in de partnertemplates.
 
+### Fase 2 (21 november 2026)
+
+- `_shared/bureau-event.ts` (getest): één helper voor gebeurtenissen van
+  buiten. Hij maakt of actualiseert een Werkbank-taak in het cluster
+  "Binnengekomen" (één open taak per gebeurtenis en onderdeel) en stuurt,
+  waar dat zinvol is, een korte bureau-mail met idempotency-sleutel: wie,
+  wat, voor welk dossier, en één regel "Aan zet". Het bureauadres komt uit
+  één bron, `resolveBureauAddress` (instelling `bureau_admin_email`, terugval
+  `hallo@`); de chatmelding, de tegenvoorstelmelding en de logiesalarmen
+  gebruiken die nu ook. De bruiloftsmelding houdt nog het vaste adres (eigen
+  testbare context; fase 3).
+- Aangeroepen vanuit `update-partner-item-status` (bevestigd, niet
+  beschikbaar, alternatief: taak `partner_status_update` + mail
+  `partner_item_response_bureau`; uitgevoerd: taak `partner_item_executed`,
+  geen mail), `accept-quote-proposal` (taak `customer_quote_accepted` + mail
+  `quote_accepted_bureau`) en `update-customer-program` bij ondertekening
+  (taak `customer_terms_signed` + mail `terms_signed_bureau`, met de
+  onderdelen onder voorbehoud). Een "alleen bevestigen"-onderdeel dat
+  bevestigd wordt blijft stil.
+- `reconcile-admin-todos` sluit de drie nieuwe taaktypen na zeven dagen, net
+  als `partner_status_update`, en sluit `new_program_request` ook bij een
+  gearchiveerde aanvraag.
+- Labelkaart: drie nieuwe bureau-mailtypes.
+
+
 ## Beslissingen voor Erwin
 
 1. **Partnerreactie als taak die blijft staan tot je hem gezien hebt, plus een

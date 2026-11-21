@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveBureauAddress } from "../_shared/bureau-event.ts";
 import { getRenderedTemplate, getRecipientEmail, getSubjectPrefix, TemplateIds } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
     const MAILJET_API_KEY = Deno.env.get("MAILJET_API_KEY");
     const MAILJET_SECRET_KEY = Deno.env.get("MAILJET_SECRET_KEY");
 
-    const recipientEmail = getRecipientEmail("hallo@bureauvlieland.nl", origin);
+    const recipientEmail = getRecipientEmail(await resolveBureauAddress(supabase), origin);
     let status: "sent" | "failed" = "sent";
     let errorMessage: string | undefined;
     let mailjetMessageId: string | undefined;
