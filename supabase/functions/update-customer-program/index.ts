@@ -12,8 +12,7 @@ import {
   getRecipientEmail as sharedGetRecipientEmail,
   getSubjectPrefix as sharedGetSubjectPrefix,
   isTestMode as sharedIsTestMode,
-  getPortalBaseUrl,
-} from "../_shared/email-templates.ts";
+  getPortalBaseUrl, formatCurrencyNL } from "../_shared/email-templates.ts";
 import { logEmail } from "../_shared/email-logger.ts";
 import { enqueueChangeNotifications, type ChangeLine, type PendingChangeInsert } from "../_shared/changeDigest.ts";
 import { computeInvoicingSnooze } from "../_shared/projectActivity.ts";
@@ -1046,8 +1045,9 @@ Deno.serve(async (req) => {
         const counterNoteSection = counterNote 
           ? `<p style="margin: 8px 0 0; font-style: italic;">"${sanitizeHtml(counterNote)}"</p>` 
           : "";
-        const priceSection = item.quoted_price 
-          ? `<p style="margin: 8px 0 0;">Huidige prijs: €${Number(item.quoted_price).toLocaleString("nl-NL", { minimumFractionDigits: 2 })}</p>` 
+        // De eigen prijsopgave van de partner, ter herinnering; geen klantprijs.
+        const priceSection = item.quoted_price
+          ? `<p style="margin: 8px 0 0;">Jouw prijsopgave: ${formatCurrencyNL(Number(item.quoted_price))} (blijft ongewijzigd)</p>`
           : "";
         const partnerPortalLink = "https://bureauvlieland.nl/partner/login";
 

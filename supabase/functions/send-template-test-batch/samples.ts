@@ -126,7 +126,7 @@ export const SAMPLE_VALUES: Record<string, string> = {
   partner_terms_note: "Onze partnervoorwaarden zijn van toepassing.",
   reservation_notice: "<p><strong>Onder voorbehoud:</strong> Zeiltocht (test) is nog niet bevestigd door de aanbieder.</p>",
   terms_accepted_block: "<p>U heeft de algemene voorwaarden geaccepteerd op 21 november 2026.</p>",
-  price_section: "<p><strong>Prijs:</strong> € 750,00 excl. btw</p>",
+  price_section: "<p>Jouw prijsopgave: € 750,00 (blijft ongewijzigd)</p>",
   proposed_time_section: "<p><strong>Voorgestelde tijd:</strong> 14:00</p>",
   note_section: "<p><em>Graag rond 10:00 verzamelen bij de haven.</em></p>",
   counter_note_section: "<p><em>Liever een uur later vanwege de boot.</em></p>",
@@ -160,11 +160,27 @@ export function placeholderNames(text: string): string[] {
   return [...names].sort();
 }
 
+/**
+ * Gaat deze template naar een partner? Dan wijst `portal_url` naar het
+ * partnerportaal, zoals de code in productie ook doet (de variabelenaam is
+ * voor klant- en partnertemplates dezelfde).
+ */
+export function isPartnerTemplate(templateId: string): boolean {
+  return /partner|^reminder_|headsup|_t\d+$/.test(templateId) && !/_customer$|_bureau$|customer_accommodation_message/.test(templateId);
+}
+
+const PARTNER_PORTAL_VALUES: Record<string, string> = {
+  portal_url: `${PORTAL}/partner/login`,
+  portal_link: `${PORTAL}/partner/login`,
+};
+
 /** Voorbeeldwaarden voor precies de variabelen die een template gebruikt. */
-export function sampleVariablesFor(subject: string, body: string): Record<string, string> {
+export function sampleVariablesFor(subject: string, body: string, templateId = ""): Record<string, string> {
   const vars: Record<string, string> = {};
+  const partner = isPartnerTemplate(templateId);
   for (const name of placeholderNames(`${subject}\n${body}`)) {
-    vars[name] = name in SAMPLE_VALUES ? SAMPLE_VALUES[name] : `«${name}»`;
+    if (partner && name in PARTNER_PORTAL_VALUES) vars[name] = PARTNER_PORTAL_VALUES[name];
+    else vars[name] = name in SAMPLE_VALUES ? SAMPLE_VALUES[name] : `«${name}»`;
   }
   return vars;
 }
@@ -180,7 +196,7 @@ export interface RenderedTemplateTest {
 }
 
 export function renderTemplateForTest(t: { id: string; name: string; subject: string; body_html: string }): RenderedTemplateTest {
-  const vars = sampleVariablesFor(t.subject, t.body_html);
+  const vars = sampleVariablesFor(t.subject, t.body_html, t.id);
   const unknown = Object.entries(vars).filter(([, v]) => v.startsWith("«")).map(([k]) => k);
   const subject = replaceVariables(processConditionals(t.subject, vars), vars);
   const html = replaceVariables(processConditionals(t.body_html, vars), vars);

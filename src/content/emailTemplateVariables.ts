@@ -37,26 +37,36 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
   "accommodation_selected_customer": [
     "accommodation_name",
     "arrival_date",
+    "board_label",
     "customer_name",
     "departure_date",
+    "extras_list",
+    "includes_block",
     "number_of_guests",
     "portal_link",
     "price_total",
+    "room_configuration_block",
     "terms_accepted_block"
   ],
   "accommodation_selected_partner": [
     "accommodation_name",
     "arrival_date",
+    "board_label",
     "departure_date",
+    "dietary_notes",
     "else",
     "extras_list",
     "guest_name",
     "guest_pays_directly",
+    "includes_block",
     "number_of_guests",
     "partner_name",
     "partner_portal_link",
     "price_total",
-    "reference_number"
+    "reference_number",
+    "room_assignment",
+    "room_configuration_block",
+    "special_requests"
   ],
   "arrival_reminder": [
     "arrival_date",
@@ -143,7 +153,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "note_section",
     "partner_name",
     "portal_link",
-    "price_section",
     "proposed_time_section",
     "status_bg_color",
     "status_border_color",
@@ -284,7 +293,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "set_password_link"
   ],
   "partner_invoice_reminder_t1": [
-    "amount_excl_vat",
     "block_name",
     "customer_name",
     "partner_name",
@@ -292,7 +300,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reference_number"
   ],
   "partner_invoice_reminder_t14": [
-    "amount_excl_vat",
     "block_name",
     "customer_name",
     "partner_name",
@@ -300,7 +307,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reference_number"
   ],
   "partner_invoice_reminder_t7": [
-    "amount_excl_vat",
     "block_name",
     "customer_name",
     "partner_name",
@@ -405,7 +411,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "portal_link",
     "proposed_date",
     "proposed_time",
-    "quoted_price",
     "reference_number",
     "status_note"
   ],
@@ -415,7 +420,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "customer_name",
     "partner_name",
     "portal_link",
-    "quoted_price",
     "reference_number",
     "status_note"
   ],

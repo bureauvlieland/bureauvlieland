@@ -292,6 +292,9 @@ Deno.serve(async (req) => {
       sent_by: user.id,
       related_request_id: invoice.request_id,
       related_partner_id: invoice.partner_id,
+      // De inhoud bewaren: de zelftest "Inhoud verstuurde mail bewaard" telt
+      // verzendingen zonder html_body/text_body als fout.
+      html_body: htmlContent,
       metadata: {
         template_name: "purchase_invoice_forward",
         actor: "admin → boekhouding",

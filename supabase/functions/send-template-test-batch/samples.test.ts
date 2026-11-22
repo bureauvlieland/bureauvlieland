@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
   buildGeneratedTestMails,
+  isPartnerTemplate,
   placeholderNames,
   renderTemplateForTest,
   sampleVariablesFor,
@@ -51,4 +52,17 @@ Deno.test("sliceBatch: batches van tien, buiten bereik valt terug op de laatste"
   assertEquals(sliceBatch(all, 3, 10).batches, 3);
   assertEquals(sliceBatch(all, 9, 10).items, [21, 22, 23]);
   assertEquals(sliceBatch([], 1, 10).batches, 1);
+});
+
+Deno.test("partnertemplates krijgen de partnerportaal-link, klanttemplates de klantlink", () => {
+  const partner = renderTemplateForTest({ id: "booking_confirmed_partner", name: "P", subject: "x", body_html: "<a href=\"{{portal_url}}\">portaal</a>" });
+  assert(partner.html.includes("/partner/login"), partner.html);
+  const customer = renderTemplateForTest({ id: "booking_confirmed_customer", name: "K", subject: "x", body_html: "<a href=\"{{portal_url}}\">portaal</a>" });
+  assert(customer.html.includes("/mijn-programma/"), customer.html);
+  for (const id of ["program_request_partner", "reminder_activity_pending", "partner_headsup_t3", "partner_invoice_reminder_t14", "cancellation_partner", "quote_expired_partner"]) {
+    assert(isPartnerTemplate(id), id);
+  }
+  for (const id of ["status_confirmed", "cancellation_customer", "customer_accommodation_message", "program_request_bureau", "chat_notification_bureau"]) {
+    assert(!isPartnerTemplate(id), id);
+  }
 });
