@@ -8,6 +8,7 @@ import {
   getRecipientEmail,
   buildReplyTo,
   TemplateIds, getPortalBaseUrl } from "../_shared/email-templates.ts";
+import { boardLabel } from "../_shared/lodgingBoard.ts";
 import { logEmail, EmailTypes } from "../_shared/email-logger.ts";
 
 import { extractMessageIds } from "../_shared/mailjet-send.ts";
@@ -206,6 +207,14 @@ Deno.serve(async (req) => {
       .select("name, unit_price, quantity, pricing_type, category")
       .eq("quote_id", quoteId);
     const extras = quoteExtras || [];
+    // Verzorging en praktische informatie uit de aanvraag, voor klant- én
+    // partnermail: wat er tot nu toe bekend is. De klant vult gastenlijst,
+    // dieet en kamerindeling vaak pas later aan; de partner ziet dat in het portaal.
+    const boardLine = boardLabel((quote as any).board_type, (quote as any).board_notes);
+    const specialRequests = sanitizeHtml(String(request.special_requests || "")).trim();
+    const roomAssignment = sanitizeHtml(String(request.room_assignment || "")).trim();
+    const guestNames = sanitizeHtml(String(request.guest_names || "")).trim();
+    const dietaryNotes = sanitizeHtml(String(request.dietary_notes || "")).trim();
     const extrasTotal = extras.reduce((sum: number, e: any) =>
       sum + (e.pricing_type === "fixed" ? e.unit_price : e.unit_price * e.quantity), 0);
     const grandTotal = quote.price_total + extrasTotal;
@@ -433,6 +442,11 @@ Deno.serve(async (req) => {
         : "";
 
       const partnerTemplateVariables: Record<string, string> = {
+        board_label: boardLine,
+        special_requests: specialRequests,
+        room_assignment: roomAssignment,
+        guest_names: guestNames,
+        dietary_notes: dietaryNotes,
         partner_name: sanitizeHtml(quote.partner?.name),
         accommodation_name: sanitizeHtml(quote.accommodation_name),
         arrival_date: formatDateNL(request.arrival_date),
@@ -588,6 +602,7 @@ Deno.serve(async (req) => {
         : "";
 
       const customerTemplateVariables: Record<string, string> = {
+        board_label: boardLine,
         customer_name: sanitizeHtml(request.customer_name),
         accommodation_name: sanitizeHtml(quote.accommodation_name),
         arrival_date: formatDateNL(request.arrival_date),
