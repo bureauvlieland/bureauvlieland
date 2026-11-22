@@ -588,7 +588,8 @@ export const handler = async (req: Request): Promise<Response> => {
         status_bg_color: config.bgColor,
         status_border_color: config.borderColor,
         proposed_time_section: proposedTimeSection,
-        price_section: priceSection,
+        // Geen partnerprijs (inkoop) naar de klant; die ziet zijn eigen prijs in het portaal.
+        price_section: "",
         note_section: noteSection,
         action_text: config.actionText,
         portal_link: portalUrl,
@@ -799,7 +800,7 @@ export const handler = async (req: Request): Promise<Response> => {
         customer_name: sanitizeHtml(programRequest.customer_name),
         activity_name: sanitizeHtml(item.block_name),
         partner_name: sanitizeHtml(partner.name),
-        quoted_price: quotedPrice ? formatCurrencyNL(quotedPrice) : "",
+        quoted_price: "", // partnerprijs is inkoop; de klant ziet zijn prijs in het portaal
         status_note: sanitizeHtml(statusNote || quotedNotes || ""),
         proposed_time: sanitizeHtml(proposedTime || ""),
         proposed_date: proposedDate || "",

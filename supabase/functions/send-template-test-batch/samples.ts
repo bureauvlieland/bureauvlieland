@@ -126,7 +126,6 @@ export const SAMPLE_VALUES: Record<string, string> = {
   partner_terms_note: "Onze partnervoorwaarden zijn van toepassing.",
   reservation_notice: "<p><strong>Onder voorbehoud:</strong> Zeiltocht (test) is nog niet bevestigd door de aanbieder.</p>",
   terms_accepted_block: "<p>U heeft de algemene voorwaarden geaccepteerd op 21 november 2026.</p>",
-  price_section: "<p><strong>Prijs:</strong> € 750,00 excl. btw</p>",
   proposed_time_section: "<p><strong>Voorgestelde tijd:</strong> 14:00</p>",
   note_section: "<p><em>Graag rond 10:00 verzamelen bij de haven.</em></p>",
   counter_note_section: "<p><em>Liever een uur later vanwege de boot.</em></p>",

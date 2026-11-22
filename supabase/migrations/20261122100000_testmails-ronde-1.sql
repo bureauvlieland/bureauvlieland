@@ -154,3 +154,33 @@ update public.email_templates
        updated_at = now()
  where id = 'program_request_partner'
    and position('Goed nieuws' in body_html) > 0;
+
+-- Statusmails aan de klant toonden de prijs die de partner aan óns opgeeft
+-- (quoted_price, inkoop, vaak excl. btw). De klant hoort zijn eigen prijs te
+-- zien, met prijssoort en btw, en die staat in het klantportaal
+-- (portalPricing). Dus: geen partnerprijs in de mail, wel een verwijzing.
+update public.email_templates
+   set body_html = replace(body_html, '{{#if quoted_price}}
+    <p style="margin:16px 0 0;padding-top:16px;border-top:1px solid #9ae6b4;">
+      <span style="color:#718096;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Bevestigde prijs</span>
+      <span style="color:#38a169;font-size:24px;font-weight:700;">{{quoted_price}}</span>
+    </p>
+    {{/if}}', '<p style="margin:16px 0 0;color:#4a5568;font-size:14px;">De prijs voor uw groep en de verdere details vindt u in uw klantportaal.</p>'),
+       variables = (variables - 'quoted_price'),
+       updated_at = now()
+ where id = 'status_confirmed' and position('{{quoted_price}}' in body_html) > 0;
+
+update public.email_templates
+   set body_html = replace(body_html, '{{#if quoted_price}}
+    <p style="margin:0 0 8px;color:#718096;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Prijs</p>
+    <p style="margin:0 0 16px;color:#2d3748;font-size:16px;font-weight:600;">{{quoted_price}}</p>
+    {{/if}}', '<p style="margin:16px 0 0;color:#4a5568;font-size:14px;">De prijs voor uw groep en de verdere details vindt u in uw klantportaal.</p>'),
+       variables = (variables - 'quoted_price'),
+       updated_at = now()
+ where id = 'status_alternative' and position('{{quoted_price}}' in body_html) > 0;
+
+update public.email_templates
+   set body_html = replace(body_html, '{{price_section}}', '<p style="margin:16px 0 0;color:#4a5568;font-size:14px;">De prijs voor uw groep en de verdere details vindt u in uw klantportaal.</p>'),
+       variables = (variables - 'price_section'),
+       updated_at = now()
+ where id = 'counter_proposal_response' and position('{{price_section}}' in body_html) > 0;

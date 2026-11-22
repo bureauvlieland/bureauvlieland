@@ -153,7 +153,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "note_section",
     "partner_name",
     "portal_link",
-    "price_section",
     "proposed_time_section",
     "status_bg_color",
     "status_border_color",
@@ -412,7 +411,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "portal_link",
     "proposed_date",
     "proposed_time",
-    "quoted_price",
     "reference_number",
     "status_note"
   ],
@@ -422,7 +420,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "customer_name",
     "partner_name",
     "portal_link",
-    "quoted_price",
     "reference_number",
     "status_note"
   ],
