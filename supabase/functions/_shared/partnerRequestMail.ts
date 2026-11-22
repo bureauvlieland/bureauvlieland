@@ -105,6 +105,7 @@ export function buildPartnerRequestMail(input: PartnerRequestMailInput): Partner
     })
     .join("");
 
+  const customer = input.customerLabel ? sanitizeHtml(String(input.customerLabel)) : "een groep";
   let headline: string;
   let subject: string;
   let intro: string;
@@ -119,13 +120,15 @@ export function buildPartnerRequestMail(input: PartnerRequestMailInput): Partner
       ? `<p>De klant heeft het programma akkoord gegeven en getekend. Onderstaande onderdelen staan definitief in het programma; we geven ze je hierbij ter kennisgeving door. Je hoeft hier niets mee te doen.</p>`
       : `<p>Onderstaande onderdelen staan in het programma van deze klant; we geven ze je hierbij ter kennisgeving door. De klant heeft nog niet getekend. Je hoeft hier niets mee te doen.</p>`;
   } else if (input.customerSigned) {
-    headline = "Aanvraag bevestigd door klant";
-    subject = `${prefix}Aanvraag bevestigd door klant: ${summary}${refSuffix}`;
-    intro = `<p>Goed nieuws: de klant heeft het programma akkoord gegeven en getekend. Wij hebben onderstaande onderdelen definitief in het programma opgenomen en vragen je ze via het partnerportaal te bevestigen${anyQuote ? ", met je prijs erbij waar we daarom vragen" : ""}.</p>`;
+    // Dit is de eerste mail die de partner over deze groep krijgt: eerst
+    // uitleggen wat er ligt, dan pas vragen of het past.
+    headline = "Nieuwe aanvraag voor jullie";
+    subject = `${prefix}Nieuwe aanvraag: ${summary}${refSuffix}`;
+    intro = `<p>Wij hebben voor ${customer} een programma op Vlieland samengesteld en daarin onderstaande onderdelen van jullie opgenomen. De klant heeft het programma akkoord gegeven en getekend, onder voorbehoud van jullie beschikbaarheid. We hopen dat het past: wil je via het partnerportaal laten weten of je beschikbaar bent${anyQuote ? ", met je prijs erbij waar we daarom vragen" : ""}?</p>`;
   } else {
-    headline = "Aanvraag via Bureau Vlieland";
-    subject = `${prefix}Aanvraag via Bureau Vlieland: ${summary}${refSuffix}`;
-    intro = `<p>Wij zetten onderstaande onderdelen alvast bij je uit. De klant heeft het programma nog niet getekend; de aanvraag is daarmee nog onder voorbehoud. Wil je via het partnerportaal laten weten of het past${anyQuote ? ", met je prijs erbij waar we daarom vragen" : ""}? Zodra de klant tekent, hoor je dat van ons.</p>`;
+    headline = "Nieuwe aanvraag voor jullie";
+    subject = `${prefix}Nieuwe aanvraag (onder voorbehoud): ${summary}${refSuffix}`;
+    intro = `<p>Wij hebben voor ${customer} een programma op Vlieland samengesteld en daarin onderstaande onderdelen van jullie opgenomen. De klant heeft het programma nog niet getekend; de aanvraag is daarmee onder voorbehoud. We hopen dat het past: wil je alvast via het partnerportaal laten weten of je beschikbaar bent${anyQuote ? ", met je prijs erbij waar we daarom vragen" : ""}? Zodra de klant tekent, hoor je dat van ons.</p>`;
   }
 
   const buttonLabel = allInform ? "Bekijk in partnerportaal" : "Reageer in partnerportaal";

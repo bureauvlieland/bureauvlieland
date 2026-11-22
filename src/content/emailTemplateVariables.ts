@@ -294,7 +294,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "set_password_link"
   ],
   "partner_invoice_reminder_t1": [
-    "amount_excl_vat",
     "block_name",
     "customer_name",
     "partner_name",
@@ -309,7 +308,6 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<string, string[]> = {
     "reference_number"
   ],
   "partner_invoice_reminder_t7": [
-    "amount_excl_vat",
     "block_name",
     "customer_name",
     "partner_name",

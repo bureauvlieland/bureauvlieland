@@ -34,15 +34,16 @@ Deno.test("aanhef Hoi, referentie in onderwerp en tabel, naam gesanitized", () =
 
 Deno.test("klant getekend: 'bevestigd door klant'; niet getekend: onder voorbehoud", () => {
   const signed = buildPartnerRequestMail(base);
-  assertStringIncludes(signed.subject, "Aanvraag bevestigd door klant");
+  assertStringIncludes(signed.subject, "Nieuwe aanvraag:");
+  assertStringIncludes(signed.html, "We hopen dat het past");
   assertStringIncludes(signed.html, "akkoord gegeven en getekend");
   assertEquals(signed.html.includes("nog niet getekend"), false);
 
   const unsigned = buildPartnerRequestMail({ ...base, customerSigned: false });
-  assertStringIncludes(unsigned.subject, "Aanvraag via Bureau Vlieland");
+  assertStringIncludes(unsigned.subject, "Nieuwe aanvraag (onder voorbehoud)");
   assertStringIncludes(unsigned.html, "nog niet getekend");
   assertStringIncludes(unsigned.html, "onder voorbehoud");
-  assertEquals(unsigned.html.includes("Aanvraag bevestigd door klant"), false);
+  assertEquals(unsigned.html.includes("getekend, onder voorbehoud van jullie beschikbaarheid"), false);
 });
 
 Deno.test("herinnering: eigen kop en onderwerp met onderdeelnaam", () => {

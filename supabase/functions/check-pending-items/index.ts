@@ -1033,7 +1033,7 @@ Deno.serve(async (req) => {
                 amount_excl_vat: amountExcl,
                 portal_url: `${portalBase}/partner/facturatie`,
               },
-              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: mail de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop; wij verwerken hem en factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een paar dagen geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd. Wanneer het uitkomt: mail de pdf van je factuur naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop; wij verwerken hem en factureren centraal richting de klant.</p><p>Referentie: ${referenceNumber}</p>`,
               logExtra: {
                 email_type: "partner_invoice_reminder_t1",
                 related_partner_id: item.provider_id as string,
@@ -1074,7 +1074,7 @@ Deno.serve(async (req) => {
                 amount_excl_vat: amountExcl,
                 portal_url: `${portalBase}/partner/facturatie`,
               },
-              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je de pdf deze week alsnog mailen naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop?</p><p>Referentie: ${referenceNumber}<br/>Bedrag (excl. BTW, indicatief): ${amountExcl}</p>`,
+              fallbackHtml: `<p>Hoi ${partnerName},</p><p>Een week geleden is "<strong>${item.block_name}</strong>" voor ${customerName} uitgevoerd, maar we hebben jouw factuur nog niet ontvangen. Wil je de pdf deze week alsnog mailen naar <a href="mailto:invoices@reply.bureauvlieland.nl">invoices@reply.bureauvlieland.nl</a>, met onze referentie erop?</p><p>Referentie: ${referenceNumber}</p>`,
               logExtra: {
                 email_type: "partner_invoice_reminder_t7",
                 related_partner_id: item.provider_id as string,

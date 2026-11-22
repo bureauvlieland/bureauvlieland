@@ -131,3 +131,26 @@ update public.email_templates
        updated_at = now()
  where id = 'partner_invitation'
    and position('jarenlange samenwerking' in body_html) > 0;
+
+-- T+3 en T+7 ook zonder indicatief bedrag (zie T+14 hierboven).
+update public.email_templates
+   set body_html = replace(body_html, '<li><strong>Bedrag (excl. BTW, indicatief):</strong> {{amount_excl_vat}}</li>', ''),
+       variables = (variables - 'amount_excl_vat'),
+       updated_at = now()
+ where id in ('partner_invoice_reminder_t1', 'partner_invoice_reminder_t7')
+   and position('{{amount_excl_vat}}' in body_html) > 0;
+
+-- Partneraanvraag (template, via approve-quote-item): dit is de eerste mail
+-- die de partner over de groep krijgt. "Aanvraag bevestigd door klant" en
+-- "Goed nieuws" veronderstellen een eerder contact dat er niet was; eerst
+-- uitleggen wat er ligt, dan vragen of het past.
+update public.email_templates
+   set subject = 'Nieuwe aanvraag: {{block_name}} ({{reference_number}})',
+       body_html = replace(replace(body_html,
+         '<h2 style="color:#0F4C5C;margin:0 0 16px;">Aanvraag bevestigd door klant</h2>',
+         '<h2 style="color:#0F4C5C;margin:0 0 16px;">Nieuwe aanvraag voor jullie</h2>'),
+         'Goed nieuws: de klant heeft akkoord gegeven op het programmavoorstel. Wij hebben jouw onderdeel definitief in het programma opgenomen',
+         'Wij hebben voor {{#if customer_company}}{{customer_company}}{{else}}{{customer_name}}{{/if}} een programma op Vlieland samengesteld en daarin jouw onderdeel opgenomen. De klant heeft het programma akkoord gegeven, onder voorbehoud van jullie beschikbaarheid. We hopen dat het past'),
+       updated_at = now()
+ where id = 'program_request_partner'
+   and position('Goed nieuws' in body_html) > 0;
