@@ -1418,17 +1418,16 @@ Deno.serve(async (req) => {
     // =============================================
     // Het klantportaal toont dan "Voorstel verlopen"; zonder deze taak zag de
     // admin daar niets van terug zodra de T-3-taak (check 9) was afgevinkt.
-    const todayStr = new Date().toISOString().split("T")[0];
-    const { data: expiredPrograms, error: expiredError } = await supabase
+    const { data: expiredPrograms, error: expiredProgramsError } = await supabase
       .from("program_requests")
       .select("id, customer_name, customer_company, quote_valid_until")
       .eq("status", "active")
       .eq("quote_status", "offerte_verstuurd")
       .not("quote_valid_until", "is", null)
-      .lt("quote_valid_until", todayStr);
+      .lt("quote_valid_until", today);
 
-    if (expiredError) {
-      console.error("Error fetching expired quotes:", expiredError);
+    if (expiredProgramsError) {
+      console.error("Error fetching expired quotes:", expiredProgramsError);
     } else {
       console.log(`Found ${expiredPrograms?.length || 0} expired quotes awaiting approval`);
 

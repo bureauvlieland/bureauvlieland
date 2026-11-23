@@ -82,6 +82,14 @@ jobs:
         with:
           deno-version: v2.x
 
+      # Een dubbele const/let in één blok is voor TypeScript een typefout, maar
+      # voor V8 een SyntaxError: de edge function start dan niet en de gateway
+      # geeft 503 op elke aanroep. `deno test --no-check` en de deploy zien dat
+      # niet (21-22 november 2026: check-pending-items twee dagen stil). Alleen
+      # deze regel, zonder de aanbevolen set; die staat elders niet aan.
+      - name: Boot-veiligheid (geen dubbele declaraties)
+        run: deno lint --rules-tags= --rules-include=no-redeclare supabase/functions
+
       - name: Discover edge function test files
         id: discover
         run: |
