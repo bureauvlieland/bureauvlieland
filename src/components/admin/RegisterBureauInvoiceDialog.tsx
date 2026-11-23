@@ -13,6 +13,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -41,11 +42,15 @@ import { resolveBureauInvoiceType } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
 import type { ProjectInvoiceSpec } from "@/lib/projectInvoiceSpec";
 import { chooseStoredLines, type StoredInvoiceLineInput } from "@/lib/bureauInvoiceLines";
+import { INVOICE_NUMBER_PENDING_LABEL, INVOICE_NUMBER_PLACEHOLDER } from "@/lib/invoiceNumber";
+import { registerBureauInvoice } from "@/lib/registerBureauInvoice";
 import { storesFullProforma } from "@/lib/proforma";
 import { markProformaRegistered } from "@/hooks/useProformaChanges";
 
 const formSchema = z.object({
-  invoice_number: z.string().min(1, "Factuurnummer is verplicht"),
+  // Leeg = volgende nummer uit de jaarreeks; gevuld = een elders gemaakte
+  // factuur met haar eigen nummer vastleggen.
+  invoice_number: z.string().optional(),
   invoice_date: z.date({ required_error: "Factuurdatum is verplicht" }),
   invoice_type: z.enum(["partial", "final", "credit"]),
   amount_excl_vat: z.coerce.number().min(0.01, "Bedrag moet groter zijn dan 0"),
@@ -151,39 +156,22 @@ export const RegisterBureauInvoiceDialog = ({
       toast.error("Bedrag overschrijdt het openstaand bedrag. Vink de bevestiging aan of pas het bedrag aan.");
       return;
     }
-    const confirmMsg = `Je staat op het punt € ${totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. BTW te registreren als factuur ${data.invoice_number}.\n\nDoorgaan?`;
+    const manualNumber = data.invoice_number?.trim() || null;
+    const numberLabel = manualNumber ?? "het volgende nummer uit de jaarreeks";
+    const confirmMsg = `Je staat op het punt € ${totalInclVat.toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. BTW te registreren als factuur met ${numberLabel}.\n\nDoorgaan?`;
     if (!window.confirm(confirmMsg)) return;
 
     setIsSubmitting(true);
     try {
-      const { data: session } = await supabase.auth.getSession();
-
-      // Insert bureau invoice
-      const { data: inserted, error: invoiceError } = await supabase
-        .from("bureau_invoices")
-        .insert({
-          request_id: requestId,
-          invoice_number: data.invoice_number,
-          invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
-          amount_excl_vat: data.amount_excl_vat,
-          vat_amount: data.vat_amount,
-          invoice_type: data.invoice_type,
-          description: data.description || null,
-          created_by: session.session?.user.id,
-        })
-        .select("id")
-        .single();
-
-      if (invoiceError) throw invoiceError;
-
       // Regels bevriezen: de hele specificatie als deze factuur het hele
-      // project dekt, anders een samenvatting per btw-tarief.
+      // project dekt, anders een samenvatting per btw-tarief. Het nummer
+      // kent de database toe; in de regeltekst staat tot die tijd {{nummer}}.
       const storedLines = chooseStoredLines({
         spec,
         fullLines,
         projectTotalInclVat: projectTotal ?? null,
         invoiceType: data.invoice_type,
-        invoiceNumber: data.invoice_number,
+        invoiceNumber: manualNumber ?? INVOICE_NUMBER_PLACEHOLDER,
         amountInclVat: totalInclVat,
         alreadyInvoicedInclVat: alreadyInvoiced ?? 0,
         vatGroups: manualVatLines.map((l) => ({
@@ -194,24 +182,36 @@ export const RegisterBureauInvoiceDialog = ({
         })),
         subDescription: data.description || null,
       });
-      if (inserted?.id && storedLines.length > 0) {
-        const { error: linesError } = await supabase
-          .from("bureau_invoice_lines")
-          .insert(storedLines.map((line) => ({ ...line, invoice_id: inserted.id })));
-        if (linesError) reportError(linesError, { where: "RegisterBureauInvoiceDialog: factuurregels opslaan" });
-        if (proformaId && fullLines && storesFullProforma(storedLines)) {
-          await markProformaRegistered(proformaId, inserted.id);
-        }
+
+      const registered = await registerBureauInvoice({
+        header: {
+          request_id: requestId,
+          invoice_number: manualNumber,
+          invoice_date: format(data.invoice_date, "yyyy-MM-dd"),
+          amount_excl_vat: data.amount_excl_vat,
+          vat_amount: data.vat_amount,
+          invoice_type: data.invoice_type,
+          description: data.description || null,
+        },
+        lines: storedLines,
+      });
+      if (!registered.ok || !registered.id || !registered.invoiceNumber) {
+        toast.error(registered.message ?? "Factuur registreren mislukt");
+        return;
+      }
+      const invoiceNumber = registered.invoiceNumber;
+      if (proformaId && fullLines && storedLines.length > 0 && storesFullProforma(storedLines)) {
+        await markProformaRegistered(proformaId, registered.id);
       }
 
       // Add history entry
       await supabase.from("program_request_history").insert({
         request_id: requestId,
-        action: `Bureau Vlieland factuur geregistreerd: ${data.invoice_number}`,
+        action: `Bureau Vlieland factuur geregistreerd: ${invoiceNumber}`,
         actor: "admin",
         actor_name: "Bureau Vlieland",
         new_value: {
-          invoice_number: data.invoice_number,
+          invoice_number: invoiceNumber,
           amount_incl_vat: totalInclVat,
           type: data.invoice_type,
         },
@@ -225,12 +225,12 @@ export const RegisterBureauInvoiceDialog = ({
         entityType: EntityTypes.REQUEST,
         entityId: requestId,
         details: {
-          invoice_number: data.invoice_number,
+          invoice_number: invoiceNumber,
           amount_incl_vat: totalInclVat,
         },
       });
 
-      toast.success("Factuur geregistreerd");
+      toast.success(`Factuur ${invoiceNumber} geregistreerd`);
       form.reset();
       setOverrideConfirmed(false);
       onSuccess();
@@ -294,10 +294,14 @@ export const RegisterBureauInvoiceDialog = ({
               name="invoice_number"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Factuurnummer *</FormLabel>
+                  <FormLabel>Factuurnummer</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="BV-2026-0001" />
+                    <Input {...field} placeholder={INVOICE_NUMBER_PENDING_LABEL.replace("bij versturen", "bij registreren")} />
                   </FormControl>
+                  <FormDescription>
+                    Leeg laten voor het volgende nummer uit de jaarreeks (bijvoorbeeld 260041). Alleen invullen
+                    voor een factuur die elders al een nummer kreeg.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -52,6 +52,8 @@ import { formatEventDates } from "@/lib/eventDateRange";
 import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
+import { INVOICE_NUMBER_PENDING_LABEL, INVOICE_NUMBER_PLACEHOLDER } from "@/lib/invoiceNumber";
+import { paymentPageUrl } from "@/lib/paymentLink";
 
 interface ProgramRequest {
   id: string;
@@ -424,13 +426,12 @@ const AdminInvoicePreview = () => {
         .order("invoice_date", { ascending: true });
       setPriorInvoices((priorData || []) as any);
 
-      // Determine which number to show.
-      // CRITICAL: do NOT auto-suggest a "next" number when there are already
-      // registered invoices — that caused PDFs to be sent with an unregistered
-      // higher number while the existing record was subtracted as "reeds gefactureerd".
-      // Default to the LATEST existing invoice; only suggest a new number when
-      // explicitly requested via ?new=1 or when no invoices exist yet.
-      const ref = requestData.reference_number || "XXXX";
+      // Welk nummer tonen? Zijn er al geregistreerde facturen en is niet om een
+      // nieuwe termijn gevraagd (?new=1), dan de laatste bestaande factuur:
+      // anders ging er een pdf uit met een nummer dat nooit geregistreerd was
+      // terwijl de bestaande factuur als "reeds gefactureerd" werd afgetrokken.
+      // Een nieuwe factuur heeft nog geen nummer: dat kent de database toe bij
+      // versturen (jaarreeks JJNNNN, docs/nummering.md).
       const explicitInvoiceId = searchParams.get("invoiceId");
       const wantNewTermijn = searchParams.get("new") === "1";
       const hasPrior = (priorData?.length ?? 0) > 0;
@@ -440,8 +441,7 @@ const AdminInvoicePreview = () => {
         setInvoiceNumber(latest.invoice_number);
         if (latest.invoice_date) setInvoiceDate(new Date(latest.invoice_date));
       } else if (!explicitInvoiceId) {
-        const nextSeq = String(((priorData || []).length || 0) + 1).padStart(3, "0");
-        setInvoiceNumber(`FV-${ref}-${nextSeq}`);
+        setInvoiceNumber("");
       }
       // If explicitInvoiceId is set, the dedicated effect above will set the number.
     } catch (error) {
@@ -744,7 +744,7 @@ const AdminInvoicePreview = () => {
         fullLines: usesProforma ? proformaStoredLines : null,
         projectTotalInclVat: usesProforma ? proformaTotals.inclVat : null,
         invoiceType: outgoingInvoiceType,
-        invoiceNumber,
+        invoiceNumber: invoiceNumber || INVOICE_NUMBER_PLACEHOLDER,
         amountInclVat: effectiveTotalInclVat,
         alreadyInvoicedInclVat: priorSumExcludingCurrent,
         vatGroups: effectiveVatLines.map((l) => ({ rate: l.rate, exclVat: l.exclVat, vatAmount: l.vatAmount, inclVat: round2(l.exclVat + l.vatAmount) })),
@@ -756,7 +756,11 @@ const AdminInvoicePreview = () => {
    * screen is for read-only inspection; the PDF is drawn natively for crisp,
    * paginated A4 output. Both come from `invoiceCategories`.
    */
-  const buildPdfBlob = async (): Promise<Blob | null> => {
+  const buildPdfBlob = async (numberForPdf?: string, invoiceIdForPdf?: string | null): Promise<Blob | null> => {
+    // Nieuwe factuur: nummer en id komen pas bij registreren (meegegeven door
+    // de verzenddialoog); een losse download zonder nummer is een concept.
+    const pdfInvoiceNumber = numberForPdf || invoiceNumber || "CONCEPT";
+    const pdfInvoiceId = invoiceIdForPdf ?? (isExistingInvoiceView ? loadedInvoice?.id ?? null : null);
     const billingNameLocal =
       request.billing_company_name || request.customer_company || request.customer_name;
     const contactName = request.billing_contact_name || request.customer_name;
@@ -794,7 +798,7 @@ const AdminInvoicePreview = () => {
         billingReference: request.billing_reference ?? undefined,
       },
       meta: {
-        invoiceNumber,
+        invoiceNumber: pdfInvoiceNumber,
         invoiceDate,
         dueDate,
         paymentTermDays,
@@ -808,6 +812,7 @@ const AdminInvoicePreview = () => {
         vatLines: displayTotals.vatLines,
       },
       notes: notes || loadedInvoice?.description || undefined,
+      paymentUrl: pdfInvoiceId ? paymentPageUrl(pdfInvoiceId) : undefined,
       priorInvoices:
         isExistingInvoiceView || isSlotMode
           ? []
@@ -827,7 +832,7 @@ const AdminInvoicePreview = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Factuur-${invoiceNumber}.pdf`;
+      link.download = `Factuur-${invoiceNumber || "concept"}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -923,7 +928,7 @@ const AdminInvoicePreview = () => {
                   Doorsturen naar Snelstart
                 </Button>
               )}
-              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || !invoiceNumber}>
+              <Button onClick={() => setSendDialogOpen(true)} disabled={isGenerating || isAppSettingsLoading || (isExistingInvoiceView && !invoiceNumber)}>
                 <Mail className="h-4 w-4 mr-2" />
                 {isExistingInvoiceView ? "Opnieuw naar klant" : "Verstuur naar klant"}
               </Button>
@@ -968,7 +973,7 @@ const AdminInvoicePreview = () => {
             if (isSlotMode && !isExistingInvoiceView) {
               return (
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                  Je maakt een <strong>slotfactuur</strong> ({invoiceNumber}) voor het openstaande bedrag van <strong>{formatCurrency(netDueIncl)}</strong>.
+                  Je maakt een <strong>slotfactuur</strong> voor het openstaande bedrag van <strong>{formatCurrency(netDueIncl)}</strong>; het nummer wordt toegekend bij versturen.
                   De factuur bevat één regel die verwijst naar de eerder verstuurde termijn(en).
                 </div>
               );
@@ -976,7 +981,7 @@ const AdminInvoicePreview = () => {
             if (hasPrior && wantNewTermijn) {
               return (
                 <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Je maakt een <strong>nieuwe termijnfactuur</strong> ({invoiceNumber}) aan voor dit project.
+                  Je maakt een <strong>nieuwe termijnfactuur</strong> aan voor dit project; het nummer wordt toegekend bij versturen.
                   De reeds geregistreerde facturen worden onderaan als "reeds gefactureerd" afgetrokken.
                 </div>
               );
@@ -994,10 +999,13 @@ const AdminInvoicePreview = () => {
 
                 <div className="space-y-2">
                   <Label>Factuurnummer</Label>
-                  <Input
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                  />
+                  <Input value={invoiceNumber || INVOICE_NUMBER_PENDING_LABEL} readOnly disabled />
+                  {!invoiceNumber && (
+                    <p className="text-xs text-muted-foreground">
+                      Volgende nummer uit de jaarreeks (bijvoorbeeld 260041), toegekend door de administratie
+                      zodra je verstuurt. Het dossiernummer {request.reference_number} staat apart op de factuur.
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1110,7 +1118,7 @@ const AdminInvoicePreview = () => {
                           <div className="space-y-0.5 text-[10.5px]">
                             <div className="flex justify-end gap-3">
                               <span className="text-gray-500">Factuurnummer:</span>
-                              <span className="font-semibold w-36 text-right">{invoiceNumber}</span>
+                              <span className="font-semibold w-36 text-right">{invoiceNumber || INVOICE_NUMBER_PENDING_LABEL}</span>
                             </div>
                             <div className="flex justify-end gap-4">
                               <span className="text-gray-500">Factuurdatum:</span>
@@ -1286,7 +1294,7 @@ const AdminInvoicePreview = () => {
                             <div className="mt-1.5">
                               <p>IBAN: <span className="font-mono font-semibold">{iban}</span></p>
                               <p>T.n.v.: {companyName}</p>
-                              <p>O.v.v.: {invoiceNumber}</p>
+                              <p>O.v.v.: {invoiceNumber || INVOICE_NUMBER_PENDING_LABEL.toLowerCase()}</p>
                             </div>
                           </div>
                         );
@@ -1354,7 +1362,7 @@ const AdminInvoicePreview = () => {
 
       <ForwardBureauInvoiceDialog
         invoice={forwardInvoice}
-        onGeneratePdf={buildPdfBlob}
+        onGeneratePdf={() => buildPdfBlob()}
         onClose={() => {
           setForwardInvoice(null);
           // Strip the action params from the URL so it doesn't reopen on refresh

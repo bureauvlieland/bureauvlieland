@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,8 @@ import { toast } from "sonner";
 import type { InvoiceType } from "@/types/bureauInvoice";
 import { reportError } from "@/lib/errorReporting";
 import type { StoredInvoiceLineInput } from "@/lib/bureauInvoiceLines";
+import { INVOICE_NUMBER_PENDING_LABEL, INVOICE_NUMBER_PLACEHOLDER } from "@/lib/invoiceNumber";
+import { registerBureauInvoice } from "@/lib/registerBureauInvoice";
 
 interface SendBureauInvoiceToCustomerDialogProps {
   isOpen: boolean;
@@ -40,8 +41,12 @@ interface SendBureauInvoiceToCustomerDialogProps {
   linesToStore?: StoredInvoiceLineInput[];
   /** De proforma waar `linesToStore` van komt; dekt de factuur haar helemaal, dan wordt zij geregistreerd. */
   proformaId?: string | null;
-  /** Async; resolves with the PDF blob to send. */
-  onGeneratePdf: () => Promise<Blob | null>;
+  /**
+   * Async; resolves with the PDF blob to send. Krijgt het factuurnummer mee:
+   * bij een nieuwe factuur kent de database dat pas toe bij registreren, en
+   * de pdf moet het dragen.
+   */
+  onGeneratePdf: (invoiceNumber: string, invoiceId: string | null) => Promise<Blob | null>;
   onSent?: () => void;
 }
 
@@ -77,27 +82,28 @@ export const SendBureauInvoiceToCustomerDialog = ({
   onSent,
 }: SendBureauInvoiceToCustomerDialogProps) => {
   const [recipient, setRecipient] = useState(defaultRecipient);
-  const [subject, setSubject] = useState(`Factuur ${invoiceNumber} – Bureau Vlieland`);
+  // Nieuwe factuur: het nummer komt pas bij registreren; in onderwerp en
+  // tekst staat tot die tijd {{nummer}}, dat we na toekenning vervangen.
+  const numberToken = invoiceNumber || INVOICE_NUMBER_PLACEHOLDER;
+  const [subject, setSubject] = useState(`Factuur ${numberToken} – Bureau Vlieland`);
   const [message, setMessage] = useState(
-    `Beste ${recipientName || "relatie"},\n\nIn de bijlage vindt u factuur ${invoiceNumber}. ` +
+    `Beste ${recipientName || "relatie"},\n\nIn de bijlage vindt u factuur ${numberToken}. ` +
       `Wij verzoeken u vriendelijk het bedrag binnen de vermelde betaaltermijn over te maken ` +
       `onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`
   );
-  const [alsoRegister, setAlsoRegister] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setRecipient(defaultRecipient);
-      setSubject(`Factuur ${invoiceNumber} – Bureau Vlieland`);
+      setSubject(`Factuur ${numberToken} – Bureau Vlieland`);
       setMessage(
-        `Beste ${recipientName || "relatie"},\n\nIn de bijlage vindt u factuur ${invoiceNumber}. ` +
+        `Beste ${recipientName || "relatie"},\n\nIn de bijlage vindt u factuur ${numberToken}. ` +
           `Wij verzoeken u vriendelijk het bedrag binnen de vermelde betaaltermijn over te maken ` +
           `onder vermelding van het factuurnummer.\n\nMet vriendelijke groet,\nBureau Vlieland`
       );
-      setAlsoRegister(!existingInvoiceId);
     }
-  }, [isOpen, defaultRecipient, recipientName, invoiceNumber, existingInvoiceId]);
+  }, [isOpen, defaultRecipient, recipientName, numberToken, existingInvoiceId]);
 
   const totalInclVat = amountExclVat + vatAmount;
 
@@ -106,70 +112,60 @@ export const SendBureauInvoiceToCustomerDialog = ({
       toast.error("Geef een ontvanger op");
       return;
     }
-    if (!invoiceNumber.trim()) {
+    if (existingInvoiceId && !invoiceNumber.trim()) {
       toast.error("Factuurnummer is verplicht");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // 1. Generate PDF
-      const blob = await onGeneratePdf();
-      if (!blob) throw new Error("PDF kon niet worden gegenereerd");
-      const base64 = await blobToBase64(blob);
-
-      // 2. Optionally register the invoice first → returns id we can pass along
+      // 1. Registreren: de database kent het nummer toe (jaarreeks JJNNNN) en
+      //    slaat kop en regels in één transactie op. Pas daarna kan de pdf
+      //    worden gemaakt, want die draagt het nummer.
       let invoiceId: string | null = existingInvoiceId;
-      if (!existingInvoiceId && alsoRegister) {
-        const { data: session } = await supabase.auth.getSession();
-        const { data: inserted, error: insertError } = await supabase
-          .from("bureau_invoices")
-          .insert({
+      let assignedNumber = invoiceNumber;
+      if (!existingInvoiceId) {
+        const registered = await registerBureauInvoice({
+          header: {
             request_id: requestId,
-            invoice_number: invoiceNumber,
             invoice_date: format(invoiceDate, "yyyy-MM-dd"),
             amount_excl_vat: amountExclVat,
             vat_amount: vatAmount,
             invoice_type: invoiceType,
             description: description || null,
-            created_by: session.session?.user.id,
-          })
-          .select("id")
-          .single();
-
-        if (insertError) {
-          if (insertError.message?.toLowerCase().includes("duplicate")) {
-            toast.error(`Factuurnummer ${invoiceNumber} bestaat al`);
-            setIsSubmitting(false);
-            return;
-          }
-          throw insertError;
+          },
+          lines: linesToStore,
+        });
+        if (!registered.ok || !registered.id || !registered.invoiceNumber) {
+          toast.error(registered.message ?? "Factuur registreren mislukt");
+          setIsSubmitting(false);
+          return;
         }
-        invoiceId = inserted?.id ?? null;
+        invoiceId = registered.id;
+        assignedNumber = registered.invoiceNumber;
 
-        const storedInvoiceId = invoiceId;
-        if (storedInvoiceId && linesToStore.length > 0) {
-          const { error: linesError } = await supabase
-            .from("bureau_invoice_lines")
-            .insert(linesToStore.map((line) => ({ ...line, invoice_id: storedInvoiceId })));
-          if (linesError) reportError(linesError, { where: "SendBureauInvoiceToCustomerDialog: factuurregels opslaan" });
-          if (proformaId && storesFullProforma(linesToStore)) {
-            await markProformaRegistered(proformaId, storedInvoiceId);
-          }
+        if (proformaId && storesFullProforma(linesToStore)) {
+          await markProformaRegistered(proformaId, registered.id);
         }
 
         await supabase.from("program_request_history").insert({
           request_id: requestId,
-          action: `Bureau Vlieland factuur geregistreerd: ${invoiceNumber}`,
+          action: `Bureau Vlieland factuur geregistreerd: ${assignedNumber}`,
           actor: "admin",
           actor_name: "Bureau Vlieland",
           new_value: {
-            invoice_number: invoiceNumber,
+            invoice_number: assignedNumber,
             amount_incl_vat: totalInclVat,
             type: invoiceType,
           },
         });
       }
+
+      // 2. PDF met het toegekende nummer
+      const blob = await onGeneratePdf(assignedNumber, invoiceId);
+      if (!blob) throw new Error("PDF kon niet worden gegenereerd");
+      const base64 = await blobToBase64(blob);
+      const fillNumber = (text: string) => text.split(INVOICE_NUMBER_PLACEHOLDER).join(assignedNumber);
 
       // 3. Send to customer
       const { error: fnError } = await supabase.functions.invoke(
@@ -178,15 +174,15 @@ export const SendBureauInvoiceToCustomerDialog = ({
           body: {
             requestId,
             pdfBase64: base64,
-            pdfFilename: `Factuur-${invoiceNumber}.pdf`,
-            invoiceNumber,
+            pdfFilename: `Factuur-${assignedNumber}.pdf`,
+            invoiceNumber: assignedNumber,
             invoiceDate: format(invoiceDate, "yyyy-MM-dd"),
             amountInclVat: totalInclVat,
             invoiceId,
             forceResend: Boolean(existingInvoiceId),
             recipientEmail: recipient.trim(),
-            customSubject: subject.trim() || undefined,
-            customMessage: message.trim() || undefined,
+            customSubject: fillNumber(subject.trim()) || undefined,
+            customMessage: fillNumber(message.trim()) || undefined,
           },
         }
       );
@@ -196,7 +192,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
       // 4. Archive PDF in storage so it can be re-downloaded later
       if (invoiceId) {
         try {
-          const pdfPath = `${requestId}/${invoiceNumber}.pdf`;
+          const pdfPath = `${requestId}/${assignedNumber}.pdf`;
           const { error: uploadErr } = await supabase.storage
             .from("bureau-invoices")
             .upload(pdfPath, blob, {
@@ -281,7 +277,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
           <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Factuurnummer:</span>
-              <span className="font-medium">{invoiceNumber}</span>
+              <span className="font-medium">{invoiceNumber || INVOICE_NUMBER_PENDING_LABEL}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Totaal incl. BTW:</span>
@@ -296,21 +292,10 @@ export const SendBureauInvoiceToCustomerDialog = ({
               Deze factuur is al geregistreerd; hij wordt opnieuw naar de klant verstuurd zonder dubbele factuurregel.
             </div>
           ) : (
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="alsoRegister"
-                checked={alsoRegister}
-                onCheckedChange={(v) => setAlsoRegister(!!v)}
-                disabled={isSubmitting}
-              />
-              <div className="space-y-0.5">
-                <Label htmlFor="alsoRegister" className="cursor-pointer">
-                  Factuur ook registreren in administratie
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Voegt de factuur toe aan het Financieel Overzicht zodat je 'm later naar Snelstart kunt doorsturen.
-                </p>
-              </div>
+            <div className="rounded-md bg-muted/40 border p-3 text-xs text-muted-foreground">
+              Bij versturen wordt de factuur geregistreerd en krijgt zij het volgende nummer uit de
+              jaarreeks (bijvoorbeeld 260041). Dat nummer komt op de pdf, in het onderwerp en in de
+              tekst op de plek van {INVOICE_NUMBER_PLACEHOLDER}.
             </div>
           )}
         </div>

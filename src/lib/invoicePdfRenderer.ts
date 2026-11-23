@@ -8,6 +8,8 @@
  * no html2canvas, no jsPDF.html.
  */
 import { jsPDF } from "jspdf";
+import QRCode from "qrcode";
+import { buildEpcPayload } from "@/lib/epcQr";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import logoUrl from "@/assets/logo.png";
@@ -113,7 +115,7 @@ export interface InvoiceCustomer {
   street?: string;
   postalCity?: string;
   vatNumber?: string;
-  /** Customer/reference number (e.g. project reference BV-2602-0006). */
+  /** Dossiernummer van het project (BV-2602-0006); toont als "Dossier" op de factuur. */
   customerNumber?: string;
   /** Customer-supplied PO / cost-center reference (toont als "Referentie" op factuur). Bron: program_requests.billing_reference. */
   billingReference?: string | null;
@@ -154,6 +156,8 @@ export interface InvoiceData {
   notes?: string;
   /** Already-sent invoices for this project (subtracted from the total). */
   priorInvoices?: InvoicePriorInvoice[];
+  /** Betaallink (publieke betaalpagina) die naast de QR-code op de factuur komt. */
+  paymentUrl?: string;
 }
 
 // ─── Formatters ──────────────────────────────────────────────
@@ -324,7 +328,7 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
     ["Betalingstermijn", `${data.meta.paymentTermDays} dagen`],
   ];
   if (data.customer.customerNumber) {
-    metaRows.push(["Klantnummer", data.customer.customerNumber]);
+    metaRows.push(["Dossier", data.customer.customerNumber]);
   }
   const billingRef = data.customer.billingReference ?? data.customer.customerReference;
   if (billingRef) {
@@ -352,9 +356,36 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
   return Math.max(yLeft, yRight) + 4;
 }
 
-function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number {
+/** Te betalen bedrag: totaal minus wat al gefactureerd is. */
+function amountDue(data: InvoiceData): number {
+  const priorSum = (data.priorInvoices ?? []).reduce((s, p) => s + p.amountInclVat, 0);
+  return data.totals.totalInclVat - priorSum;
+}
+
+/**
+ * EPC-QR als PNG-data-url, of null als er niets te betalen is (creditnota,
+ * geen IBAN). De klant scant hem met de bank-app: IBAN, naam, bedrag en
+ * factuurnummer staan dan al ingevuld.
+ */
+async function paymentQrDataUrl(data: InvoiceData): Promise<string | null> {
+  const payload = buildEpcPayload({
+    beneficiaryName: data.bureau.legalName,
+    iban: data.bureau.iban,
+    amount: amountDue(data),
+    remittance: data.meta.invoiceNumber,
+  });
+  if (!payload) return null;
+  try {
+    return await QRCode.toDataURL(payload, { errorCorrectionLevel: "M", margin: 0, width: 320 });
+  } catch {
+    return null;
+  }
+}
+
+async function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): Promise<number> {
   const y0 = startY;
-  const boxH = 26;
+  const qrDataUrl = await paymentQrDataUrl(data);
+  const boxH = qrDataUrl ? 30 : 26;
   const boxW = CONTENT_W;
 
   setFill(pdf, [248, 250, 252]);
@@ -373,13 +404,13 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
   const valueX = MARGIN_L + 38;
 
   let y = y0 + 10;
-  const priorSumTop = (data.priorInvoices ?? []).reduce((s, p) => s + p.amountInclVat, 0);
-  const netDueTop = data.totals.totalInclVat - priorSumTop;
+  const netDueTop = amountDue(data);
   const rows: Array<[string, string, boolean]> = [
     ["Te betalen", `${fmtEuro(netDueTop)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
     ["IBAN", data.bureau.iban, false],
     ["Op naam van", data.bureau.legalName, false],
-    ["Omschrijving", `Factuur ${data.meta.invoiceNumber}`, false],
+    // Alleen het nummer: dat is wat de klant bij de overschrijving vermeldt.
+    ["Omschrijving", data.meta.invoiceNumber, false],
   ];
 
   for (const [label, value, bold] of rows) {
@@ -391,6 +422,25 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
     setText(pdf, bold ? NAVY : TEXT);
     pdf.text(value, valueX, y);
     y += 4.2;
+  }
+
+  // Rechts: QR-code voor de bank-app, met daaronder de betaallink.
+  if (qrDataUrl) {
+    const qrSize = 20;
+    const qrX = MARGIN_L + boxW - qrSize - 4;
+    const qrY = y0 + 3;
+    pdf.addImage(qrDataUrl, "PNG", qrX, qrY, qrSize, qrSize);
+    pdf.setFont(activeFont, "normal");
+    pdf.setFontSize(FS.small);
+    setText(pdf, TEXT_MUTED);
+    pdf.text("Scan met uw bank-app", qrX + qrSize / 2, qrY + qrSize + 3.5, { align: "center" });
+
+    if (data.paymentUrl) {
+      const linkY = y0 + boxH - 3;
+      pdf.text("Of betaal via", labelX, linkY);
+      setText(pdf, NAVY);
+      pdf.textWithLink(data.paymentUrl, valueX, linkY, { url: data.paymentUrl });
+    }
   }
 
   return y0 + boxH + 6;
@@ -667,7 +717,7 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
   pdf.setFont(activeFont, "normal");
   pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
-  const termsText = `Voorwaarden: betaling binnen ${data.meta.paymentTermDays} dagen na factuurdatum onder vermelding van factuurnummer ${data.meta.invoiceNumber}. Op deze factuur zijn onze algemene voorwaarden van toepassing (${data.bureau.website}/voorwaarden).`;
+  const termsText = `Voorwaarden: betaling binnen ${data.meta.paymentTermDays} dagen na factuurdatum onder vermelding van ${data.meta.invoiceNumber}. Op deze factuur zijn onze algemene voorwaarden van toepassing (${data.bureau.website}/voorwaarden).`;
   const wrapped = pdf.splitTextToSize(termsText, CONTENT_W) as string[];
   for (const ln of wrapped) {
     pdf.text(ln, MARGIN_L, y);
@@ -768,7 +818,7 @@ export async function renderInvoicePdf(input: InvoiceData, options: RenderInvoic
   // Page 1: full header (with logo + meta + payment box)
   state.y = await renderHeader(pdf, data, state);
   state.y = await renderInvoiceMeta(pdf, data, state.y);
-  state.y = renderPaymentBox(pdf, data, state.y);
+  state.y = await renderPaymentBox(pdf, data, state.y);
 
   // Table header
   state.y = renderTableHeader(pdf, state.y);

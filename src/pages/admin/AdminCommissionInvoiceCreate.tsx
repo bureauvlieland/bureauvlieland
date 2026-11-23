@@ -607,8 +607,8 @@ export default function AdminCommissionInvoiceCreate() {
                 <div className="space-y-2">
                   <Label>Factuurnummer</Label>
                   <p className="text-sm text-muted-foreground">
-                    Concept. Het nummer (BVC-JJMM-NNNN) wordt uitgegeven bij "Definitief maken",
-                    uit de reeks van de maand van de factuurdatum.
+                    Concept. Het nummer wordt uitgegeven bij "Definitief maken", uit de verkoopreeks
+                    van het jaar van de factuurdatum (JJNNNN, bijvoorbeeld 260041; dezelfde reeks als de klantfacturen).
                   </p>
                 </div>
 

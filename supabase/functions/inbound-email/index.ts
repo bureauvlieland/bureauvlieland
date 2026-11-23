@@ -10,10 +10,12 @@ const corsHeaders = {
 };
 
 /**
- * Extract reference number from a Reply-To address like reply+BV-2503-0012@reply.bureauvlieland.nl
+ * Extract reference number from a Reply-To address like
+ * reply+BV-2503-0012@reply.bureauvlieland.nl (dossier) or
+ * reply+260041@reply.bureauvlieland.nl (verkoopfactuurnummer uit de jaarreeks).
  */
-function extractReferenceNumber(toAddress: string): string | null {
-  const match = toAddress.match(/reply\+([A-Z]+-\d{4}-\d{4})@/i);
+export function extractReferenceNumber(toAddress: string): string | null {
+  const match = toAddress.match(/reply\+([A-Z]+-\d{4}-\d{4}|\d{6,})@/i);
   return match ? match[1].toUpperCase() : null;
 }
 
@@ -705,8 +707,9 @@ Deno.serve(async (req) => {
     const content = trimQuotedReply(rawContent) || rawContent;
     const truncatedContent = content.length > 10000 ? content.substring(0, 10000) + "\n\n[Bericht ingekort]" : content;
 
-    // Antwoord op een commissiefactuur (Reply-To reply+BVC-JJMM-NNNN@…): geen
-    // project, dus geen dossierregel maar een Werkbank-taak voor de partner.
+    // Antwoord op een commissiefactuur (Reply-To reply+<factuurnummer>@…, oud
+    // BVC-JJMM-NNNN of nieuw JJNNNN): geen project, dus geen dossierregel maar
+    // een Werkbank-taak voor de partner.
     if (isCommissionInvoiceReference(referenceNumber)) {
       const attachments = await extractAndStoreAttachments(rawPayload, supabase, referenceNumber);
       const routed = await routeCommissionInvoiceReply(supabase, {

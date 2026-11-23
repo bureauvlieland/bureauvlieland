@@ -76,6 +76,29 @@ export function lineSearchText(line: BankLineInput): string {
   return `${line.description ?? ""} ${line.end_to_end_id ?? ""} ${line.remittance_info ?? ""}`.toUpperCase();
 }
 
+/**
+ * Referentie zoals een klant hem kan hebben ingetikt, terug naar de vorm
+ * waarin wij hem bewaren: hoofdletters, zonder spaties, punten en streepjes.
+ * "26-0041", "26 0041" en "factuur 260041" raken dan alle drie 260041.
+ * (Zelfde regel als normalizeInvoiceReference in src/lib/invoiceNumber.ts.)
+ */
+export function normalizeReference(value: string | null | undefined): string {
+  return (value ?? "").toUpperCase().replace(/[\s.\-_/]/g, "");
+}
+
+/**
+ * Staat de referentie in de omschrijving? Een nummer van alleen cijfers
+ * (de jaarreeks JJNNNN) moet als los getal voorkomen, anders raakt 260041
+ * ook de cijfers van een IBAN of een datum.
+ */
+export function textMentionsReference(text: string, reference: string | null | undefined): boolean {
+  const ref = normalizeReference(reference);
+  if (!ref) return false;
+  const haystack = normalizeReference(text);
+  if (!/^\d+$/.test(ref)) return haystack.includes(ref);
+  return new RegExp(`(?<!\\d)${ref}(?!\\d)`).test(haystack);
+}
+
 const sameAmount = (a: number | null | undefined, b: number) =>
   a !== null && a !== undefined && Math.abs(Number(a) - b) < 0.01;
 
@@ -87,8 +110,7 @@ const sameAmount = (a: number | null | undefined, b: number) =>
  */
 function score(candidate: MatchCandidate, text: string, amount: number, lineIban: string): number | null {
   const [both, refOnly, amountOnly] = SCORES[candidate.type];
-  const ref = (candidate.reference ?? "").toUpperCase();
-  const refMatch = !!ref && text.includes(ref);
+  const refMatch = textMentionsReference(text, candidate.reference);
   const amountMatch = sameAmount(candidate.amount, amount) || sameAmount(candidate.netAmount, amount);
   const candidateIbans = (candidate.ibans ?? []).map(normalizeIban).filter(Boolean);
   const ibanMatch = !!lineIban && candidateIbans.includes(lineIban);
