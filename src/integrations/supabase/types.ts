@@ -5452,6 +5452,14 @@ export type Database = {
         Args: { p_invoice_id: string }
         Returns: { id: string; invoice_number: string }[]
       }
+      register_bureau_invoice: {
+        Args: { p_header: Json; p_lines?: Json }
+        Returns: { id: string; invoice_number: string }[]
+      }
+      next_sales_invoice_number: {
+        Args: { p_date: string }
+        Returns: string
+      }
       get_accommodation_quote_terms: {
         Args: { _quote_id: string }
         Returns: {

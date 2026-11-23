@@ -272,11 +272,13 @@ credited`, bedragen en ontvanger bevroren) en `guard_commission_invoice_lines_fr
 met een duidelijke melding. Dat is de bedoeling: corrigeer via `credit_commission_invoice`
 (creditnota plus nieuwe factuur), niet met een `UPDATE`.
 
-Het factuurnummer komt uit `commission_invoice_sequences` via
-`next_commission_invoice_number(datum)`: één rij per maand (`BVC-JJMM-NNNN`),
-vergrendeld met `INSERT … ON CONFLICT … FOR UPDATE`. Zet nooit handmatig een
-nummer in `invoice_number` en reset de reeks niet; een gat in de reeks is
-geen probleem, een dubbel nummer wel.
+Het factuurnummer komt sinds 23 november 2026 uit `sales_invoice_sequences`
+via `next_sales_invoice_number(datum)` (`next_commission_invoice_number` is
+daar een alias op): één rij per jaar, nummer `JJNNNN`, dezelfde reeks als de
+klantfacturen (`docs/nummering.md`), vergrendeld met `INSERT … ON CONFLICT DO
+UPDATE`. Zet nooit handmatig een nummer in `invoice_number` en reset de reeks
+niet; een gat in de reeks is geen probleem, een dubbel nummer wel. Oude
+nummers (`BVC-JJMM-NNNN`, `FV-BV-…`) blijven staan.
 
 De koppeling tussen factuur en bron is `commission_invoice_id` op
 `program_request_items`, `accommodation_quotes` en `partner_purchase_invoices`.

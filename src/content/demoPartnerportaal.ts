@@ -310,7 +310,7 @@ export const DEMO_DASHBOARD: PartnerDashboardData = {
 export const DEMO_COMMISSION_INVOICES: PartnerCommissionInvoice[] = [
   {
     id: "demo-commissie-1",
-    invoice_number: "BVC-2610-0007",
+    invoice_number: "260107",
     invoice_date: "2026-10-01",
     due_date: "2026-10-15",
     status: "sent",

@@ -44,8 +44,10 @@ function makeMockSupabase(invoices: Row[]) {
   return { client, inserted, filters };
 }
 
-Deno.test("isCommissionInvoiceReference: alleen BVC-JJMM-NNNN", () => {
+Deno.test("isCommissionInvoiceReference: BVC-JJMM-NNNN of jaarreeks JJNNNN", () => {
   assert(isCommissionInvoiceReference("BVC-2611-0004"));
+  assert(isCommissionInvoiceReference("260041"));
+  assertEquals(isCommissionInvoiceReference("26004"), false);
   assertEquals(isCommissionInvoiceReference("BV-2611-0004"), false);
   assertEquals(isCommissionInvoiceReference("LOG-2611-0004"), false);
   assertEquals(isCommissionInvoiceReference(null), false);

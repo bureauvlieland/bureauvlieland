@@ -1,6 +1,6 @@
 // Antwoord van een partner op een commissiefactuur.
 //
-// De commissiefactuur gaat uit met Reply-To `reply+BVC-JJMM-NNNN@…`. Een
+// De commissiefactuur gaat uit met Reply-To `reply+<factuurnummer>@…`. Een
 // commissiefactuur hangt niet aan één project (geen request_id), dus zo'n
 // antwoord past niet in project_communications. We maken daarom een
 // Werkbank-taak met afzender, onderwerp en het begin van de tekst, gekoppeld
@@ -9,9 +9,15 @@
 export const COMMISSION_REPLY_AUTO_TYPE = "commission_invoice_reply";
 export const COMMISSION_REPLY_EXCERPT_LENGTH = 500;
 
-/** Factuurnummer van een commissiefactuur: BVC-JJMM-NNNN. */
+/**
+ * Factuurnummer van een commissiefactuur: de oude maandreeks BVC-JJMM-NNNN of
+ * de jaarreeks JJNNNN (docs/nummering.md). Klantfacturen gaan uit met het
+ * dossiernummer als Reply-To, dus een los factuurnummer is hier altijd een
+ * commissiefactuur; bestaat hij niet, dan valt de aanroeper terug.
+ */
 export function isCommissionInvoiceReference(referenceNumber: string | null | undefined): boolean {
-  return /^BVC-\d{4}-\d{4}$/.test(referenceNumber ?? "");
+  const ref = referenceNumber ?? "";
+  return /^BVC-\d{4}-\d{4}$/.test(ref) || /^\d{6,}$/.test(ref);
 }
 
 export interface CommissionReplyInput {

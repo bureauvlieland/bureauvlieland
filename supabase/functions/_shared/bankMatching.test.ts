@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { decideMatch, suggestionsForLine, type MatchCandidates } from "./bankMatching.ts";
+import { decideMatch, suggestionsForLine, textMentionsReference, type MatchCandidates } from "./bankMatching.ts";
 
 const candidates: MatchCandidates = {
   sales: [{ type: "sales", id: "s1", reference: "BV-2609-0007", amount: 1210 }],
@@ -134,4 +134,32 @@ Deno.test("incasso: alleen de IBAN klopt, dan zwakke voorstellen voor alle open 
 Deno.test("niets past: geen match", () => {
   const decision = decideMatch(suggestionsForLine({ direction: "in", amount: 999, description: "x" }, candidates));
   assertEquals(decision.status, "unmatched");
+});
+
+// ── Jaarreeks JJNNNN (docs/nummering.md) ─────────────────────────────────────
+
+Deno.test("textMentionsReference: cijfernummer met en zonder streepje, niet binnen een IBAN", () => {
+  assertEquals(textMentionsReference("FACTUUR 260041 BUREAU VLIELAND", "260041"), true);
+  assertEquals(textMentionsReference("FACTUUR 26-0041", "260041"), true);
+  assertEquals(textMentionsReference("26 0041 DINER", "260041"), true);
+  assertEquals(textMentionsReference("NL91ABNA0260041300", "260041"), false);
+  assertEquals(textMentionsReference("1260041", "260041"), false);
+  assertEquals(textMentionsReference("FVBV26110001001", "FV-BV-2611-0001-001"), true);
+  assertEquals(textMentionsReference("IETS", null), false);
+});
+
+Deno.test("inkomende betaling met jaarreeksnummer zonder streepje: zekere verkoopmatch", () => {
+  const pool: MatchCandidates = {
+    sales: [{ type: "sales", id: "s2", reference: "260041", amount: 1210 }],
+    commission: [{ type: "commission", id: "c3", reference: "260042", amount: 121 }],
+    purchase: [],
+    batch: [],
+  };
+  const sale = suggestionsForLine({ direction: "in", amount: 1210, description: "Fam. Jansen factuur 26-0041" }, pool);
+  assertEquals(sale[0], { type: "sales", id: "s2", label: "260041", amount: 1210, confidence: 0.98 });
+  const commission = suggestionsForLine({ direction: "in", amount: 121, remittance_info: "260042" }, pool);
+  assertEquals(commission[0], { type: "commission", id: "c3", label: "260042", amount: 121, confidence: 0.98 });
+  // Een ander bedrag en een IBAN waar de cijfers toevallig in zitten: geen referentiematch.
+  const stranger = suggestionsForLine({ direction: "in", amount: 50, description: "NL91ABNA0260041300" }, pool);
+  assertEquals(stranger.length, 0);
 });

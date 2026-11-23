@@ -113,7 +113,7 @@ export interface InvoiceCustomer {
   street?: string;
   postalCity?: string;
   vatNumber?: string;
-  /** Customer/reference number (e.g. project reference BV-2602-0006). */
+  /** Dossiernummer van het project (BV-2602-0006); toont als "Dossier" op de factuur. */
   customerNumber?: string;
   /** Customer-supplied PO / cost-center reference (toont als "Referentie" op factuur). Bron: program_requests.billing_reference. */
   billingReference?: string | null;
@@ -324,7 +324,7 @@ async function renderInvoiceMeta(pdf: jsPDF, data: InvoiceData, startY: number):
     ["Betalingstermijn", `${data.meta.paymentTermDays} dagen`],
   ];
   if (data.customer.customerNumber) {
-    metaRows.push(["Klantnummer", data.customer.customerNumber]);
+    metaRows.push(["Dossier", data.customer.customerNumber]);
   }
   const billingRef = data.customer.billingReference ?? data.customer.customerReference;
   if (billingRef) {
@@ -379,7 +379,8 @@ function renderPaymentBox(pdf: jsPDF, data: InvoiceData, startY: number): number
     ["Te betalen", `${fmtEuro(netDueTop)}  (vóór ${fmtDate(data.meta.dueDate)})`, true],
     ["IBAN", data.bureau.iban, false],
     ["Op naam van", data.bureau.legalName, false],
-    ["Omschrijving", `Factuur ${data.meta.invoiceNumber}`, false],
+    // Alleen het nummer: dat is wat de klant bij de overschrijving vermeldt.
+    ["Omschrijving", data.meta.invoiceNumber, false],
   ];
 
   for (const [label, value, bold] of rows) {
@@ -667,7 +668,7 @@ function renderLegalBlock(pdf: jsPDF, data: InvoiceData, startY: number): number
   pdf.setFont(activeFont, "normal");
   pdf.setFontSize(FS.small);
   setText(pdf, TEXT_MUTED);
-  const termsText = `Voorwaarden: betaling binnen ${data.meta.paymentTermDays} dagen na factuurdatum onder vermelding van factuurnummer ${data.meta.invoiceNumber}. Op deze factuur zijn onze algemene voorwaarden van toepassing (${data.bureau.website}/voorwaarden).`;
+  const termsText = `Voorwaarden: betaling binnen ${data.meta.paymentTermDays} dagen na factuurdatum onder vermelding van ${data.meta.invoiceNumber}. Op deze factuur zijn onze algemene voorwaarden van toepassing (${data.bureau.website}/voorwaarden).`;
   const wrapped = pdf.splitTextToSize(termsText, CONTENT_W) as string[];
   for (const ln of wrapped) {
     pdf.text(ln, MARGIN_L, y);
