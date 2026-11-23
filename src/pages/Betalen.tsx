@@ -148,8 +148,17 @@ const Betalen = () => {
                     </div>
                     {view.epcPayload && (
                       <div className="flex flex-col items-center gap-2 sm:pt-6">
-                        <div className="rounded-md bg-white p-3 border">
-                          <QRCodeSVG value={view.epcPayload} size={168} level="M" aria-label="QR-code voor uw bank-app" />
+                        {/* De QR tekent zijn eigen witte vlak met rand: een bank-app scant hem ook in donkere modus. */}
+                        <div className="rounded-md border overflow-hidden">
+                          <QRCodeSVG
+                            value={view.epcPayload}
+                            size={192}
+                            level="M"
+                            marginSize={3}
+                            bgColor="#ffffff"
+                            fgColor="#000000"
+                            aria-label="QR-code voor uw bank-app"
+                          />
                         </div>
                         <p className="text-xs text-muted-foreground text-center max-w-[12rem]">
                           Scan met uw bank-app: IBAN, bedrag en omschrijving staan dan al ingevuld.
