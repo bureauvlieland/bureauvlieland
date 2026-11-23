@@ -88,8 +88,30 @@ een nieuwe reeks bij 001, wat de boekhouder en de Belastingdienst
 - Offertes krijgen geen eigen reeks: een offerte is een versie van het
   dossier.
 
-## Volgende stap
+## Betaallink en QR-code
 
-De grootste winst voor de klant zit buiten de nummering: een betaallink of
-QR-code met vooringevuld kenmerk op de factuur, zodat er niets meer
-ingetikt hoeft te worden. Dat kan los van deze wijziging.
+Gebouwd op 23 november 2026, direct na de nummering. De klant hoeft niets
+meer over te tikken.
+
+- **EPC-QR op de pdf** (`src/lib/epcQr.ts`, kopie in
+  `supabase/functions/_shared/epcQr.ts`): de SEPA-QR die Nederlandse en
+  Europese bank-apps scannen. IBAN, begunstigde, bedrag en factuurnummer
+  staan dan ingevuld. Geen betaalprovider, geen kosten. Rechts in het
+  betaalblok, met "Scan met uw bank-app"; geen QR bij een creditnota of
+  zonder IBAN. De QR-png komt van `qrcode` (`toDataURL`).
+- **Betaalpagina** `/betalen/<factuur-id>` (`src/pages/Betalen.tsx`,
+  edge function `get-invoice-payment`, zonder login): bedrag, vervaldatum,
+  IBAN, begunstigde en omschrijving met kopieerknoppen, plus dezelfde QR
+  (`qrcode.react`). De factuur-uuid is het toegangsbewijs; de functie geeft
+  alleen terug wat op de factuur zelf staat (geen regels, adres of
+  e-mailadres). Betaald: "Deze factuur is betaald". Creditnota: geen QR.
+- **Waar de link staat**: op de pdf onder de betaalgegevens ("Of betaal
+  via …", `InvoiceData.paymentUrl`) en in de factuurmail als knop
+  "Betaalgegevens en QR-code" (`send-bureau-invoice-to-customer`, alleen als
+  er een `invoiceId` is). De verzenddialoog geeft nummer én id door aan
+  `onGeneratePdf`, zodat de pdf de link draagt; een bestaande factuur krijgt
+  de link van haar eigen id. De basis-url is `src/lib/paymentLink.ts`.
+
+Niet gebouwd: een iDEAL-link via een betaalprovider. Dat vraagt een
+contract en kosten per transactie; de EPC-QR geeft hetzelfde gemak voor
+bankoverschrijvingen.

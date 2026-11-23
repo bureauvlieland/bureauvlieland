@@ -33,6 +33,8 @@ interface RequestBody {
   customMessage?: string;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const formatCurrency = (amount: number) =>
   `€ ${Number(amount).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -161,6 +163,10 @@ export async function handler(req: Request): Promise<Response> {
         `Wij verzoeken u vriendelijk het bedrag van <strong>${formatCurrency(body.amountInclVat)}</strong> ` +
         `binnen de op de factuur vermelde betaaltermijn over te maken onder vermelding van het factuurnummer.`;
 
+    // Betaallink: publieke pagina met IBAN, bedrag, omschrijving en EPC-QR; de
+    // factuur-uuid is het toegangsbewijs (docs/nummering.md).
+    const paymentUrl = body.invoiceId && UUID_RE.test(body.invoiceId) ? `https://bureauvlieland.nl/betalen/${body.invoiceId}` : null;
+
     // Binnenkant; de huisstijlwrapper levert logo en voettekst (adres, KvK, IBAN).
     const innerHtml = `
         <h2 style="color: #0F4C5C; margin-bottom: 16px;">Factuur ${escapeHtml(body.invoiceNumber)}</h2>
@@ -186,6 +192,12 @@ export async function handler(req: Request): Promise<Response> {
             <td style="padding: 6px 0;">${escapeHtml(request.reference_number)}</td>
           </tr>` : ""}
         </table>
+
+        ${paymentUrl ? `
+        <p style="margin: 20px 0;">
+          <a href="${paymentUrl}" style="display: inline-block; background: #0F4C5C; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 6px; font-weight: bold;">Betaalgegevens en QR-code</a>
+        </p>
+        <p style="font-size: 13px; color: #666;">Op die pagina staan IBAN, bedrag en omschrijving klaar om te kopiëren, met een QR-code voor uw bank-app. De gegevens staan ook op de factuur in de bijlage.</p>` : ""}
 
         <p>Heeft u vragen over deze factuur? Beantwoord dan gewoon deze e-mail.</p>
 

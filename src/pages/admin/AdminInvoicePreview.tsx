@@ -53,6 +53,7 @@ import { invoiceTypeLabels, type InvoiceType } from "@/types/bureauInvoice";
 import { resolveBureauInvoiceType, shouldShowFullSpecification } from "@/lib/bureauInvoiceType";
 import { reportError } from "@/lib/errorReporting";
 import { INVOICE_NUMBER_PENDING_LABEL, INVOICE_NUMBER_PLACEHOLDER } from "@/lib/invoiceNumber";
+import { paymentPageUrl } from "@/lib/paymentLink";
 
 interface ProgramRequest {
   id: string;
@@ -755,10 +756,11 @@ const AdminInvoicePreview = () => {
    * screen is for read-only inspection; the PDF is drawn natively for crisp,
    * paginated A4 output. Both come from `invoiceCategories`.
    */
-  const buildPdfBlob = async (numberForPdf?: string): Promise<Blob | null> => {
-    // Nieuwe factuur: het nummer komt pas bij registreren (meegegeven door de
-    // verzenddialoog); een losse download zonder nummer is een concept.
+  const buildPdfBlob = async (numberForPdf?: string, invoiceIdForPdf?: string | null): Promise<Blob | null> => {
+    // Nieuwe factuur: nummer en id komen pas bij registreren (meegegeven door
+    // de verzenddialoog); een losse download zonder nummer is een concept.
     const pdfInvoiceNumber = numberForPdf || invoiceNumber || "CONCEPT";
+    const pdfInvoiceId = invoiceIdForPdf ?? (isExistingInvoiceView ? loadedInvoice?.id ?? null : null);
     const billingNameLocal =
       request.billing_company_name || request.customer_company || request.customer_name;
     const contactName = request.billing_contact_name || request.customer_name;
@@ -810,6 +812,7 @@ const AdminInvoicePreview = () => {
         vatLines: displayTotals.vatLines,
       },
       notes: notes || loadedInvoice?.description || undefined,
+      paymentUrl: pdfInvoiceId ? paymentPageUrl(pdfInvoiceId) : undefined,
       priorInvoices:
         isExistingInvoiceView || isSlotMode
           ? []
@@ -1359,7 +1362,7 @@ const AdminInvoicePreview = () => {
 
       <ForwardBureauInvoiceDialog
         invoice={forwardInvoice}
-        onGeneratePdf={buildPdfBlob}
+        onGeneratePdf={() => buildPdfBlob()}
         onClose={() => {
           setForwardInvoice(null);
           // Strip the action params from the URL so it doesn't reopen on refresh

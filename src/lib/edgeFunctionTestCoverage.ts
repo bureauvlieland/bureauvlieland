@@ -49,6 +49,7 @@ const TESTED: Record<string, "deno" | "e2e"> = {
   "send-bureau-invoice-to-customer": "deno",
   "send-commission-invoice-to-partner": "deno",
   "get-partner-commission-invoices": "deno",
+  "get-invoice-payment": "deno",
   "attach-accommodation-invoice-pdf": "deno",
   "send-customer-aftersales": "deno",
   "send-review-reminder": "deno",
@@ -236,6 +237,7 @@ const REGISTRY: Row[] = [
   { name: "flag-missing-partner-invoices", category: "invoicing", critical: false },
   { name: "get-commission-reconciliation", category: "invoicing", critical: false },
   { name: "get-partner-commission-invoices", category: "invoicing", critical: false },
+  { name: "get-invoice-payment", category: "invoicing", critical: false }, // publieke betaalpagina /betalen/<id>
   { name: "attach-accommodation-invoice-pdf", category: "invoicing", critical: false },
   { name: "mailjet-webhook-status", category: "webhook", critical: false },
   { name: "map-book", category: "utility", critical: false },

@@ -189,6 +189,10 @@ verify_jwt = true
 [functions.customer-review]
 verify_jwt = false
 
+# Publieke betaalpagina /betalen/<factuur-id>: de uuid is het toegangsbewijs.
+[functions.get-invoice-payment]
+verify_jwt = false
+
 [functions.reference-case]
 verify_jwt = false
 

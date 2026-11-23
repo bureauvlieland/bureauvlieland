@@ -63,6 +63,7 @@ const LogiesVlieland = lazy(() => import("./pages/LogiesVlieland"));
 const AccommodationQuotes = lazy(() => import("./pages/AccommodationQuotes"));
 const ActiviteitenBoeken = lazy(() => import("./pages/ActiviteitenBoeken"));
 const BookingStatus = lazy(() => import("./pages/BookingStatus"));
+const Betalen = lazy(() => import("./pages/Betalen"));
 
 const Sitemap = lazy(() => import("./pages/Sitemap"));
 const Ontwerp = lazy(() => import("./pages/Ontwerp"));
@@ -223,6 +224,7 @@ const App = () => {
             <Route path="/logies-vlieland" element={<LogiesVlieland />} />
             <Route path="/activiteiten-boeken" element={<ActiviteitenBoeken />} />
             <Route path="/boeking-status" element={<BookingStatus />} />
+            <Route path="/betalen/:invoiceId" element={<Betalen />} />
 
             <Route path="/logies-aanvragen" element={
               <FeatureGate featureKey="customer_portal_enabled">

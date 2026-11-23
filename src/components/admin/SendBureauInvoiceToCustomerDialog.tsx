@@ -46,7 +46,7 @@ interface SendBureauInvoiceToCustomerDialogProps {
    * bij een nieuwe factuur kent de database dat pas toe bij registreren, en
    * de pdf moet het dragen.
    */
-  onGeneratePdf: (invoiceNumber: string) => Promise<Blob | null>;
+  onGeneratePdf: (invoiceNumber: string, invoiceId: string | null) => Promise<Blob | null>;
   onSent?: () => void;
 }
 
@@ -162,7 +162,7 @@ export const SendBureauInvoiceToCustomerDialog = ({
       }
 
       // 2. PDF met het toegekende nummer
-      const blob = await onGeneratePdf(assignedNumber);
+      const blob = await onGeneratePdf(assignedNumber, invoiceId);
       if (!blob) throw new Error("PDF kon niet worden gegenereerd");
       const base64 = await blobToBase64(blob);
       const fillNumber = (text: string) => text.split(INVOICE_NUMBER_PLACEHOLDER).join(assignedNumber);

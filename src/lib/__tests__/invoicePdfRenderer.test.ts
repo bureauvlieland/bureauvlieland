@@ -28,7 +28,7 @@ const sample: InvoiceData = {
     customerNumber: "BV-2606-0013",
   },
   meta: {
-    invoiceNumber: "FV-BV-2606-0013-001",
+    invoiceNumber: "260041",
     invoiceDate: new Date(2026, 10, 3),
     dueDate: new Date(2026, 11, 3),
     paymentTermDays: 14,
@@ -78,6 +78,7 @@ const sample: InvoiceData = {
       ],
     },
   ],
+  paymentUrl: "https://bureauvlieland.nl/betalen/5f1c2d3e-4b5a-4c6d-8e7f-9a0b1c2d3e4f",
   totals: {
     totalExclVat: 3533.2,
     totalVat: 580.41,
