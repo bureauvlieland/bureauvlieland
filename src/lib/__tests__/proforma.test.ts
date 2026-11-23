@@ -4,6 +4,8 @@ import {
   HIDDEN_REASON_GONE,
   activeProformaLines,
   isEmptySyncPlan,
+  pickProformaHeads,
+  sectionTotalsFromProformaLines,
   planProformaSync,
   proformaDeltaInclVat,
   specToProformaLines,
@@ -213,5 +215,85 @@ describe("planProformaSync (plan §3.4)", () => {
     const hidden = lines.map((l) => (l.line_key === "item:a" ? { ...l, line_status: "hidden" as const } : l));
     expect(totalsFromProformaLines(hidden).inclVat).toBe(Math.round((all - 500) * 100) / 100);
     expect(activeProformaLines(hidden)).toHaveLength(lines.length - 1);
+  });
+});
+
+describe("sectionTotalsFromProformaLines", () => {
+  const line = (over: Partial<ProformaLine> & Pick<ProformaLine, "kind" | "amount_incl_vat" | "sort_order">): ProformaLine =>
+    ({
+      id: `l${over.sort_order}`,
+      proforma_id: "p1",
+      created_at: "2026-11-20",
+      updated_at: "2026-11-20",
+      section: "Overig",
+      item_id: null,
+      description: "x",
+      sub_description: null,
+      quantity: 1,
+      quantity_label: null,
+      unit_price_excl_vat: 0,
+      unit_suffix: "",
+      vat_rate: 21,
+      amount_excl_vat: 0,
+      vat_amount: 0,
+      origin: "quote_item",
+      line_status: "active",
+      line_key: null,
+      replaces_line_id: null,
+      hidden_reason: null,
+      purchase_invoice_line_id: null,
+      purchase_invoice_id: null,
+      accommodation_quote_id: null,
+      fee_key: null,
+      quote_amount_incl_vat: null,
+      accepted_amount_incl_vat: null,
+      ...over,
+    }) as ProformaLine;
+
+  it("verdeelt regels over de secties van de facturatiepagina", () => {
+    const lines: ProformaLine[] = [
+      line({ kind: "item", amount_incl_vat: 210, sort_order: 0, item_id: "a" }),
+      line({ kind: "item", amount_incl_vat: 100, sort_order: 1, item_id: "b", line_status: "replaced" }),
+      line({ kind: "item_group", amount_incl_vat: 2848.16, sort_order: 2, item_id: "kost" }),
+      line({ kind: "sub", amount_incl_vat: 961.95, sort_order: 3 }),
+      line({ kind: "sub", amount_incl_vat: 1886.21, sort_order: 4 }),
+      line({ kind: "lodging", amount_incl_vat: 1336, sort_order: 5, origin: "lodging" }),
+      line({ kind: "fee", amount_incl_vat: 150, sort_order: 6, origin: "fee", fee_key: "coordination_fee" }),
+      line({ kind: "fee", amount_incl_vat: 54.18, sort_order: 7, origin: "fee", fee_key: "tourist_tax" }),
+      line({ kind: "fee", amount_incl_vat: 10.5, sort_order: 8, origin: "fee", fee_key: "nature_contribution" }),
+      line({ kind: "fee", amount_incl_vat: 17.5, sort_order: 9, origin: "fee", fee_key: "central_surcharge" }),
+      line({ kind: "cost", amount_incl_vat: 75, sort_order: 10, origin: "purchase_line" }),
+    ];
+    const totals = sectionTotalsFromProformaLines(lines, new Set(["kost"]));
+    expect(totals).toEqual({
+      programItems: 210,
+      extraCosts: 2923.16,
+      lodging: 1336,
+      coordinationFee: 150,
+      touristTax: 54.18,
+      natureContribution: 10.5,
+      centralSurcharge: 17.5,
+      revisionFees: 0,
+    });
+    const sum = Object.values(totals).reduce((s, v) => s + v, 0);
+    expect(Math.round(sum * 100) / 100).toBe(totalsFromProformaLines(lines).inclVat);
+  });
+});
+
+describe("pickProformaHeads", () => {
+  const head = (id: string, request_id: string, status: "concept" | "registered", created_at: string) => ({
+    id,
+    request_id,
+    status,
+    created_at,
+  });
+  it("kiest het concept, anders de nieuwste geregistreerde", () => {
+    const picked = pickProformaHeads([
+      head("r-old", "A", "registered", "2026-11-01"),
+      head("r-new", "A", "registered", "2026-11-20"),
+      head("c", "B", "concept", "2026-11-02"),
+      head("r", "B", "registered", "2026-11-21"),
+    ]);
+    expect(picked.map((h) => h.id).sort()).toEqual(["c", "r-new"]);
   });
 });

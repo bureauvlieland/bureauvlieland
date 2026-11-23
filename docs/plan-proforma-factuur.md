@@ -657,3 +657,16 @@ onderdelen.
   dat was in oktober handwerk en wordt nu de regel.
 - Meerdere proforma's per project (bijvoorbeeld per deelnemer): één concept
   per project, deelfacturen blijven samenvattende regels.
+
+**Nazorg (23 november 2026), geregistreerde proforma blijft de bron.** De
+facturatiepagina las alleen proforma's in concept. Na registreren viel zij
+terug op de berekening over het programma (vervangen en weggelaten
+offerteregels tellen daar mee) en schreef dat totaal terug naar
+`invoice_spec_total_incl_vat`; de trigger zette afgeronde projecten dan terug
+op gedeeltelijk gefactureerd (BV-2606-0013: € 311,50 "restant" dat op de
+eindfactuur niet bestaat; BV-2608-0002: € 1.173,39). Nu leest de pagina ook
+geregistreerde proforma's (`pickProformaHeads`, concept gaat voor), komen de
+sectietotalen uit de proformaregels (`sectionTotalsFromProformaLines`) en
+schrijft migratie `20261123120000` het projecttotaal ook bij een
+geregistreerde proforma vanuit de database, met een correctie voor alle
+bestaande projecten.
