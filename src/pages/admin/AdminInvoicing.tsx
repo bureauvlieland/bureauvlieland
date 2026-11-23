@@ -30,7 +30,14 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useItemVatRates } from "@/hooks/useItemVatRates";
 import { buildProjectInvoiceSpec, scaleVatGroups } from "@/lib/projectInvoiceSpec";
 import { syncInvoiceSpecTotals } from "@/hooks/useProjectInvoiceSpec";
-import { proformaToStoredLines, totalsFromProformaLines, type Proforma, type ProformaLine } from "@/lib/proforma";
+import {
+  pickProformaHeads,
+  proformaToStoredLines,
+  sectionTotalsFromProformaLines,
+  totalsFromProformaLines,
+  type Proforma,
+  type ProformaLine,
+} from "@/lib/proforma";
 import { orderProformaLines } from "@/lib/proformaWorksheet";
 import { specToProformaLines } from "@/lib/proforma";
 import { createProformaForRequest, isAcceptedQuoteStatus } from "@/hooks/useProforma";
@@ -220,9 +227,12 @@ const AdminInvoicing = () => {
   );
   const requestIdsKey = useMemo(() => requests.map((r) => r.id).sort().join(","), [requests]);
 
-  // Fase 3 van docs/plan-proforma-factuur.md: een project met een proforma in
-  // concept krijgt zijn totalen en factuurregels daaruit, niet uit de
-  // specificatie met klantregels.
+  // Fase 3 van docs/plan-proforma-factuur.md: een project met een proforma
+  // krijgt zijn totalen en factuurregels daaruit, niet uit de specificatie
+  // over het programma. Ook een geregistreerde proforma telt: na de
+  // eindfactuur blijft zij de bron, anders valt de pagina terug op de oude
+  // berekening met vervangen offerteregels en toont die een restant dat er
+  // niet is. Het concept gaat voor als beide bestaan.
   const { data: proformasByRequest = new Map<string, { proforma: Proforma; lines: ProformaLine[] }>() } = useQuery({
     queryKey: ["admin-invoicing-proformas", requestIdsKey],
     enabled: requestIdsKey.length > 0,
@@ -232,18 +242,20 @@ const AdminInvoicing = () => {
         .from("project_proformas")
         .select("*")
         .in("request_id", ids)
-        .eq("status", "concept");
+        .in("status", ["concept", "registered"])
+        .order("created_at", { ascending: false });
       if (error) throw error;
       const map = new Map<string, { proforma: Proforma; lines: ProformaLine[] }>();
       if (!heads || heads.length === 0) return map;
+      const chosen = pickProformaHeads(heads as unknown as Proforma[]);
       const { data: lines, error: linesError } = await supabase
         .from("project_proforma_lines")
         .select("*")
-        .in("proforma_id", heads.map((h) => h.id));
+        .in("proforma_id", chosen.map((h) => h.id));
       if (linesError) throw linesError;
-      for (const head of heads) {
+      for (const head of chosen) {
         map.set(head.request_id, {
-          proforma: head as unknown as Proforma,
+          proforma: head,
           lines: ((lines ?? []) as unknown as ProformaLine[]).filter((l) => l.proforma_id === head.id),
         });
       }
@@ -327,6 +339,10 @@ const AdminInvoicing = () => {
         });
         if (proforma) {
           const pt = totalsFromProformaLines(proforma.lines);
+          const sections = sectionTotalsFromProformaLines(
+            proforma.lines,
+            new Set(request.items.filter((item) => item.day_index === -1).map((item) => item.id)),
+          );
           const invoiced = spec.totals.invoiced;
           return {
             request,
@@ -334,14 +350,14 @@ const AdminInvoicing = () => {
             quoteSpec,
             proforma,
             totals: {
-              programItemsTotal: spec.totals.programItems,
-              extraCostsTotal: spec.totals.extraCosts,
-              coordinationFee: spec.totals.coordinationFee,
-              touristTax: spec.totals.touristTax,
-              natureContribution: spec.totals.natureContribution,
-              centralSurcharge: spec.totals.centralSurcharge,
-              revisionFees: spec.totals.revisionFees,
-              accommodationTotal: spec.totals.lodging + spec.totals.lodgingExtras,
+              programItemsTotal: sections.programItems,
+              extraCostsTotal: sections.extraCosts,
+              coordinationFee: sections.coordinationFee,
+              touristTax: sections.touristTax,
+              natureContribution: sections.natureContribution,
+              centralSurcharge: sections.centralSurcharge,
+              revisionFees: sections.revisionFees,
+              accommodationTotal: sections.lodging,
               grandTotalInclVat: pt.inclVat,
               invoicedTotal: invoiced,
               outstanding: Math.max(0, Math.round((pt.inclVat - invoiced) * 100) / 100),
@@ -376,7 +392,9 @@ const AdminInvoicing = () => {
   const specSyncReady = !isLoading && !isSettingsLoading && !isStructuresLoading && rows.length > 0;
   useEffect(() => {
     if (!specSyncReady) return;
-    // Projecten met een proforma schrijft de database zelf (trigger).
+    // Projecten met een proforma (concept of geregistreerd) schrijft de
+    // database zelf (trigger, migratie 20261123120000); de berekening over
+    // het programma mag dat getal niet overschrijven.
     void syncInvoiceSpecTotals(
       rows
         .filter((row) => !row.proforma)
@@ -700,7 +718,7 @@ const AdminInvoicing = () => {
           suggestedVatGroups={selectedVatGroups}
           spec={selectedRow.spec}
           fullLines={selectedRow.proforma ? proformaToStoredLines(orderProformaLines(selectedRow.proforma.lines)) : null}
-          proformaId={selectedRow.proforma?.proforma.id ?? null}
+          proformaId={selectedRow.proforma?.proforma.status === "concept" ? selectedRow.proforma.proforma.id : null}
           onSuccess={handleInvoiceSuccess}
         />
       )}

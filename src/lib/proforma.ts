@@ -120,7 +120,96 @@ export const followsQuote = (line: Pick<ProformaLine, "origin" | "line_status" |
 export const activeProformaLines = <T extends { line_status: ProformaLineStatus }>(lines: T[]): T[] =>
   lines.filter((l) => l.line_status === "active");
 
+/**
+ * Eén proforma per project uit een lijst koppen: het concept als dat er is,
+ * anders de nieuwste (geregistreerde). Volgorde van invoer: nieuwste eerst.
+ */
+export function pickProformaHeads<T extends Pick<Proforma, "id" | "request_id" | "status" | "created_at">>(heads: T[]): T[] {
+  const byRequest = new Map<string, T>();
+  const sorted = [...heads].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  for (const head of sorted) {
+    const current = byRequest.get(head.request_id);
+    if (!current || (current.status !== "concept" && head.status === "concept")) byRequest.set(head.request_id, head);
+  }
+  return [...byRequest.values()];
+}
+
 export const totalsFromProformaLines = (lines: ProformaLine[]) => totalsFromStoredLines(activeProformaLines(lines));
+
+export interface ProformaSectionTotals {
+  programItems: number;
+  extraCosts: number;
+  lodging: number;
+  coordinationFee: number;
+  touristTax: number;
+  natureContribution: number;
+  centralSurcharge: number;
+  revisionFees: number;
+}
+
+/**
+ * Sectietotalen (incl. btw) uit de actieve proformaregels, in de indeling
+ * van de specificatie op de facturatiepagina. Subregels tellen mee bij de
+ * groep waar ze onder hangen (regels in sorteervolgorde); de groepsregel
+ * zelf niet, die is alleen een kop.
+ */
+export function sectionTotalsFromProformaLines(
+  lines: ProformaLine[],
+  /** Onderdelen die als kostenpost gelden (dag −1); hun regels tellen bij "Extra kostenposten". */
+  extraCostItemIds: ReadonlySet<string> = new Set(),
+): ProformaSectionTotals {
+  const totals: ProformaSectionTotals = {
+    programItems: 0,
+    extraCosts: 0,
+    lodging: 0,
+    coordinationFee: 0,
+    touristTax: 0,
+    natureContribution: 0,
+    centralSurcharge: 0,
+    revisionFees: 0,
+  };
+  const sorted = [...activeProformaLines(lines)].sort((a, b) => a.sort_order - b.sort_order);
+  const itemTarget = (line: ProformaLine): "programItems" | "extraCosts" =>
+    line.item_id && extraCostItemIds.has(line.item_id) ? "extraCosts" : "programItems";
+  // Subregels dragen zelf geen onderdeel; ze volgen de groep erboven.
+  let groupTarget: "programItems" | "extraCosts" = "programItems";
+  for (const line of sorted) {
+    const amount = Number(line.amount_incl_vat) || 0;
+    switch (line.kind) {
+      case "item_group":
+        groupTarget = itemTarget(line);
+        break;
+      case "sub":
+        totals[line.item_id ? itemTarget(line) : groupTarget] += amount;
+        break;
+      case "item":
+        totals[itemTarget(line)] += amount;
+        break;
+      case "cost":
+        totals.extraCosts += amount;
+        break;
+      case "lodging":
+      case "lodging_extra":
+        totals.lodging += amount;
+        break;
+      case "revision":
+        totals.revisionFees += amount;
+        break;
+      case "fee":
+        if (line.fee_key === "coordination_fee") totals.coordinationFee += amount;
+        else if (line.fee_key === "tourist_tax") totals.touristTax += amount;
+        else if (line.fee_key === "nature_contribution") totals.natureContribution += amount;
+        else if (line.fee_key === "central_surcharge") totals.centralSurcharge += amount;
+        else if (line.fee_key === "revision") totals.revisionFees += amount;
+        else totals.coordinationFee += amount;
+        break;
+      default:
+        break;
+    }
+  }
+  for (const key of Object.keys(totals) as Array<keyof ProformaSectionTotals>) totals[key] = Math.round(totals[key] * 100) / 100;
+  return totals;
+}
 
 /** De actieve regels als op te slaan factuurregels (zonder herkomstvelden), in de gegeven volgorde. */
 export function proformaToStoredLines(lines: ProformaLine[]): StoredInvoiceLineInput[] {
