@@ -30,7 +30,7 @@ function getResetFallbackHtml(partnerName: string, setPasswordLink: string): str
 <div style="text-align:center;margin:32px 0;">
   <a href="${setPasswordLink}" style="display:inline-block;background-color:#0F4C5C;color:#ffffff;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;">Wachtwoord instellen</a>
 </div>
-<p style="font-size:14px;color:#666;">Deze link is persoonlijk en 1 uur geldig.</p>
+<p style="font-size:14px;color:#666;">Deze link is persoonlijk en 24 uur geldig.</p>
 <p style="font-size:12px;color:#999;word-break:break-all;">Werkt de knop niet? Kopieer dan deze link:<br><a href="${setPasswordLink}" style="color:#0F4C5C;">${setPasswordLink}</a></p>
 <p style="margin:24px 0 0;">Met vriendelijke groet,<br><strong>Bureau Vlieland</strong></p>
   `;
@@ -141,7 +141,7 @@ Bureau Vlieland heeft een nieuwe link voor je aangemaakt om je wachtwoord voor h
 
 ${setPasswordLink}
 
-Deze link is persoonlijk en 1 uur geldig.
+Deze link is persoonlijk en 24 uur geldig.
 
 Met vriendelijke groet,
 Bureau Vlieland`,

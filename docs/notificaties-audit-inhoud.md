@@ -717,7 +717,7 @@ Stand `main`, 21 november 2026. Bronnen: `email_templates`-export (scratchpad/te
 
 ## partner_password_reset — Wachtwoord resetten (send-partner-reset-email) en admin-reset-partner-password (inline)
 - Ontvanger: partner. Verzonden door `send-partner-reset-email/index.ts:76-140` (zelfservice, DB-template 2026-03-11) en `admin-reset-partner-password/index.ts:93-140` (admin, inline `getResetHtml` `:15-44`, zelfde `email_type`).
-- A: template zegt "Deze link is 1 uur geldig" — Supabase recovery-links zijn standaard 1 uur; ok mits de projectinstelling niet is aangepast (niet gecontroleerd). Admin-variant: "Deze link is persoonlijk en beperkt geldig" ok.
+- A: template zegt "Deze link is 1 uur geldig" — Supabase recovery-links zijn standaard 1 uur; ok mits de projectinstelling niet is aangepast (niet gecontroleerd). Admin-variant: "Deze link is persoonlijk en beperkt geldig" ok. *Update 26 nov 2026: termijn naar 24 uur (migratie `20261126090000_resetlink-24-uur.sql`, dashboardinstelling Email OTP expiration 86400); teksten overal "24 uur".*
 - B: `{{reset_link}}` = recovery-link met redirect `/partner/reset-password` (bestaat) ok; `mailto:hallo@` ok.
 - C: `partner_name`, `reset_link` gevuld.
 - D: template "Hallo … je" ok; "Partner Portal" (Engels) in onderwerp en tekst; eigen kop "Bureau Vlieland" boven de wrapper-logo. Admin-variant: "Beste … u/uw", eigen `#1e3a5f`-header, geen wrapper.

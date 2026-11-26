@@ -89,6 +89,19 @@ workflow "Deploy Supabase" (zie hieronder). Een wijziging onder `supabase/` die
 op `main` staat maar niet is gedeployed, draait dus niet: kijk bij *Actions →
 Deploy Supabase* of de run groen is.
 
+### Auth-instellingen staan niet in de deploy
+
+De workflow deployt functies en migraties, maar pusht de `[auth]`-secties van
+`supabase/config.toml` niet. Die waarden zijn documentatie van wat in het
+dashboard moet staan: *Authentication → URL Configuration* (Site URL en
+redirect-URL's) en *Authentication → Sign In / Providers → Email → Email OTP
+expiration* (86400 s = 24 uur, de geldigheid van de links voor wachtwoord
+vergeten, admin-reset en uitnodigen). Wijzig je zo'n waarde, pas dan beide
+aan plus de teksten die de termijn noemen (mailtemplate
+`partner_password_reset`, fallbacks in `send-partner-reset-email` en
+`admin-reset-partner-password`, `PartnerLogin`, `PartnerResetPassword`,
+`PartnerGuides`).
+
 ### Controleren of de nieuwe backend draait
 
 Open de run in *Actions → Deploy Supabase*: de stap "functions deploy" noemt de

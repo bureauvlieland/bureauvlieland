@@ -139,7 +139,7 @@ const PartnerResetPassword = () => {
 
   if (sessionExpired && !sessionReady) {
     return (
-      <PartnerAuthShell title="Link verlopen" heading="Link verlopen of al gebruikt" intro="Een link is een uur geldig en werkt één keer. Vraag hieronder een nieuwe aan.">
+      <PartnerAuthShell title="Link verlopen" heading="Link verlopen of al gebruikt" intro="Een link is 24 uur geldig en werkt één keer. Vraag hieronder een nieuwe aan.">
         {resendSent ? (
           <SuccessScreen title="Nieuwe link verstuurd" intro="Controleer uw inbox en de spammap." primary={{ label: "Naar inloggen", to: "/partner/login" }} className="py-2" />
         ) : (

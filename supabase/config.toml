@@ -14,6 +14,14 @@ additional_redirect_urls = [
   "http://localhost:8080/**",
 ]
 
+# Geldigheid van de links uit auth.admin.generateLink (wachtwoord vergeten,
+# admin-reset, uitnodigen): 24 uur. De deploy-workflow pusht deze sectie niet;
+# de waarde moet ook in het dashboard staan (Authentication → Sign In /
+# Providers → Email → "Email OTP expiration" = 86400). De mailteksten en de
+# partnerhandleiding noemen 24 uur. Zie docs/deployen.md.
+[auth.email]
+otp_expiry = 86400
+
 [functions.send-catering-request]
 verify_jwt = false
 

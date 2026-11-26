@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
           <div style="text-align: center; margin: 32px 0;">
             <a href="${actionLink}" style="background-color: #1e3a5f; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Wachtwoord resetten</a>
           </div>
-          <p style="font-size: 14px; color: #666;">Deze link is 1 uur geldig.</p>
+          <p style="font-size: 14px; color: #666;">Deze link is 24 uur geldig.</p>
         </div>
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
         <div style="padding: 0 24px 24px; color: #666; font-size: 14px;">

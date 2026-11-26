@@ -103,7 +103,7 @@ export const PartnerGuidesContent = () => {
               <p>Een nieuw wachtwoord kiest u onder Instellingen. Bent u het kwijt, dan vraagt u op de inlogpagina een nieuwe aan.</p>
               <Steps items={["Ga naar de inlogpagina.", "Vul uw e-mailadres in.", 'Kies "Wachtwoord vergeten?".', "U ontvangt een e-mail met een link om een nieuw wachtwoord in te stellen."]} />
               <Notice tone="info">
-                <p>De link in de e-mail is een uur geldig.</p>
+                <p>De link in de e-mail is 24 uur geldig.</p>
               </Notice>
             </>
           ),

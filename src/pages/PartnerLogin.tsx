@@ -3,17 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FormField, Notice } from "@/components/system";
+import { FormField, Notice, SuccessScreen } from "@/components/system";
 import { PartnerAuthShell } from "@/components/partner-portal/PartnerAuthShell";
-import { Loader2, Lock, LogIn, Mail } from "lucide-react";
+import { Loader2, Lock, LogIn, Mail, Send } from "lucide-react";
 import { z } from "zod";
 import { loginPasswordSchema } from "@/lib/passwordPolicy";
 import { reportError } from "@/lib/errorReporting";
 
 /**
  * Inloggen op het partnerportaal (partnerportaal fase 4): twee velden op
- * `FormField`, fouten inline als `Notice`, wachtwoord vergeten op dezelfde
- * kaart.
+ * `FormField`, fouten inline als `Notice`. "Wachtwoord vergeten?" opent een
+ * eigen stap op dezelfde kaart: de partner vult (of bevestigt) het
+ * e-mailadres in en verstuurt de resetlink bewust met een eigen knop, zodat
+ * een klik op de link niet meteen een mail veroorzaakt.
  */
 const loginSchema = z.object({
   email: z.string().email("Vul een geldig e-mailadres in."),
@@ -27,6 +29,10 @@ const PartnerLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [notice, setNotice] = useState<{ tone: "danger" | "success"; title: string; text?: string } | null>(null);
+  const [mode, setMode] = useState<"login" | "forgot">("login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState<string | undefined>();
+  const [resetSent, setResetSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,14 +97,33 @@ const PartnerLogin = () => {
     }
   };
 
-  const handleForgotPassword = async () => {
+  const openForgotPassword = () => {
     setNotice(null);
-    if (!email.trim()) {
-      setErrors({ email: "Vul eerst uw e-mailadres in." });
+    setErrors({});
+    setResetError(undefined);
+    setResetSent(false);
+    // Het ingevulde loginadres als voorzet; de partner bevestigt het zelf.
+    setResetEmail(email.trim());
+    setMode("forgot");
+  };
+
+  const closeForgotPassword = () => {
+    setNotice(null);
+    setResetError(undefined);
+    setMode("login");
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(null);
+    setResetError(undefined);
+    const address = resetEmail.trim();
+    if (!address) {
+      setResetError("Vul uw e-mailadres in.");
       return;
     }
-    if (!z.string().email().safeParse(email).success) {
-      setErrors({ email: "Vul een geldig e-mailadres in." });
+    if (!z.string().email().safeParse(address).success) {
+      setResetError("Vul een geldig e-mailadres in.");
       return;
     }
     setIsLoading(true);
@@ -108,9 +133,9 @@ const PartnerLogin = () => {
       setNotice({ tone: "danger", title: "Het duurt te lang", text: "Probeer het opnieuw of neem contact op met Bureau Vlieland." });
     }, 15000);
     try {
-      const { error } = await supabase.functions.invoke("send-partner-reset-email", { body: { email: email.trim() } });
+      const { error } = await supabase.functions.invoke("send-partner-reset-email", { body: { email: address } });
       if (error) throw error;
-      setNotice({ tone: "success", title: "E-mail verstuurd", text: "Controleer uw inbox en de spammap. De link is een uur geldig." });
+      setResetSent(true);
     } catch (err) {
       reportError(err, { where: "PartnerLogin: Password reset error" });
       setNotice({ tone: "danger", title: "Geen e-mail verstuurd", text: "Kon geen e-mail versturen om uw wachtwoord opnieuw in te stellen. Probeer het opnieuw of neem contact op met Bureau Vlieland." });
@@ -119,6 +144,39 @@ const PartnerLogin = () => {
       setIsLoading(false);
     }
   };
+
+  if (mode === "forgot") {
+    return (
+      <PartnerAuthShell title="Wachtwoord vergeten" heading="Wachtwoord vergeten" intro="Vul uw e-mailadres in. U ontvangt een link om een nieuw wachtwoord in te stellen.">
+        {resetSent ? (
+          <SuccessScreen
+            title="E-mail verstuurd"
+            intro={`Controleer de inbox en de spammap van ${resetEmail.trim()}. De link is 24 uur geldig.`}
+            primary={{ label: "Naar inloggen", onClick: closeForgotPassword }}
+            className="py-2"
+          />
+        ) : (
+          <form onSubmit={(e) => void handleForgotPassword(e)} className="space-y-4" noValidate>
+            {notice && (
+              <Notice tone={notice.tone} title={notice.title}>
+                {notice.text && <p>{notice.text}</p>}
+              </Notice>
+            )}
+            <FormField label="E-mailadres" htmlFor="reset-email" required leading={<Mail />} error={resetError}>
+              <Input type="email" autoComplete="email" autoFocus value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} disabled={isLoading} placeholder="naam@bedrijf.nl" />
+            </FormField>
+            <Button type="submit" className="w-full" disabled={isLoading || !resetEmail.trim()}>
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : <Send className="mr-2 h-4 w-4" aria-hidden="true" />}
+              Resetlink sturen
+            </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={closeForgotPassword} disabled={isLoading}>
+              Terug naar inloggen
+            </Button>
+          </form>
+        )}
+      </PartnerAuthShell>
+    );
+  }
 
   return (
     <PartnerAuthShell title="Inloggen" heading="Partnerportaal" intro="Log in om uw aanvragen, aanbod en facturen te beheren." footer="Nog geen account? Neem contact op met Bureau Vlieland.">
@@ -139,7 +197,7 @@ const PartnerLogin = () => {
           Inloggen
         </Button>
         <div className="text-center">
-          <Button type="button" variant="link" onClick={() => void handleForgotPassword()} disabled={isLoading} className="text-sm">
+          <Button type="button" variant="link" onClick={openForgotPassword} disabled={isLoading} className="text-sm">
             Wachtwoord vergeten?
           </Button>
         </div>
